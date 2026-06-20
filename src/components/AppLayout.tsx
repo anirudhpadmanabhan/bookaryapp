@@ -84,27 +84,30 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </div>
           </Link>
 
-          {/* Live header search */}
-          <form
-            onSubmit={(e) => { e.preventDefault(); goSearch(searchValue); }}
-            className="hidden flex-1 max-w-md md:flex"
-          >
-            <div className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface/50 px-4 py-2.5 text-sm focus-within:border-primary/60">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <input
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); goSearch(searchValue); } }}
-                placeholder="Search titles, authors, genres, shelf codes…"
-                className="w-full bg-transparent outline-none placeholder:text-muted-foreground"
-              />
-              {searchValue && (
-                <button type="button" onClick={() => setSearchValue("")} className="cursor-pointer text-muted-foreground hover:text-foreground">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-          </form>
+          {/* Live header search — hidden on /search to avoid duplication */}
+          {pathname !== "/search" && (
+            <form
+              onSubmit={(e) => { e.preventDefault(); goSearch(searchValue); }}
+              className="hidden flex-1 max-w-md md:flex"
+            >
+              <div className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface/50 px-4 py-2.5 text-sm focus-within:border-primary/60">
+                <Search className="h-4 w-4 text-muted-foreground" />
+                <input
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); goSearch(searchValue); } }}
+                  placeholder="Search titles, authors, genres, shelf codes…"
+                  className="w-full bg-transparent outline-none placeholder:text-muted-foreground"
+                />
+                {searchValue && (
+                  <button type="button" onClick={() => setSearchValue("")} className="cursor-pointer text-muted-foreground hover:text-foreground">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            </form>
+          )}
+
 
           <div className="flex items-center gap-3">
             {user && profile ? (
