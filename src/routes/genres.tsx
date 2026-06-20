@@ -1,7 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
-import { fetchBooks, colorAt, slugify } from "@/lib/books";
+import { fetchBooks, colorAt, genreEnglish, genreMalayalam, slugify } from "@/lib/books";
 import { BookOpen, Search as SearchIcon, ArrowDownUp } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -15,20 +15,20 @@ export const Route = createFileRoute("/genres")({
       { name: "description", content: "Browse the Cherukad library by genre." },
     ],
   }),
-  component: GenresPage,
+  component: () => <Outlet />,
 });
 
-function GenresPage() {
+export function GenresPage() {
   const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<GenreSort>("popular");
 
   const genres = useMemo(() => {
-    const map = new Map<string, { count: number; ml: string | null }>();
+    const map = new Map<string, { count: number; ml: string | null; en: string }>();
     for (const b of books) {
       const cur = map.get(b.genre);
       if (cur) cur.count++;
-      else map.set(b.genre, { count: 1, ml: b.genre_ml });
+      else map.set(b.genre, { count: 1, ml: genreMalayalam(b), en: genreEnglish(b) });
     }
     const arr = Array.from(map.entries());
     if (sort === "az") arr.sort((a, b) => a[0].localeCompare(b[0]));
@@ -37,7 +37,7 @@ function GenresPage() {
   }, [books, sort]);
 
   const filtered = q.trim()
-    ? genres.filter(([g, info]) => g.toLowerCase().includes(q.toLowerCase()) || (info.ml ?? "").includes(q))
+    ? genres.filter(([g, info]) => g.toLowerCase().includes(q.toLowerCase()) || info.en.toLowerCase().includes(q.toLowerCase()) || (info.ml ?? "").includes(q))
     : genres;
 
   return (
@@ -51,7 +51,7 @@ function GenresPage() {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Filter genres…"
+            placeholder="Filter genres in English or Malayalam…"
             className="w-full bg-transparent text-base outline-none placeholder:text-muted-foreground"
           />
         </div>
@@ -74,7 +74,7 @@ function GenresPage() {
           >
             <BookOpen className="h-5 w-5 text-white/70" />
             <div>
-              <div className="text-lg font-bold leading-tight">{genre}</div>
+              <div className="text-lg font-bold leading-tight">{info.en}</div>
               {info.ml && <div className="font-mal text-sm text-white/85">{info.ml}</div>}
               <div className="mt-2 text-xs text-white/75">{info.count} title{info.count !== 1 && "s"}</div>
             </div>

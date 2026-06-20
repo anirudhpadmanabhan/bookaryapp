@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
-import { fetchBook, synopsisFor } from "@/lib/books";
+import { displayRating as catalogRating, fetchBook, genreEnglish, genreMalayalam, synopsisFor } from "@/lib/books";
 import { BookCover } from "@/components/BookCover";
 import {
   Heart, Star, Calendar, ArrowLeft, NotebookPen,
@@ -46,7 +46,9 @@ function BookPage() {
 
   const isFav = !!favorites?.some((f) => f.book_id === book.id);
   const activeRental = rentals?.find((r: any) => r.book_id === book.id && !r.returned_at);
-  const displayRating = avgRating ?? Number(book.rating);
+  const displayRating = avgRating ?? catalogRating(book);
+  const enGenre = genreEnglish(book);
+  const mlGenre = genreMalayalam(book);
 
   const requireSignIn = (msg: string) => {
     toast.error(msg);
@@ -79,7 +81,7 @@ function BookPage() {
         </div>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
-            {book.genre} {book.genre_ml && <>· <span className="font-mal text-accent">{book.genre_ml}</span></>}
+            {enGenre} {mlGenre && <>· <span className="font-mal text-accent">{mlGenre}</span></>}
           </div>
           <h1 className="mt-1 text-3xl font-bold md:text-4xl">{book.title}</h1>
           {book.title_ml && <p className="font-mal mt-1 text-xl text-accent">{book.title_ml}</p>}
@@ -120,7 +122,7 @@ function BookPage() {
                 disabled={rent.isPending}
                 className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {rent.isPending ? "Renting…" : "Rent Now · 20 days"}
+                {rent.isPending ? "Confirming…" : "Rent now"}
               </button>
             )}
             <button
@@ -267,6 +269,12 @@ function RentModal({
           </div>
         </div>
 
+        <div className="mb-4 grid grid-cols-3 gap-2 text-center text-[11px]">
+          <div className="rounded-lg bg-primary/15 px-2 py-2 text-primary">1. Address</div>
+          <div className="rounded-lg bg-emerald-500/10 px-2 py-2 text-emerald-300">2. Wallet</div>
+          <div className="rounded-lg bg-accent/10 px-2 py-2 text-accent">3. Tracking</div>
+        </div>
+
         <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Delivery address</label>
         <textarea
           value={address}
@@ -278,8 +286,7 @@ function RentModal({
         <p className="mt-1 text-[11px] text-muted-foreground">Saved to your profile so future rentals pre-fill.</p>
 
         <div className="mt-4 rounded-xl border border-border/60 bg-surface/40 px-3 py-2.5 text-xs text-muted-foreground">
-          Return window: <span className="font-medium text-foreground">20 days</span> from confirmation.
-          You'll see live tracking in your Profile → Active rentals.
+          Return window: <span className="font-medium text-foreground">20 days</span> from confirmation. A reminder appears in the top-right bell and Profile when the return date is within 20 days.
         </div>
 
         <div className="mt-5 flex gap-2">

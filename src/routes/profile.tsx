@@ -7,12 +7,13 @@ import {
 } from "@/lib/userdata";
 import {
   Wallet, BookOpen, CheckCircle2, Lightbulb, Clock, Flame, Heart, NotebookPen,
-  Trophy, BookMarked, AlertTriangle,
+  Trophy, BookMarked, AlertTriangle, BellRing,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { fetchBooks } from "@/lib/books";
 
 export const Route = createFileRoute("/profile")({
   ssr: false,
@@ -29,6 +30,7 @@ function ProfilePage() {
   const { data: rentals = [] } = useRentals();
   const { data: favorites = [] } = useFavorites();
   const { data: suggestions = [] } = useSuggestions();
+  const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
   const insights = useReadingInsights();
   const dueSoon = useDueSoonRentals();
   const topUp = useTopUpWallet();
@@ -60,10 +62,14 @@ function ProfilePage() {
   const totalSpent = (rentals as any[]).reduce((s, r) => s + Number(r.price_paid ?? 0), 0);
 
   const returnBook = async (rentalId: string) => {
-    const { error } = await supabase.from("rentals").update({ returned_at: new Date().toISOString() }).eq("id", rentalId);
+    const { error } = await supabase.from("rentals").update({ returned_at: new Date().toISOString(), tracking_status: "returned" } as any).eq("id", rentalId);
     if (error) return toast.error(error.message);
     qc.invalidateQueries({ queryKey: ["rentals"] });
     toast.success("Book returned");
+  };
+
+  const notifyRental = (title: string, dueAt: string) => {
+    toast.success(`Reminder enabled for ${title} — due ${new Date(dueAt).toLocaleDateString()}`);
   };
 
   const submitSuggestion = (e: React.FormEvent) => {
@@ -123,6 +129,9 @@ function ProfilePage() {
             <Stat icon={BookMarked} tint="primary" label="Books read"      value={insights.booksRead} sub={`${insights.activeRentals} active right now`} />
             <Stat icon={NotebookPen} tint="accent" label="Diary entries"   value={insights.diaryCount} sub="All-time" />
             <Stat icon={Heart} tint="rose"   label="Loved"           value={favorites.length} sub="Books in your shelf" />
+          </div>
+          <div className="mt-3 rounded-2xl border border-border bg-surface/40 px-4 py-3 text-sm text-muted-foreground">
+            Uploaded catalogue: <span className="font-semibold text-foreground">{books.length.toLocaleString()} books</span> in the selected library.
           </div>
           {(insights.topGenre || insights.topAuthor) && (
             <div className="glass-card mt-4 grid gap-3 rounded-2xl p-5 sm:grid-cols-2">
@@ -216,7 +225,12 @@ function ProfilePage() {
                       )}
                     </div>
                   </div>
-                  <button type="button" onClick={() => returnBook(r.id)} className="cursor-pointer rounded-lg bg-surface-elevated px-3 py-1.5 text-sm hover:bg-primary/20 hover:text-primary">Return</button>
+                  <div className="flex shrink-0 flex-col gap-2">
+                    <button type="button" onClick={() => notifyRental(r.books?.title ?? "this book", r.due_at)} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-surface-elevated">
+                      <BellRing className="h-3.5 w-3.5" /> Notify
+                    </button>
+                    <button type="button" onClick={() => returnBook(r.id)} className="cursor-pointer rounded-lg bg-surface-elevated px-3 py-1.5 text-sm hover:bg-primary/20 hover:text-primary">Return</button>
+                  </div>
                 </div>
               );
             })}

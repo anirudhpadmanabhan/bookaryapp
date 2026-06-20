@@ -13,7 +13,15 @@ export function useProfile() {
       if (!user) return null;
       const { data, error } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
       if (error) throw error;
-      return data;
+      if (data) return data;
+      const displayName = user.user_metadata?.display_name || user.email?.split("@")[0] || "Reader";
+      const { data: created, error: createError } = await supabase
+        .from("profiles")
+        .insert({ id: user.id, display_name: displayName })
+        .select("*")
+        .single();
+      if (createError) throw createError;
+      return created;
     },
   });
 }
@@ -87,8 +95,17 @@ export function useRentBook() {
   return useMutation({
     mutationFn: async ({ bookId, price, address }: { bookId: string; price: number; address?: string }) => {
       if (!user) throw new Error("Sign in to rent");
-      const { data: prof, error: pErr } = await supabase.from("profiles").select("wallet_balance, address").eq("id", user.id).single();
+      const { data: prof, error: pErr } = await supabase.from("profiles").select("wallet_balance, address").eq("id", user.id).maybeSingle();
       if (pErr) throw pErr;
+      if (!prof) throw new Error("Add your profile details before renting");
+      const { data: existing, error: activeErr } = await supabase
+        .from("rentals")
+        .select("id, due_at")
+        .eq("book_id", bookId)
+        .is("returned_at", null)
+        .maybeSingle();
+      if (activeErr) throw activeErr;
+      if (existing) throw new Error(`Already rented — due ${new Date(existing.due_at).toLocaleDateString()}`);
       const balance = Number(prof.wallet_balance);
       if (balance < price) throw new Error(`Need ₹${price - balance} more in wallet`);
       const deliveryAddress = (address ?? prof.address ?? "").trim() || null;

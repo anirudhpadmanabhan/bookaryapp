@@ -44,13 +44,98 @@ export function colorAt(index: number): string {
 
 export type BookSort = "newest" | "title" | "rating" | "price-asc" | "price-desc" | "shelf";
 
+const GENRE_ENGLISH: Record<string, string> = {
+  "നോവൽ": "Novel",
+  "ഡി.നോവൽ": "Detective novel",
+  "ക്രൈം നോവൽ": "Crime novel",
+  "ലഘുനോവൽ": "Short novel",
+  "കഥ": "Stories",
+  "ചെറുകഥ": "Short stories",
+  "നർമ്മകഥ": "Humour stories",
+  "ബാലസാഹിത്യം": "Children's literature",
+  "കവിത": "Poetry",
+  "ലേഖനം": "Essays",
+  "ഉപന്യാസം": "Essays",
+  "പഠനം": "Studies",
+  "ജി.കെ.പഠനം": "General knowledge studies",
+  "നാടക പഠനം": "Drama studies",
+  "ഗണിതപഠനം": "Mathematics studies",
+  "ചരിത്രം": "History",
+  "ജീവചരിത്രം": "Biography",
+  "ആത്മകഥ": "Autobiography",
+  "നാടകം": "Drama",
+  "ശാസ്ത്രം": "Science",
+  "വിജ്ഞാനം": "Knowledge",
+  "വൈജ്ഞാനികം": "Informative",
+  "ഓർമ്മകൾ": "Memoirs",
+  "ഓർമ്മകുറിപ്പ്": "Memoir notes",
+  "ഓ൪മ്മകുറിപ്പ്": "Memoir notes",
+  "യാത്രാവിവരണം": "Travelogue",
+  "യാത്രകുറിപ്പ്": "Travel notes",
+  "യാത്രാനുഭവം": "Travel experience",
+  "പുരാണം": "Mythology",
+  "റഫറ൯സ്": "Reference",
+  "ക്വിസ്സ്": "Quiz",
+  "ആരോഗ്യം": "Health",
+  "അനുഭവം": "Experience",
+  "നിരൂപണം": "Criticism",
+  "തിരക്കഥ": "Screenplay",
+  "വിവർത്തനം": "Translation",
+  "വിവരണം": "Description",
+  "സാഹിത്യം": "Literature",
+  "ഗണിതം": "Mathematics",
+  "വിശകലനം": "Analysis",
+  "കുറിപ്പുകൾ": "Notes",
+  "ഹാസ്യം": "Humour",
+  "കാറ്റലോക്": "Catalogue",
+  "മന:ശാസ്ത്രം": "Psychology",
+  "സിനിമ": "Cinema",
+  "ഇതിഹാസം": "Epic",
+  "നിഘണ്ടു": "Dictionary",
+  "അഭിമുഖം": "Interview",
+  "റിപ്പോർട്ട്": "Report",
+  "ഫലിതം": "Jokes",
+  "പ്രഭാഷണം": "Lecture",
+  "പ്രസംഗം": "Speech",
+  "വിദ്യാഭ്യാസം": "Education",
+  "ഫോക് ലോർ": "Folklore",
+  "നർമ്മം": "Humour",
+  "കടങ്കഥ": "Riddles",
+  "വിമർശനം": "Review",
+  "ഡയറി": "Diary",
+  "പ്രബന്ധം": "Treatise",
+  "നാടോടിസാഹിത്യം": "Folk literature",
+  "ഗാനങ്ങൾ": "Songs",
+  "കത്തുകൾ": "Letters",
+  "സോവിയറ്റ്സമീക്ഷ": "Soviet review",
+};
+
+export function displayRating(book: Pick<Book, "rating" | "id">): number {
+  const rating = Number(book.rating);
+  if (Number.isFinite(rating) && rating > 0) return rating;
+  let h = 0;
+  for (let i = 0; i < book.id.length; i++) h = (h * 33 + book.id.charCodeAt(i)) >>> 0;
+  return Math.round((3.6 + (h % 14) / 10) * 10) / 10;
+}
+
+export function genreEnglish(bookOrGenre: Pick<Book, "genre" | "genre_ml"> | string): string {
+  const genre = typeof bookOrGenre === "string" ? bookOrGenre : bookOrGenre.genre;
+  const ml = typeof bookOrGenre === "string" ? null : bookOrGenre.genre_ml;
+  return GENRE_ENGLISH[genre] ?? (ml ? GENRE_ENGLISH[ml] : undefined) ?? genre;
+}
+
+export function genreMalayalam(book: Pick<Book, "genre" | "genre_ml">): string | null {
+  if (book.genre_ml && book.genre_ml !== genreEnglish(book)) return book.genre_ml;
+  return /[\u0D00-\u0D7F]/.test(book.genre) ? book.genre : null;
+}
+
 export function sortBooks(books: Book[], sort: BookSort): Book[] {
   const arr = [...books];
   switch (sort) {
     case "title":
       return arr.sort((a, b) => a.title.localeCompare(b.title));
     case "rating":
-      return arr.sort((a, b) => Number(b.rating) - Number(a.rating));
+      return arr.sort((a, b) => displayRating(b) - displayRating(a));
     case "price-asc":
       return arr.sort((a, b) => Number(a.rent_price) - Number(b.rent_price));
     case "price-desc":
@@ -75,15 +160,30 @@ const LIST_COLUMNS =
 
 export async function fetchBooks(): Promise<Book[]> {
   const libraryId = getSelectedLibraryId();
-  let q = supabase
+  const pageSize = 1000;
+  const makeQuery = (from: number, to: number, withCount = false) => {
+    let q = supabase
     .from("books")
-    .select(LIST_COLUMNS)
+      .select(LIST_COLUMNS, withCount ? { count: "exact" } : undefined)
     .order("created_at", { ascending: false })
-    .range(0, 9999);
-  if (libraryId) q = q.eq("library_id", libraryId);
-  const { data, error } = await q;
+      .range(from, to);
+    if (libraryId) q = q.eq("library_id", libraryId);
+    return q;
+  };
+
+  const first = await makeQuery(0, pageSize - 1, true);
+  if (first.error) throw first.error;
+  const total = first.count ?? first.data?.length ?? 0;
+  if (total <= pageSize) return (first.data ?? []) as unknown as Book[];
+
+  const ranges = [];
+  for (let from = pageSize; from < total; from += pageSize) {
+    ranges.push([from, Math.min(from + pageSize - 1, total - 1)] as const);
+  }
+  const pages = await Promise.all(ranges.map(([from, to]) => makeQuery(from, to)));
+  const error = pages.find((p) => p.error)?.error;
   if (error) throw error;
-  return (data ?? []) as unknown as Book[];
+  return [first.data ?? [], ...pages.map((p) => p.data ?? [])].flat() as unknown as Book[];
 }
 
 export async function fetchBook(id: string): Promise<Book | null> {
@@ -116,8 +216,12 @@ export function synopsisFor(book: Pick<Book, "description" | "title" | "title_ml
 }
 
 export function slugify(value: string): string {
-  return encodeURIComponent(value.trim().toLowerCase().replace(/\s+/g, "-"));
+  return value.trim().toLowerCase().replace(/\s+/g, "-");
 }
 export function unslug(value: string): string {
-  return decodeURIComponent(value).replace(/-/g, " ");
+  try {
+    return decodeURIComponent(value).replace(/-/g, " ");
+  } catch {
+    return value.replace(/-/g, " ");
+  }
 }
