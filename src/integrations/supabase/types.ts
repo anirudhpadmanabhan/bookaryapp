@@ -141,23 +141,29 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address: string | null
           created_at: string
           display_name: string
           id: string
+          phone: string | null
           updated_at: string
           wallet_balance: number
         }
         Insert: {
+          address?: string | null
           created_at?: string
           display_name?: string
           id: string
+          phone?: string | null
           updated_at?: string
           wallet_balance?: number
         }
         Update: {
+          address?: string | null
           created_at?: string
           display_name?: string
           id?: string
+          phone?: string | null
           updated_at?: string
           wallet_balance?: number
         }
@@ -204,29 +210,35 @@ export type Database = {
       rentals: {
         Row: {
           book_id: string
+          delivery_address: string | null
           due_at: string
           id: string
           price_paid: number
           rented_at: string
           returned_at: string | null
+          tracking_status: string
           user_id: string
         }
         Insert: {
           book_id: string
+          delivery_address?: string | null
           due_at?: string
           id?: string
           price_paid: number
           rented_at?: string
           returned_at?: string | null
+          tracking_status?: string
           user_id: string
         }
         Update: {
           book_id?: string
+          delivery_address?: string | null
           due_at?: string
           id?: string
           price_paid?: number
           rented_at?: string
           returned_at?: string | null
+          tracking_status?: string
           user_id?: string
         }
         Relationships: [
@@ -244,6 +256,7 @@ export type Database = {
           body: string
           book_id: string
           created_at: string
+          favorite_quote: string | null
           id: string
           rating: number
           updated_at: string
@@ -253,6 +266,7 @@ export type Database = {
           body?: string
           book_id: string
           created_at?: string
+          favorite_quote?: string | null
           id?: string
           rating: number
           updated_at?: string
@@ -262,6 +276,7 @@ export type Database = {
           body?: string
           book_id?: string
           created_at?: string
+          favorite_quote?: string | null
           id?: string
           rating?: number
           updated_at?: string

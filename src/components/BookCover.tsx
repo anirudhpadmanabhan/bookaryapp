@@ -15,20 +15,20 @@ export function BookCover({
   return (
     <div className={cn("cover", `cover-${color}`, className)}>
       <div className="relative z-10">
-        <span className="font-mal text-[11px] tracking-wide text-white/70">{book.genre_ml ?? ""}</span>
+        <span className="font-mal text-[10px] tracking-wide text-white/70 line-clamp-1">{book.genre_ml ?? ""}</span>
       </div>
-      <div className="relative z-10 flex flex-col items-center gap-2 px-2 text-center">
+      <div className="relative z-10 flex flex-col items-center gap-1.5 px-1 text-center">
         {book.title_ml && (
-          <span className="font-mal text-[20px] font-bold leading-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] line-clamp-3">
+          <span className="font-mal text-[18px] font-bold leading-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)] line-clamp-3">
             {book.title_ml}
           </span>
         )}
-        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/90 drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)] line-clamp-3">
+        <span className="text-[9px] font-semibold uppercase tracking-[0.1em] text-white/90 drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)] line-clamp-3 leading-snug">
           {book.title}
         </span>
       </div>
       <div className="relative z-10 text-center">
-        <span className="font-mal text-[12px] text-white/85 drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)] line-clamp-1">
+        <span className="font-mal text-[11px] text-white/85 drop-shadow-[0_1px_3px_rgba(0,0,0,0.6)] line-clamp-1">
           {book.author_ml ?? book.author}
         </span>
       </div>

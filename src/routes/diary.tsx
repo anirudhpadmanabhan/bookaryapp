@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { AppLayout } from "@/components/AppLayout";
 import { useDiary, useEditDiary, useDeleteDiary, useAddDiary } from "@/lib/userdata";
 import { useSession } from "@/lib/auth";
@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { NotebookPen, Pencil, Trash2, X, Check, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { BookCover } from "@/components/BookCover";
+
 
 export const Route = createFileRoute("/diary")({
   ssr: false,
@@ -150,10 +151,15 @@ function DiaryItem({ entry }: { entry: any }) {
   return (
     <article className="glass-card flex flex-col gap-4 rounded-2xl p-4 sm:flex-row sm:p-5">
       <div className="w-20 shrink-0 sm:w-24">
-        {entry.books ? <BookCover book={entry.books} className="!p-2 text-[10px]" /> : (
+        {entry.books ? (
+          <Link to="/books/$id" params={{ id: entry.books.id }} className="block cursor-pointer transition hover:opacity-90">
+            <BookCover book={entry.books} className="!p-2 text-[10px]" />
+          </Link>
+        ) : (
           <div className="flex aspect-[2/3] w-full items-center justify-center rounded-xl bg-surface text-[10px] uppercase tracking-wider text-muted-foreground">No book</div>
         )}
       </div>
+
       <div className="min-w-0 flex-1">
         <div className="mb-2 flex flex-wrap items-baseline gap-2">
           <h3 className="text-base font-semibold">{entry.books?.title ?? "Free entry"}</h3>
