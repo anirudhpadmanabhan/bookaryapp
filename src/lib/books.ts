@@ -160,15 +160,30 @@ const LIST_COLUMNS =
 
 export async function fetchBooks(): Promise<Book[]> {
   const libraryId = getSelectedLibraryId();
-  let q = supabase
+  const pageSize = 1000;
+  const makeQuery = (from: number, to: number, withCount = false) => {
+    let q = supabase
     .from("books")
-    .select(LIST_COLUMNS)
+      .select(LIST_COLUMNS, withCount ? { count: "exact" } : undefined)
     .order("created_at", { ascending: false })
-    .range(0, 9999);
-  if (libraryId) q = q.eq("library_id", libraryId);
-  const { data, error } = await q;
+      .range(from, to);
+    if (libraryId) q = q.eq("library_id", libraryId);
+    return q;
+  };
+
+  const first = await makeQuery(0, pageSize - 1, true);
+  if (first.error) throw first.error;
+  const total = first.count ?? first.data?.length ?? 0;
+  if (total <= pageSize) return (first.data ?? []) as unknown as Book[];
+
+  const ranges = [];
+  for (let from = pageSize; from < total; from += pageSize) {
+    ranges.push([from, Math.min(from + pageSize - 1, total - 1)] as const);
+  }
+  const pages = await Promise.all(ranges.map(([from, to]) => makeQuery(from, to)));
+  const error = pages.find((p) => p.error)?.error;
   if (error) throw error;
-  return (data ?? []) as unknown as Book[];
+  return [first.data ?? [], ...pages.map((p) => p.data ?? [])].flat() as unknown as Book[];
 }
 
 export async function fetchBook(id: string): Promise<Book | null> {
