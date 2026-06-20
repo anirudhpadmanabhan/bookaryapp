@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
-import { fetchBooks, sortBooks, unslug, type BookSort } from "@/lib/books";
+import { fetchBooks, genreEnglish, genreMalayalam, sortBooks, unslug, type BookSort } from "@/lib/books";
 import { BooksGrid, type ViewMode } from "@/components/BooksGrid";
 import { SortBar } from "@/components/SortBar";
 import { ArrowLeft, Feather, BookOpen } from "lucide-react";
@@ -26,7 +26,8 @@ function WriterPage() {
   const sorted = useMemo(() => sortBooks(byAuthor, sort), [byAuthor, sort]);
   const mlName = byAuthor[0]?.author_ml;
   const original = byAuthor[0]?.original_author;
-  const genres = [...new Set(byAuthor.map((b) => b.genre))];
+  const genres = [...new Map(byAuthor.map((b) => [genreEnglish(b), genreMalayalam(b)])).entries()];
+  const avgRating = byAuthor.length ? byAuthor.reduce((s, b) => s + Number(b.rating), 0) / byAuthor.length : 0;
 
   return (
     <AppLayout>
@@ -52,10 +53,11 @@ function WriterPage() {
             <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-3 py-1 text-xs text-primary">
               <BookOpen className="h-3 w-3" /> {byAuthor.length.toLocaleString()} title{byAuthor.length !== 1 && "s"}
             </span>
-            {genres.slice(0, 4).map((g) => (
-              <span key={g} className="rounded-full bg-surface px-3 py-1 text-xs text-muted-foreground">{g}</span>
+            {genres.slice(0, 4).map(([en, ml]) => (
+              <span key={en} className="rounded-full bg-surface px-3 py-1 text-xs text-muted-foreground">{en}{ml ? ` / ${ml}` : ""}</span>
             ))}
             {genres.length > 4 && <span className="rounded-full bg-surface px-3 py-1 text-xs text-muted-foreground">+{genres.length - 4} more</span>}
+            {avgRating > 0 && <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs text-amber-300">★ {avgRating.toFixed(1)} avg rating</span>}
           </div>
         </div>
       </div>
