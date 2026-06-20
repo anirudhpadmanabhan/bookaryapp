@@ -11,10 +11,9 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { fetchBooks } from "@/lib/books";
-import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/profile")({
   ssr: false,
