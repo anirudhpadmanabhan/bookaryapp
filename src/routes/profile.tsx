@@ -38,6 +38,22 @@ function ProfilePage() {
   const [sTitle, setSTitle] = useState("");
   const [sAuthor, setSAuthor] = useState("");
   const [sNote, setSNote] = useState("");
+  const [editingDetails, setEditingDetails] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  useEffect(() => {
+    if (profile) { setPhone((profile as any).phone ?? ""); setAddress((profile as any).address ?? ""); }
+  }, [profile]);
+
+  const saveDetails = async () => {
+    if (!user) return;
+    const { error } = await supabase.from("profiles").update({ phone: phone.trim() || null, address: address.trim() || null } as any).eq("id", user.id);
+    if (error) return toast.error(error.message);
+    qc.invalidateQueries({ queryKey: ["profile"] });
+    setEditingDetails(false);
+    toast.success("Details saved");
+  };
+
 
   const active = (rentals as any[]).filter((r) => !r.returned_at);
   const past = (rentals as any[]).filter((r) => r.returned_at);
