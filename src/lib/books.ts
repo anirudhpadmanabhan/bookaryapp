@@ -68,24 +68,22 @@ export function sortBooks(books: Book[], sort: BookSort): Book[] {
   }
 }
 
+// Columns needed for the grid/list views. We deliberately omit `description`
+// (large text) — it's only used on the book detail page, fetched via fetchBook.
+const LIST_COLUMNS =
+  "id,title,title_ml,author,author_ml,original_author,genre,genre_ml,rating,rent_price,cover_color,pages,published_year,publisher,shelf_code,language,cover_url,created_at,library_id";
+
 export async function fetchBooks(): Promise<Book[]> {
   const libraryId = getSelectedLibraryId();
-  const pageSize = 1000;
-  const all: Book[] = [];
-  for (let from = 0; ; from += pageSize) {
-    let q = supabase
-      .from("books")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .range(from, from + pageSize - 1);
-    if (libraryId) q = q.eq("library_id", libraryId);
-    const { data, error } = await q;
-    if (error) throw error;
-    const rows = (data ?? []) as Book[];
-    all.push(...rows);
-    if (rows.length < pageSize) break;
-  }
-  return all;
+  let q = supabase
+    .from("books")
+    .select(LIST_COLUMNS)
+    .order("created_at", { ascending: false })
+    .range(0, 9999);
+  if (libraryId) q = q.eq("library_id", libraryId);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data ?? []) as unknown as Book[];
 }
 
 export async function fetchBook(id: string): Promise<Book | null> {
