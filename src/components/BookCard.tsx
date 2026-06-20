@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { Heart, Star, MapPin } from "lucide-react";
 import { displayRating, genreEnglish, type Book } from "@/lib/books";
 import { BookCover } from "./BookCover";
@@ -82,7 +82,6 @@ export function BookCard({ book, minimal = false, coverColor, hideShelf = true }
 
 export function BookRow({ book, hideShelf = false }: { book: Book; hideShelf?: boolean }) {
   const { user } = useSession();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { data: favorites } = useFavorites();
   const toggle = useToggleFavorite();
   const isFav = !!favorites?.some((f) => f.book_id === book.id);
