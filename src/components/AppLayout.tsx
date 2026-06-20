@@ -181,9 +181,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   <LogOut className="h-4 w-4" />
                 </button>
               </>
-              // Sign-in CTA hidden while the platform is still being built.
-              null
-            )}
+            ) : null /* Sign-in CTA hidden while the platform is still being built. */}
           </div>
         </div>
       </header>
