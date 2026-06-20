@@ -194,6 +194,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </div>
       </header>
 
+      {/* Mobile library switcher — sits right under the BOOKARY logo */}
+      <div className="border-b border-border/60 bg-background/60 px-4 py-2 sm:hidden">
+        <LibrarySwitcher compact />
+      </div>
+
+
+
       <div className="mx-auto flex max-w-[1400px] gap-6 px-4 py-6 md:px-6">
         <aside className="sticky top-20 hidden h-[calc(100vh-6rem)] w-60 shrink-0 flex-col gap-6 md:flex">
           <nav className="glass-card flex flex-col gap-1 rounded-2xl p-3">
