@@ -5,11 +5,11 @@ import { fetchBook, synopsisFor } from "@/lib/books";
 import { BookCover } from "@/components/BookCover";
 import {
   Heart, Star, Calendar, ArrowLeft, NotebookPen,
-  Building2, MapPin, Globe, User as UserIcon, MessageSquare, Trash2, Pencil,
+  Building2, MapPin, Globe, User as UserIcon, MessageSquare, Trash2, Pencil, Quote, X,
 } from "lucide-react";
 import {
   useFavorites, useRentals, useRentBook, useToggleFavorite, useAddDiary,
-  useReviews, useUpsertReview, useDeleteReview,
+  useReviews, useUpsertReview, useDeleteReview, useProfile,
 } from "@/lib/userdata";
 import { useSession } from "@/lib/auth";
 import { toast } from "sonner";
@@ -25,6 +25,7 @@ function BookPage() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user } = useSession();
+  const { data: profile } = useProfile();
   const { data: book, isLoading } = useQuery({ queryKey: ["book", id], queryFn: () => fetchBook(id) });
   const { data: favorites } = useFavorites();
   const { data: rentals } = useRentals();
@@ -33,7 +34,7 @@ function BookPage() {
   const toggle = useToggleFavorite();
   const addDiary = useAddDiary();
   const [note, setNote] = useState("");
-  const [progress, setProgress] = useState(10);
+  const [showRent, setShowRent] = useState(false);
 
   const avgRating = useMemo(() => {
     if (!reviews.length) return null;
@@ -54,7 +55,7 @@ function BookPage() {
 
   const submitDiary = () => {
     if (!note.trim()) return toast.error("Write something");
-    addDiary.mutate({ bookId: book.id, note: note.trim(), progress }, { onSuccess: () => setNote("") });
+    addDiary.mutate({ bookId: book.id, note: note.trim(), progress: 0 }, { onSuccess: () => setNote("") });
   };
 
   return (
@@ -115,7 +116,7 @@ function BookPage() {
             ) : (
               <button
                 type="button"
-                onClick={() => user ? rent.mutate({ bookId: book.id, price: Number(book.rent_price) }) : requireSignIn("Sign in to rent")}
+                onClick={() => user ? setShowRent(true) : requireSignIn("Sign in to rent")}
                 disabled={rent.isPending}
                 className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
@@ -145,9 +146,7 @@ function BookPage() {
                 rows={3}
                 className="w-full rounded-xl border border-border bg-background/50 px-4 py-3 text-sm outline-none focus:border-primary"
               />
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                <label className="text-xs text-muted-foreground">Progress {progress}%</label>
-                <input type="range" min={0} max={100} value={progress} onChange={(e) => setProgress(Number(e.target.value))} className="flex-1 cursor-pointer accent-[var(--primary)]" />
+              <div className="mt-3 flex justify-end">
                 <button
                   onClick={submitDiary}
                   disabled={addDiary.isPending}
@@ -167,6 +166,24 @@ function BookPage() {
         </div>
       </div>
 
+      {/* Rent confirmation modal */}
+      {showRent && user && profile && (
+        <RentModal
+          price={Number(book.rent_price)}
+          balance={Number(profile.wallet_balance)}
+          defaultAddress={profile.address ?? ""}
+          title={book.title}
+          onClose={() => setShowRent(false)}
+          onConfirm={(addr) => {
+            rent.mutate(
+              { bookId: book.id, price: Number(book.rent_price), address: addr },
+              { onSuccess: () => setShowRent(false) },
+            );
+          }}
+          pending={rent.isPending}
+        />
+      )}
+
       {/* Reviews section */}
       <section className="mt-12">
         <div className="mb-4 flex items-center gap-3">
@@ -178,7 +195,7 @@ function BookPage() {
           <ReviewForm bookId={book.id} existing={reviews.find((r) => r.user_id === user.id)} />
         ) : (
           <div className="glass-card mb-4 flex items-center justify-between gap-3 rounded-2xl p-4 text-sm">
-            <span className="text-muted-foreground">Sign in to share your rating and review.</span>
+            <span className="text-muted-foreground">Sign in to share your rating, review, and a favourite quote.</span>
             <Link to="/auth" search={{ redirect: pathname }} className="cursor-pointer rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90">Sign in</Link>
           </div>
         )}
@@ -205,6 +222,12 @@ function BookPage() {
                   </div>
                 </div>
                 {r.body && <p className="text-sm text-foreground/85">{r.body}</p>}
+                {r.favorite_quote && (
+                  <blockquote className="mt-3 flex gap-3 rounded-xl border-l-2 border-accent bg-accent/5 px-4 py-3 text-sm italic text-foreground/85">
+                    <Quote className="h-4 w-4 shrink-0 text-accent" />
+                    <span>{r.favorite_quote}</span>
+                  </blockquote>
+                )}
               </article>
             ))}
           </div>
@@ -214,24 +237,87 @@ function BookPage() {
   );
 }
 
-function ReviewForm({ bookId, existing }: { bookId: string; existing?: { id: string; rating: number; body: string } }) {
+function RentModal({
+  price, balance, defaultAddress, title, onClose, onConfirm, pending,
+}: {
+  price: number; balance: number; defaultAddress: string; title: string;
+  onClose: () => void; onConfirm: (addr: string) => void; pending: boolean;
+}) {
+  const [address, setAddress] = useState(defaultAddress);
+  const insufficient = balance < price;
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-2xl border border-border bg-popover p-6 shadow-2xl">
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold">Confirm rental</h2>
+            <p className="text-xs text-muted-foreground">{title}</p>
+          </div>
+          <button onClick={onClose} className="cursor-pointer text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+        </div>
+
+        <div className="mb-4 grid grid-cols-2 gap-3 text-sm">
+          <div className="rounded-xl bg-surface/60 p-3">
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Rental fee</div>
+            <div className="text-lg font-bold">₹{price.toFixed(0)}</div>
+          </div>
+          <div className={`rounded-xl p-3 ${insufficient ? "bg-rose-500/15 text-rose-300" : "bg-emerald-500/10 text-emerald-300"}`}>
+            <div className="text-[10px] uppercase tracking-wider opacity-80">Wallet</div>
+            <div className="text-lg font-bold">₹{balance.toFixed(0)}</div>
+          </div>
+        </div>
+
+        <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Delivery address</label>
+        <textarea
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          placeholder="House, street, town, pincode"
+          rows={3}
+          className="w-full rounded-xl border border-border bg-background/60 px-3 py-2.5 text-sm outline-none focus:border-primary"
+        />
+        <p className="mt-1 text-[11px] text-muted-foreground">Saved to your profile so future rentals pre-fill.</p>
+
+        <div className="mt-4 rounded-xl border border-border/60 bg-surface/40 px-3 py-2.5 text-xs text-muted-foreground">
+          Return window: <span className="font-medium text-foreground">20 days</span> from confirmation.
+          You'll see live tracking in your Profile → Active rentals.
+        </div>
+
+        <div className="mt-5 flex gap-2">
+          <button onClick={onClose} className="flex-1 cursor-pointer rounded-xl border border-border px-4 py-2.5 text-sm hover:bg-surface-elevated">Cancel</button>
+          <button
+            onClick={() => onConfirm(address)}
+            disabled={pending || insufficient || !address.trim()}
+            className="flex-1 cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {insufficient ? "Top up wallet first" : pending ? "Confirming…" : `Confirm · ₹${price.toFixed(0)}`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ReviewForm({ bookId, existing }: { bookId: string; existing?: { id: string; rating: number; body: string; favorite_quote?: string | null } }) {
   const upsert = useUpsertReview();
   const del = useDeleteReview();
-  // No pre-filled stars — the user picks their own.
   const [rating, setRating] = useState(existing?.rating ?? 0);
   const [hover, setHover] = useState(0);
   const [body, setBody] = useState(existing?.body ?? "");
+  const [quote, setQuote] = useState(existing?.favorite_quote ?? "");
   const [editing, setEditing] = useState(!existing);
 
   if (existing && !editing) {
     return (
-      <div className="glass-card mb-4 flex items-center gap-3 rounded-2xl p-4">
+      <div className="glass-card mb-4 flex flex-wrap items-center gap-3 rounded-2xl p-4">
         <span className="text-sm">Your review:</span>
         <div className="flex">
           {Array.from({ length: 5 }).map((_, i) => (
             <Star key={i} className={`h-4 w-4 ${i < existing.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
           ))}
         </div>
+        {existing.favorite_quote && (
+          <span className="max-w-xs truncate text-xs italic text-muted-foreground">"{existing.favorite_quote}"</span>
+        )}
         <button onClick={() => setEditing(true)} className="ml-auto inline-flex cursor-pointer items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-surface-elevated">
           <Pencil className="h-3.5 w-3.5" /> Edit
         </button>
@@ -273,11 +359,23 @@ function ReviewForm({ bookId, existing }: { bookId: string; existing?: { id: str
         rows={3}
         className="w-full rounded-xl border border-border bg-background/50 px-4 py-3 text-sm outline-none focus:border-primary"
       />
+      <div className="mt-3">
+        <label className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <Quote className="h-3 w-3 text-accent" /> Favourite quote (optional)
+        </label>
+        <textarea
+          value={quote}
+          onChange={(e) => setQuote(e.target.value)}
+          placeholder="A line from the book that stayed with you…"
+          rows={2}
+          className="w-full rounded-xl border border-border bg-background/50 px-4 py-3 text-sm italic outline-none focus:border-primary"
+        />
+      </div>
       <div className="mt-3 flex gap-2">
         <button
           onClick={() => {
             if (rating === 0) return toast.error("Pick a star rating first");
-            upsert.mutate({ bookId, rating, body: body.trim() }, { onSuccess: () => setEditing(false) });
+            upsert.mutate({ bookId, rating, body: body.trim(), quote: quote.trim() }, { onSuccess: () => setEditing(false) });
           }}
           disabled={upsert.isPending}
           className="cursor-pointer rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
@@ -285,7 +383,7 @@ function ReviewForm({ bookId, existing }: { bookId: string; existing?: { id: str
           {existing ? "Update review" : "Post review"}
         </button>
         {existing && (
-          <button onClick={() => { setEditing(false); setRating(existing.rating); setBody(existing.body); }} className="cursor-pointer rounded-lg border border-border px-4 py-2 text-sm hover:bg-surface-elevated">
+          <button onClick={() => { setEditing(false); setRating(existing.rating); setBody(existing.body); setQuote(existing.favorite_quote ?? ""); }} className="cursor-pointer rounded-lg border border-border px-4 py-2 text-sm hover:bg-surface-elevated">
             Cancel
           </button>
         )}
