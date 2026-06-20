@@ -13,6 +13,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { fetchBooks } from "@/lib/books";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/profile")({
   ssr: false,
@@ -29,6 +31,7 @@ function ProfilePage() {
   const { data: rentals = [] } = useRentals();
   const { data: favorites = [] } = useFavorites();
   const { data: suggestions = [] } = useSuggestions();
+  const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
   const insights = useReadingInsights();
   const dueSoon = useDueSoonRentals();
   const topUp = useTopUpWallet();
@@ -127,6 +130,9 @@ function ProfilePage() {
             <Stat icon={BookMarked} tint="primary" label="Books read"      value={insights.booksRead} sub={`${insights.activeRentals} active right now`} />
             <Stat icon={NotebookPen} tint="accent" label="Diary entries"   value={insights.diaryCount} sub="All-time" />
             <Stat icon={Heart} tint="rose"   label="Loved"           value={favorites.length} sub="Books in your shelf" />
+          </div>
+          <div className="mt-3 rounded-2xl border border-border bg-surface/40 px-4 py-3 text-sm text-muted-foreground">
+            Uploaded catalogue: <span className="font-semibold text-foreground">{books.length.toLocaleString()} books</span> in the selected library.
           </div>
           {(insights.topGenre || insights.topAuthor) && (
             <div className="glass-card mt-4 grid gap-3 rounded-2xl p-5 sm:grid-cols-2">
