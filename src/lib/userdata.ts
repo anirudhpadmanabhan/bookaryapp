@@ -201,9 +201,11 @@ export type Review = {
   user_id: string;
   rating: number;
   body: string;
+  favorite_quote: string | null;
   created_at: string;
   updated_at: string;
 };
+
 
 export function useReviews(bookId: string) {
   return useQuery({
