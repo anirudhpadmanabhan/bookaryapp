@@ -18,16 +18,26 @@ export function useProfile() {
   });
 }
 
-// FAVORITES
+// FAVORITES — deduped at query level so stale duplicate rows can't show twice on Loved.
 export function useFavorites() {
   const { user } = useSession();
   return useQuery({
     enabled: !!user,
     queryKey: ["favorites", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("favorites").select("book_id, created_at");
+      const { data, error } = await supabase
+        .from("favorites")
+        .select("book_id, created_at")
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      return data ?? [];
+      const seen = new Set<string>();
+      const unique: { book_id: string; created_at: string }[] = [];
+      for (const f of data ?? []) {
+        if (seen.has(f.book_id)) continue;
+        seen.add(f.book_id);
+        unique.push(f);
+      }
+      return unique;
     },
   });
 }
@@ -43,7 +53,7 @@ export function useToggleFavorite() {
         if (error) throw error;
       } else {
         const { error } = await supabase.from("favorites").insert({ book_id: bookId, user_id: user.id });
-        if (error) throw error;
+        if (error && !String(error.message).includes("duplicate")) throw error;
       }
     },
     onSuccess: (_d, vars) => {
@@ -77,7 +87,6 @@ export function useRentBook() {
   return useMutation({
     mutationFn: async ({ bookId, price }: { bookId: string; price: number }) => {
       if (!user) throw new Error("Sign in to rent");
-      // Get profile to check balance
       const { data: prof, error: pErr } = await supabase.from("profiles").select("wallet_balance").eq("id", user.id).single();
       if (pErr) throw pErr;
       const balance = Number(prof.wallet_balance);
@@ -105,7 +114,7 @@ export function useDiary() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reading_diary")
-        .select("*, books(title, author, cover_color, title_ml, author_ml, genre_ml, genre)")
+        .select("*, books(id, title, author, cover_color, title_ml, author_ml, genre_ml, genre, shelf_code)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -125,6 +134,102 @@ export function useAddDiary() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["diary"] });
       toast.success("Diary entry saved");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useEditDiary() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, note, progress }: { id: string; note: string; progress: number }) => {
+      const { error } = await supabase.from("reading_diary").update({ note, progress_pct: progress }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["diary"] });
+      toast.success("Entry updated");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useDeleteDiary() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("reading_diary").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["diary"] });
+      toast.success("Entry removed");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+// REVIEWS
+export type Review = {
+  id: string;
+  book_id: string;
+  user_id: string;
+  rating: number;
+  body: string;
+  created_at: string;
+  updated_at: string;
+  reviewer_name?: string;
+};
+
+export function useReviews(bookId: string) {
+  return useQuery({
+    queryKey: ["reviews", bookId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("reviews")
+        .select("*")
+        .eq("book_id", bookId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as Review[];
+    },
+  });
+}
+
+export function useUpsertReview() {
+  const qc = useQueryClient();
+  const { user } = useSession();
+  return useMutation({
+    mutationFn: async ({ bookId, rating, body }: { bookId: string; rating: number; body: string }) => {
+      if (!user) throw new Error("Sign in to write a review");
+      const { error } = await supabase
+        .from("reviews")
+        .upsert(
+          { book_id: bookId, user_id: user.id, rating, body },
+          { onConflict: "book_id,user_id" },
+        );
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["reviews", vars.bookId] });
+      toast.success("Review saved");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useDeleteReview() {
+  const qc = useQueryClient();
+  const { user } = useSession();
+  return useMutation({
+    mutationFn: async ({ bookId }: { bookId: string }) => {
+      if (!user) throw new Error("Sign in");
+      const { error } = await supabase.from("reviews").delete().eq("book_id", bookId).eq("user_id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["reviews", vars.bookId] });
+      toast.success("Review removed");
     },
     onError: (e: Error) => toast.error(e.message),
   });
