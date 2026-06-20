@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getSelectedLibraryId } from "@/lib/library";
 
 export type Book = {
   id: string;
@@ -68,14 +69,17 @@ export function sortBooks(books: Book[], sort: BookSort): Book[] {
 }
 
 export async function fetchBooks(): Promise<Book[]> {
+  const libraryId = getSelectedLibraryId();
   const pageSize = 1000;
   const all: Book[] = [];
   for (let from = 0; ; from += pageSize) {
-    const { data, error } = await supabase
+    let q = supabase
       .from("books")
       .select("*")
       .order("created_at", { ascending: false })
       .range(from, from + pageSize - 1);
+    if (libraryId) q = q.eq("library_id", libraryId);
+    const { data, error } = await q;
     if (error) throw error;
     const rows = (data ?? []) as Book[];
     all.push(...rows);
@@ -94,10 +98,10 @@ export async function fetchBook(id: string): Promise<Book | null> {
 export const NEW_ARRIVAL_SHELF_CODES = ["4556", "4586", "4616", "4615", "4499"];
 
 export async function fetchNewArrivals(): Promise<Book[]> {
-  const { data, error } = await supabase
-    .from("books")
-    .select("*")
-    .in("shelf_code", NEW_ARRIVAL_SHELF_CODES);
+  const libraryId = getSelectedLibraryId();
+  let q = supabase.from("books").select("*").in("shelf_code", NEW_ARRIVAL_SHELF_CODES);
+  if (libraryId) q = q.eq("library_id", libraryId);
+  const { data, error } = await q;
   if (error) throw error;
   const list = (data ?? []) as Book[];
   // Preserve the order defined in NEW_ARRIVAL_SHELF_CODES.
