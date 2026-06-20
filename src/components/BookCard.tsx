@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Heart, Star, MapPin, LogIn } from "lucide-react";
-import type { Book } from "@/lib/books";
+import { displayRating, genreEnglish, type Book } from "@/lib/books";
 import { BookCover } from "./BookCover";
 import { useFavorites, useToggleFavorite } from "@/lib/userdata";
 import { useSession } from "@/lib/auth";
@@ -50,7 +50,7 @@ export function BookCard({ book, minimal = false, coverColor, hideShelf = true }
             ) : null}
             <div className="absolute left-2.5 top-2.5 z-10 chip">
               <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-              <span className="text-white">{Number(book.rating).toFixed(1)}</span>
+              <span className="text-white">{displayRating(book).toFixed(1)}</span>
             </div>
             {!hideShelf && book.shelf_code && (
               <div className="absolute bottom-2.5 right-2.5 z-10 chip">
@@ -62,7 +62,7 @@ export function BookCard({ book, minimal = false, coverColor, hideShelf = true }
         )}
       </div>
       <div className="flex flex-1 flex-col gap-1 px-3 py-2.5">
-        <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{book.genre}</div>
+        <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{genreEnglish(book)}</div>
         <h3 className="line-clamp-1 text-xs font-semibold text-foreground group-hover:text-primary">{book.title}</h3>
         <p className="line-clamp-1 text-[11px] text-muted-foreground">by {book.author}</p>
         <div className="mt-2">
@@ -86,7 +86,7 @@ export function BookCard({ book, minimal = false, coverColor, hideShelf = true }
   );
 }
 
-export function BookRow({ book }: { book: Book }) {
+export function BookRow({ book, hideShelf = false }: { book: Book; hideShelf?: boolean }) {
   const { user } = useSession();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { data: favorites } = useFavorites();
@@ -105,11 +105,11 @@ export function BookRow({ book }: { book: Book }) {
           </div>
         </Link>
         <p className="truncate text-xs text-muted-foreground">
-          {book.author} · {book.genre}
+          {book.author} · {genreEnglish(book)}
           {book.publisher && ` · ${book.publisher}`}
         </p>
       </div>
-      {book.shelf_code && (
+      {!hideShelf && book.shelf_code && (
         <span className="hidden items-center gap-1 rounded-full bg-surface px-2.5 py-1 text-[11px] text-muted-foreground sm:inline-flex">
           <MapPin className="h-3 w-3" /> {book.shelf_code}
         </span>
