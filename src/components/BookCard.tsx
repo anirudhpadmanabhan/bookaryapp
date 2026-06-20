@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Heart, Star, MapPin, LogIn } from "lucide-react";
+import { Heart, Star, MapPin } from "lucide-react";
 import { displayRating, genreEnglish, type Book } from "@/lib/books";
 import { BookCover } from "./BookCover";
 import { useFavorites, useToggleFavorite } from "@/lib/userdata";
@@ -71,14 +71,9 @@ export function BookCard({ book, minimal = false, coverColor, hideShelf = true }
               View &amp; Rent
             </span>
           ) : (
-            <Link
-              to="/auth"
-              search={{ redirect: pathname }}
-              onClick={(e) => e.stopPropagation()}
-              className="inline-flex w-full cursor-pointer items-center justify-center gap-1 rounded-md border border-border bg-background/40 px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground hover:border-primary/50 hover:text-primary"
-            >
-              <LogIn className="h-3 w-3" /> Sign in to rent
-            </Link>
+            <span className="inline-flex w-full items-center justify-center rounded-md border border-border bg-background/40 px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground group-hover:border-primary/50 group-hover:text-primary">
+              View details
+            </span>
           )}
         </div>
       </div>
