@@ -1,0 +1,149 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-malayalam: var(--malayalam);
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-serif: "Noto Serif Malayalam", "Manjari", serif;
+}
+
+:root {
+  --radius: 0.875rem;
+
+  /* Deep midnight indigo base, inspired by the Bookary look */
+  --background: oklch(0.16 0.04 280);
+  --foreground: oklch(0.96 0.01 280);
+
+  --surface: oklch(0.21 0.05 280);
+  --surface-elevated: oklch(0.26 0.06 280);
+
+  --card: oklch(0.21 0.05 280);
+  --card-foreground: oklch(0.96 0.01 280);
+  --popover: oklch(0.22 0.05 280);
+  --popover-foreground: oklch(0.96 0.01 280);
+
+  --primary: oklch(0.66 0.21 285);
+  --primary-foreground: oklch(0.99 0 0);
+
+  --secondary: oklch(0.28 0.06 280);
+  --secondary-foreground: oklch(0.96 0.01 280);
+
+  --muted: oklch(0.26 0.04 280);
+  --muted-foreground: oklch(0.72 0.03 280);
+
+  --accent: oklch(0.7 0.18 50);            /* warm amber accent */
+  --accent-foreground: oklch(0.18 0.04 50);
+
+  --malayalam: oklch(0.82 0.13 75);        /* gold for Malayalam script */
+
+  --destructive: oklch(0.62 0.24 27);
+  --destructive-foreground: oklch(0.99 0 0);
+
+  --border: oklch(0.32 0.04 280 / 60%);
+  --input: oklch(0.3 0.04 280);
+  --ring: oklch(0.66 0.21 285);
+}
+
+.dark { /* same — app is dark by default */
+  --background: oklch(0.16 0.04 280);
+  --foreground: oklch(0.96 0.01 280);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html, body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    background-image:
+      radial-gradient(60rem 40rem at 10% -10%, oklch(0.34 0.13 290 / 35%), transparent 60%),
+      radial-gradient(50rem 35rem at 110% 10%, oklch(0.4 0.13 30 / 18%), transparent 60%);
+    background-attachment: fixed;
+  }
+
+  .font-mal {
+    font-family: var(--font-serif);
+    font-feature-settings: "ss01";
+  }
+}
+
+/* Book cover gradient palettes */
+@layer components {
+  .cover { @apply relative overflow-hidden rounded-xl flex flex-col justify-between p-5 text-white shadow-lg; aspect-ratio: 2 / 3; }
+  .cover-violet   { background: linear-gradient(155deg, #4c1d95, #1e1b4b 60%, #0b0a1f); }
+  .cover-midnight { background: linear-gradient(160deg, #1e1b4b, #0c1024 70%); }
+  .cover-plum     { background: linear-gradient(160deg, #4a044e, #1f0a23 80%); }
+  .cover-rust     { background: linear-gradient(160deg, #9a3412, #3a1208 80%); }
+  .cover-teal     { background: linear-gradient(160deg, #134e4a, #042f2e 80%); }
+  .cover-forest   { background: linear-gradient(160deg, #14532d, #052016 80%); }
+  .cover-oxblood  { background: linear-gradient(160deg, #7f1d1d, #1f0606 80%); }
+  .cover-amber    { background: linear-gradient(160deg, #b45309, #3b1d04 80%); }
+  .cover-crimson  { background: linear-gradient(160deg, #9f1239, #2a0612 80%); }
+  .cover-butter   { background: linear-gradient(160deg, #ca8a04, #3b2a04 80%); }
+  .cover-rose     { background: linear-gradient(160deg, #be185d, #2a061a 80%); }
+  .cover-wine     { background: linear-gradient(160deg, #6b21a8, #1f0838 80%); }
+  .cover-sage     { background: linear-gradient(160deg, #4d7c0f, #1c2a08 80%); }
+  .cover-fog      { background: linear-gradient(160deg, #475569, #0f172a 80%); }
+  .cover-cobalt   { background: linear-gradient(160deg, #1e40af, #0b1733 80%); }
+  .cover-gold     { background: linear-gradient(160deg, #a16207, #2b1a04 80%); }
+  .cover-stone    { background: linear-gradient(160deg, #44403c, #0f0d0c 80%); }
+  .cover-indigo   { background: linear-gradient(160deg, #4338ca, #110f33 80%); }
+
+  .cover::after {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(120% 80% at 50% -10%, rgba(255,255,255,0.18), transparent 50%),
+      linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.35));
+    pointer-events: none;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[11px] uppercase tracking-wider text-white/80 backdrop-blur;
+  }
+
+  .glass-card {
+    background: linear-gradient(180deg, oklch(0.24 0.05 280 / 80%), oklch(0.2 0.05 280 / 80%));
+    border: 1px solid oklch(0.32 0.04 280 / 50%);
+    backdrop-filter: blur(8px);
+  }
+}
