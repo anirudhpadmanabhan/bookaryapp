@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
 import { fetchBooks } from "@/lib/books";
-import { BookCard } from "@/components/BookCard";
+import { BooksGrid } from "@/components/BooksGrid";
 import { useFavorites } from "@/lib/userdata";
 import { useSession } from "@/lib/auth";
 import { Heart } from "lucide-react";
@@ -21,7 +21,8 @@ function LovedPage() {
   const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
   const { data: favorites = [] } = useFavorites();
   const favIds = new Set(favorites.map((f) => f.book_id));
-  const loved = books.filter((b) => favIds.has(b.id));
+  // Dedup by id (in addition to the hook-level dedup) — guards against any stale rows.
+  const loved = books.filter((b, i, arr) => favIds.has(b.id) && arr.findIndex((x) => x.id === b.id) === i);
 
   return (
     <AppLayout>
@@ -33,12 +34,10 @@ function LovedPage() {
       {loved.length === 0 ? (
         <div className="glass-card rounded-2xl p-10 text-center">
           <p className="text-muted-foreground">No favourites yet. Tap the heart on any book to save it here.</p>
-          <Link to="/" className="mt-4 inline-block rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground">Browse books</Link>
+          <Link to="/" className="mt-4 inline-block cursor-pointer rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground">Browse books</Link>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-          {loved.map((b) => <BookCard key={b.id} book={b} minimal />)}
-        </div>
+        <BooksGrid books={loved} />
       )}
     </AppLayout>
   );

@@ -55,11 +55,14 @@ export type Database = {
           genre: string
           genre_ml: string | null
           id: string
+          language: string | null
+          original_author: string | null
           pages: number | null
           published_year: number | null
           publisher: string | null
           rating: number
           rent_price: number
+          shelf_code: string | null
           title: string
           title_ml: string | null
         }
@@ -73,11 +76,14 @@ export type Database = {
           genre: string
           genre_ml?: string | null
           id?: string
+          language?: string | null
+          original_author?: string | null
           pages?: number | null
           published_year?: number | null
           publisher?: string | null
           rating?: number
           rent_price?: number
+          shelf_code?: string | null
           title: string
           title_ml?: string | null
         }
@@ -91,11 +97,14 @@ export type Database = {
           genre?: string
           genre_ml?: string | null
           id?: string
+          language?: string | null
+          original_author?: string | null
           pages?: number | null
           published_year?: number | null
           publisher?: string | null
           rating?: number
           rent_price?: number
+          shelf_code?: string | null
           title?: string
           title_ml?: string | null
         }
@@ -161,6 +170,7 @@ export type Database = {
           id: string
           note: string
           progress_pct: number
+          updated_at: string
           user_id: string
         }
         Insert: {
@@ -169,6 +179,7 @@ export type Database = {
           id?: string
           note: string
           progress_pct?: number
+          updated_at?: string
           user_id: string
         }
         Update: {
@@ -177,6 +188,7 @@ export type Database = {
           id?: string
           note?: string
           progress_pct?: number
+          updated_at?: string
           user_id?: string
         }
         Relationships: [
@@ -220,6 +232,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "rentals_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reviews: {
+        Row: {
+          body: string
+          book_id: string
+          created_at: string
+          id: string
+          rating: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body?: string
+          book_id: string
+          created_at?: string
+          id?: string
+          rating: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          book_id?: string
+          created_at?: string
+          id?: string
+          rating?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_book_id_fkey"
             columns: ["book_id"]
             isOneToOne: false
             referencedRelation: "books"

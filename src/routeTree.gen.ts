@@ -17,6 +17,8 @@ import { Route as GenresRouteImport } from './routes/genres'
 import { Route as DiaryRouteImport } from './routes/diary'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as WritersSlugRouteImport } from './routes/writers.$slug'
+import { Route as GenresSlugRouteImport } from './routes/genres.$slug'
 import { Route as BooksIdRouteImport } from './routes/books.$id'
 
 const WritersRoute = WritersRouteImport.update({
@@ -59,6 +61,16 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WritersSlugRoute = WritersSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => WritersRoute,
+} as any)
+const GenresSlugRoute = GenresSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => GenresRoute,
+} as any)
 const BooksIdRoute = BooksIdRouteImport.update({
   id: '/books/$id',
   path: '/books/$id',
@@ -69,35 +81,41 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/diary': typeof DiaryRoute
-  '/genres': typeof GenresRoute
+  '/genres': typeof GenresRouteWithChildren
   '/loved': typeof LovedRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
-  '/writers': typeof WritersRoute
+  '/writers': typeof WritersRouteWithChildren
   '/books/$id': typeof BooksIdRoute
+  '/genres/$slug': typeof GenresSlugRoute
+  '/writers/$slug': typeof WritersSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/diary': typeof DiaryRoute
-  '/genres': typeof GenresRoute
+  '/genres': typeof GenresRouteWithChildren
   '/loved': typeof LovedRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
-  '/writers': typeof WritersRoute
+  '/writers': typeof WritersRouteWithChildren
   '/books/$id': typeof BooksIdRoute
+  '/genres/$slug': typeof GenresSlugRoute
+  '/writers/$slug': typeof WritersSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/diary': typeof DiaryRoute
-  '/genres': typeof GenresRoute
+  '/genres': typeof GenresRouteWithChildren
   '/loved': typeof LovedRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
-  '/writers': typeof WritersRoute
+  '/writers': typeof WritersRouteWithChildren
   '/books/$id': typeof BooksIdRoute
+  '/genres/$slug': typeof GenresSlugRoute
+  '/writers/$slug': typeof WritersSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -111,6 +129,8 @@ export interface FileRouteTypes {
     | '/search'
     | '/writers'
     | '/books/$id'
+    | '/genres/$slug'
+    | '/writers/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -122,6 +142,8 @@ export interface FileRouteTypes {
     | '/search'
     | '/writers'
     | '/books/$id'
+    | '/genres/$slug'
+    | '/writers/$slug'
   id:
     | '__root__'
     | '/'
@@ -133,17 +155,19 @@ export interface FileRouteTypes {
     | '/search'
     | '/writers'
     | '/books/$id'
+    | '/genres/$slug'
+    | '/writers/$slug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   DiaryRoute: typeof DiaryRoute
-  GenresRoute: typeof GenresRoute
+  GenresRoute: typeof GenresRouteWithChildren
   LovedRoute: typeof LovedRoute
   ProfileRoute: typeof ProfileRoute
   SearchRoute: typeof SearchRoute
-  WritersRoute: typeof WritersRoute
+  WritersRoute: typeof WritersRouteWithChildren
   BooksIdRoute: typeof BooksIdRoute
 }
 
@@ -205,6 +229,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/writers/$slug': {
+      id: '/writers/$slug'
+      path: '/$slug'
+      fullPath: '/writers/$slug'
+      preLoaderRoute: typeof WritersSlugRouteImport
+      parentRoute: typeof WritersRoute
+    }
+    '/genres/$slug': {
+      id: '/genres/$slug'
+      path: '/$slug'
+      fullPath: '/genres/$slug'
+      preLoaderRoute: typeof GenresSlugRouteImport
+      parentRoute: typeof GenresRoute
+    }
     '/books/$id': {
       id: '/books/$id'
       path: '/books/$id'
@@ -215,27 +253,39 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface GenresRouteChildren {
+  GenresSlugRoute: typeof GenresSlugRoute
+}
+
+const GenresRouteChildren: GenresRouteChildren = {
+  GenresSlugRoute: GenresSlugRoute,
+}
+
+const GenresRouteWithChildren =
+  GenresRoute._addFileChildren(GenresRouteChildren)
+
+interface WritersRouteChildren {
+  WritersSlugRoute: typeof WritersSlugRoute
+}
+
+const WritersRouteChildren: WritersRouteChildren = {
+  WritersSlugRoute: WritersSlugRoute,
+}
+
+const WritersRouteWithChildren =
+  WritersRoute._addFileChildren(WritersRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   DiaryRoute: DiaryRoute,
-  GenresRoute: GenresRoute,
+  GenresRoute: GenresRouteWithChildren,
   LovedRoute: LovedRoute,
   ProfileRoute: ProfileRoute,
   SearchRoute: SearchRoute,
-  WritersRoute: WritersRoute,
+  WritersRoute: WritersRouteWithChildren,
   BooksIdRoute: BooksIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

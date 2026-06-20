@@ -6,6 +6,7 @@ export type Book = {
   title_ml: string | null;
   author: string;
   author_ml: string | null;
+  original_author: string | null;
   genre: string;
   genre_ml: string | null;
   rating: number;
@@ -15,20 +16,57 @@ export type Book = {
   pages: number | null;
   published_year: number | null;
   publisher: string | null;
+  shelf_code: string | null;
+  language: string | null;
+  cover_url: string | null;
+  created_at?: string;
 };
 
-// Wide palette for visual variety — bg uses deep indigo, none of these match.
+// Reordered for maximum visual contrast between neighbours — warms and cools alternated,
+// so position-based assignment in grids never lands 3 similar covers in a row.
 export const COVER_PALETTE = [
-  "plum","teal","rose","amber","emerald","sienna","sapphire",
-  "violet","rust","forest","oxblood","crimson","butter","wine",
-  "sage","fog","cobalt","gold","stone",
+  "amber","teal","rose","forest","gold","cobalt","crimson","sage",
+  "butter","plum","sienna","sapphire","rust","emerald","wine","fog",
+  "violet","oxblood","stone",
 ] as const;
 
-// Stable hash → palette index, so each book always gets the same color.
+// Stable hash → palette index (used when no position is available).
 export function colorForBook(id: string): string {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
   return COVER_PALETTE[h % COVER_PALETTE.length];
+}
+
+// Position-based palette walk that guarantees no two adjacent picks repeat.
+export function colorAt(index: number): string {
+  // Coprime stride keeps spread even.
+  return COVER_PALETTE[(index * 5) % COVER_PALETTE.length];
+}
+
+export type BookSort = "newest" | "title" | "rating" | "price-asc" | "price-desc" | "shelf";
+
+export function sortBooks(books: Book[], sort: BookSort): Book[] {
+  const arr = [...books];
+  switch (sort) {
+    case "title":
+      return arr.sort((a, b) => a.title.localeCompare(b.title));
+    case "rating":
+      return arr.sort((a, b) => Number(b.rating) - Number(a.rating));
+    case "price-asc":
+      return arr.sort((a, b) => Number(a.rent_price) - Number(b.rent_price));
+    case "price-desc":
+      return arr.sort((a, b) => Number(b.rent_price) - Number(a.rent_price));
+    case "shelf":
+      return arr.sort((a, b) => {
+        const sa = Number(a.shelf_code ?? Infinity);
+        const sb = Number(b.shelf_code ?? Infinity);
+        if (!Number.isNaN(sa) && !Number.isNaN(sb) && sa !== sb) return sa - sb;
+        return (a.shelf_code ?? "").localeCompare(b.shelf_code ?? "");
+      });
+    case "newest":
+    default:
+      return arr; // already created_at desc from query
+  }
 }
 
 export async function fetchBooks(): Promise<Book[]> {
@@ -58,5 +96,13 @@ export function synopsisFor(book: Pick<Book, "description" | "title" | "title_ml
   if (book.description && book.description.trim().length > 0) return book.description;
   const ml = book.title_ml ? ` (${book.title_ml})` : "";
   const g = book.genre_ml ? `${book.genre} / ${book.genre_ml}` : book.genre;
-  return `${book.title}${ml} is a celebrated ${g.toLowerCase()} work by ${book.author}. A treasured addition to the Bookary catalog — rent it to read the full text and add your reflections to your reading diary.`;
+  return `${book.title}${ml} is a ${g.toLowerCase()} work by ${book.author}, part of the Cherukad Smaraka Vayanasala collection.`;
+}
+
+// Slugify (used for /genres/$slug and /writers/$slug routes).
+export function slugify(value: string): string {
+  return encodeURIComponent(value.trim().toLowerCase().replace(/\s+/g, "-"));
+}
+export function unslug(value: string): string {
+  return decodeURIComponent(value).replace(/-/g, " ");
 }
