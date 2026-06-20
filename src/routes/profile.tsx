@@ -149,8 +149,12 @@ function ProfilePage() {
               const msLeft = dueDate.getTime() - Date.now();
               const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
               const overdue = msLeft < 0;
+              const status = r.tracking_status ?? "confirmed";
+              const statusLabel: Record<string, string> = {
+                confirmed: "Confirmed", packed: "Packed", out_for_delivery: "Out for delivery", delivered: "Delivered",
+              };
               return (
-                <div key={r.id} className="glass-card flex flex-wrap items-center gap-4 rounded-2xl p-4">
+                <div key={r.id} className="glass-card flex flex-wrap items-start gap-4 rounded-2xl p-4">
                   <div className={`cover cover-${r.books?.cover_color || "amber"} h-20 w-14 flex-shrink-0 !aspect-auto !p-2`}>
                     <span className="font-mal text-[8px] text-white/90">{r.books?.title_ml}</span>
                   </div>
@@ -168,11 +172,20 @@ function ProfilePage() {
                       </span>
                       <span className="text-muted-foreground">· Paid ₹{r.price_paid}</span>
                     </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-primary">
+                        📦 {statusLabel[status] ?? status}
+                      </span>
+                      {r.delivery_address && (
+                        <span className="text-muted-foreground">→ {r.delivery_address}</span>
+                      )}
+                    </div>
                   </div>
                   <button type="button" onClick={() => returnBook(r.id)} className="cursor-pointer rounded-lg bg-surface-elevated px-3 py-1.5 text-sm hover:bg-primary/20 hover:text-primary">Return</button>
                 </div>
               );
             })}
+
           </div>
         )}
       </section>
