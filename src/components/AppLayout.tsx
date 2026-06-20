@@ -181,15 +181,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   <LogOut className="h-4 w-4" />
                 </button>
               </>
-            ) : (
-              <Link
-                to="/auth"
-                search={{ redirect: pathname }}
-                className="cursor-pointer rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
-              >
-                Sign in
-              </Link>
-            )}
+            ) : null /* Sign-in CTA hidden while the platform is still being built. */}
           </div>
         </div>
       </header>
@@ -248,12 +240,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </aside>
 
         <main className="min-w-0 flex-1">
-          {!user && (
-            <div className="mb-5 flex items-center gap-3 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-              <Hand className="h-4 w-4" />
-              <span>You're browsing as a guest. <Link to="/auth" search={{ redirect: pathname }} className="cursor-pointer underline underline-offset-2">Sign in</Link> to rent, love and keep a reading diary.</span>
-            </div>
-          )}
           {children}
         </main>
       </div>
