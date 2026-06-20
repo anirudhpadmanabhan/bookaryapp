@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
-import { fetchBooks, fetchNewArrivals, sortBooks, type BookSort, slugify } from "@/lib/books";
+import { fetchBooks, fetchNewArrivals, genreEnglish, genreMalayalam, sortBooks, type BookSort, slugify } from "@/lib/books";
 import { BooksGrid, type ViewMode } from "@/components/BooksGrid";
 import { BookCard } from "@/components/BookCard";
 import { colorAt } from "@/lib/books";
@@ -33,11 +33,11 @@ function HomePage() {
   const shown = sorted.slice(0, HOME_LIMIT);
 
   const genres = useMemo(() => {
-    const map = new Map<string, { count: number; ml: string | null }>();
+    const map = new Map<string, { count: number; ml: string | null; en: string }>();
     for (const b of books) {
       const cur = map.get(b.genre);
       if (cur) cur.count++;
-      else map.set(b.genre, { count: 1, ml: b.genre_ml });
+      else map.set(b.genre, { count: 1, ml: genreMalayalam(b), en: genreEnglish(b) });
     }
     return Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count);
   }, [books]);
@@ -56,7 +56,7 @@ function HomePage() {
             <span className="font-mal text-accent">ചെറുകാട്</span> reading library — every book on every rack.
           </h1>
           <p className="mt-4 text-base text-foreground/80 md:text-lg">
-            {books.length.toLocaleString()} titles across {genres.length} genres, all browsable by shelf code.
+            Uploaded catalogue: {books.length.toLocaleString()} books across {genres.length} genres.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link to="/search" className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90">
@@ -111,7 +111,7 @@ function HomePage() {
                 params={{ slug: slugify(g) }}
                 className="cursor-pointer rounded-full border border-border bg-surface/60 px-3 py-1.5 text-xs hover:border-primary/60 hover:text-primary"
               >
-                {info.ml ?? g} <span className="text-muted-foreground">· {info.count}</span>
+                {info.en}{info.ml ? ` / ${info.ml}` : ""} <span className="text-muted-foreground">· {info.count}</span>
               </Link>
             ))}
             <Link to="/genres" className="cursor-pointer rounded-full bg-primary/15 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/25">
@@ -150,7 +150,7 @@ function HomePage() {
             ))}
           </div>
         ) : (
-          <BooksGrid books={shown} view={view} />
+          <BooksGrid books={shown} view={view} hideShelf />
         )}
       </section>
     </AppLayout>
