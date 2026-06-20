@@ -3,11 +3,17 @@ import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
 import { fetchBook, synopsisFor } from "@/lib/books";
 import { BookCover } from "@/components/BookCover";
-import { Heart, Star, BookOpen, Calendar, Coins, ArrowLeft, NotebookPen, Building2 } from "lucide-react";
-import { useFavorites, useRentals, useRentBook, useToggleFavorite, useAddDiary } from "@/lib/userdata";
+import {
+  Heart, Star, BookOpen, Calendar, Coins, ArrowLeft, NotebookPen,
+  Building2, MapPin, Globe, User as UserIcon, MessageSquare, Trash2, Pencil,
+} from "lucide-react";
+import {
+  useFavorites, useRentals, useRentBook, useToggleFavorite, useAddDiary,
+  useReviews, useUpsertReview, useDeleteReview,
+} from "@/lib/userdata";
 import { useSession } from "@/lib/auth";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 export const Route = createFileRoute("/books/$id")({
   ssr: false,
@@ -21,17 +27,29 @@ function BookPage() {
   const { data: book, isLoading } = useQuery({ queryKey: ["book", id], queryFn: () => fetchBook(id) });
   const { data: favorites } = useFavorites();
   const { data: rentals } = useRentals();
+  const { data: reviews = [] } = useReviews(id);
   const rent = useRentBook();
   const toggle = useToggleFavorite();
   const addDiary = useAddDiary();
   const [note, setNote] = useState("");
   const [progress, setProgress] = useState(10);
 
+  const avgRating = useMemo(() => {
+    if (!reviews.length) return null;
+    return reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
+  }, [reviews]);
+
   if (isLoading) return <AppLayout><div className="h-64 animate-pulse rounded-2xl bg-surface" /></AppLayout>;
   if (!book) return <AppLayout><p>Book not found.</p></AppLayout>;
 
   const isFav = !!favorites?.some((f) => f.book_id === book.id);
   const activeRental = rentals?.find((r) => r.book_id === book.id && !r.returned_at);
+  const displayRating = avgRating ?? Number(book.rating);
+
+  const submitDiary = () => {
+    if (!note.trim()) return toast.error("Write something");
+    addDiary.mutate({ bookId: book.id, note: note.trim(), progress }, { onSuccess: () => setNote("") });
+  };
 
   return (
     <AppLayout>
@@ -40,26 +58,48 @@ function BookPage() {
       </button>
       <div className="grid gap-8 md:grid-cols-[280px_1fr]">
         <div className="max-w-[280px]">
-          <BookCover book={book} />
+          {book.cover_url ? (
+            <img src={book.cover_url} alt={book.title} className="w-full rounded-xl shadow-lg" />
+          ) : (
+            <BookCover book={book} />
+          )}
+          {book.shelf_code && (
+            <div className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-surface px-4 py-2.5 text-sm">
+              <MapPin className="h-4 w-4 text-primary" />
+              <span className="font-medium">Rack #{book.shelf_code}</span>
+            </div>
+          )}
         </div>
-        <div>
-          <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
-            {book.genre} · <span className="font-mal text-accent">{book.genre_ml}</span>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+            {book.genre} {book.genre_ml && <>· <span className="font-mal text-accent">{book.genre_ml}</span></>}
           </div>
           <h1 className="mt-1 text-3xl font-bold md:text-4xl">{book.title}</h1>
-          <p className="font-mal mt-1 text-xl text-accent">{book.title_ml}</p>
-          <p className="mt-3 text-muted-foreground">by <span className="font-medium text-foreground">{book.author}</span> · <span className="font-mal">{book.author_ml}</span></p>
+          {book.title_ml && <p className="font-mal mt-1 text-xl text-accent">{book.title_ml}</p>}
+          <p className="mt-3 text-muted-foreground">
+            by <span className="font-medium text-foreground">{book.author}</span>
+            {book.author_ml && <> · <span className="font-mal">{book.author_ml}</span></>}
+          </p>
+          {book.original_author && book.original_author !== book.author_ml && (
+            <p className="mt-1 text-xs text-muted-foreground">Original author: <span className="font-mal">{book.original_author}</span></p>
+          )}
 
-          <div className="mt-5 flex flex-wrap gap-3 text-sm">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-3 py-1.5 text-amber-300"><Star className="h-3.5 w-3.5 fill-amber-300" />{Number(book.rating).toFixed(1)} rating</span>
+          <div className="mt-5 flex flex-wrap gap-2 text-sm">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-3 py-1.5 text-amber-300">
+              <Star className="h-3.5 w-3.5 fill-amber-300" />
+              {displayRating.toFixed(1)}
+              {reviews.length > 0 && <span className="text-xs text-amber-200/70">· {reviews.length} review{reviews.length !== 1 && "s"}</span>}
+            </span>
+            {book.shelf_code && <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-3 py-1.5 text-primary"><MapPin className="h-3.5 w-3.5" />Rack {book.shelf_code}</span>}
             {book.pages && <span className="inline-flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5"><BookOpen className="h-3.5 w-3.5" />{book.pages} pages</span>}
             {book.published_year && <span className="inline-flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5"><Calendar className="h-3.5 w-3.5" />{book.published_year}</span>}
             {book.publisher && <span className="inline-flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5"><Building2 className="h-3.5 w-3.5" />{book.publisher}</span>}
+            {book.language && <span className="inline-flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5"><Globe className="h-3.5 w-3.5" />{book.language}</span>}
             <span className="inline-flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5"><Coins className="h-3.5 w-3.5" />₹{book.rent_price} / 20 days</span>
           </div>
 
           <div className="mt-6">
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Synopsis</h2>
+            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">About</h2>
             <p className="text-base leading-relaxed text-foreground/80">{synopsisFor(book)}</p>
           </div>
 
@@ -96,16 +136,18 @@ function BookPage() {
               <textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="What struck you on the page today?"
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitDiary(); } }}
+                placeholder="What struck you on the page today? (Enter to save, Shift+Enter for newline)"
                 rows={3}
                 className="w-full rounded-xl border border-border bg-background/50 px-4 py-3 text-sm outline-none focus:border-primary"
               />
-              <div className="mt-3 flex items-center gap-3">
+              <div className="mt-3 flex flex-wrap items-center gap-3">
                 <label className="text-xs text-muted-foreground">Progress {progress}%</label>
-                <input type="range" min={0} max={100} value={progress} onChange={(e) => setProgress(Number(e.target.value))} className="flex-1 accent-[var(--primary)]" />
+                <input type="range" min={0} max={100} value={progress} onChange={(e) => setProgress(Number(e.target.value))} className="flex-1 cursor-pointer accent-[var(--primary)]" />
                 <button
-                  onClick={() => { if (!note.trim()) return toast.error("Write something"); addDiary.mutate({ bookId: book.id, note, progress }); setNote(""); }}
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+                  onClick={submitDiary}
+                  disabled={addDiary.isPending}
+                  className="cursor-pointer rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
                 >
                   Save entry
                 </button>
@@ -115,11 +157,115 @@ function BookPage() {
 
           {!user && (
             <div className="mt-6 rounded-xl border border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-200">
-              <Link to="/auth" className="font-semibold underline underline-offset-2">Sign in</Link> to rent this book, save it to Loved, and start a reading diary.
+              <Link to="/auth" className="cursor-pointer font-semibold underline underline-offset-2">Sign in</Link> to rent this book, save it to Loved, leave a review, and start a reading diary.
             </div>
           )}
         </div>
       </div>
+
+      {/* Reviews section */}
+      <section className="mt-12">
+        <div className="mb-4 flex items-center gap-3">
+          <MessageSquare className="h-5 w-5 text-accent" />
+          <h2 className="text-xl font-bold">Reviews</h2>
+          <span className="text-sm text-muted-foreground">({reviews.length})</span>
+        </div>
+        {user && <ReviewForm bookId={book.id} existing={reviews.find((r) => r.user_id === user.id)} />}
+        {reviews.length === 0 ? (
+          <p className="glass-card rounded-2xl p-6 text-center text-sm text-muted-foreground">
+            No reviews yet. {user ? "Be the first to share what you thought." : "Sign in to leave the first review."}
+          </p>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {reviews.map((r) => (
+              <article key={r.id} className="glass-card rounded-2xl p-5">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-primary to-accent text-xs font-bold text-white">
+                      <UserIcon className="h-3.5 w-3.5" />
+                    </div>
+                    <span className="text-sm font-medium">{r.user_id === user?.id ? "You" : "Reader"}</span>
+                    <span className="text-xs text-muted-foreground">· {new Date(r.created_at).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} className={`h-4 w-4 ${i < r.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
+                    ))}
+                  </div>
+                </div>
+                {r.body && <p className="text-sm text-foreground/85">{r.body}</p>}
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
     </AppLayout>
+  );
+}
+
+function ReviewForm({ bookId, existing }: { bookId: string; existing?: { id: string; rating: number; body: string } }) {
+  const upsert = useUpsertReview();
+  const del = useDeleteReview();
+  const [rating, setRating] = useState(existing?.rating ?? 5);
+  const [body, setBody] = useState(existing?.body ?? "");
+  const [editing, setEditing] = useState(!existing);
+
+  if (existing && !editing) {
+    return (
+      <div className="glass-card mb-4 flex items-center gap-3 rounded-2xl p-4">
+        <span className="text-sm">Your review:</span>
+        <div className="flex">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Star key={i} className={`h-4 w-4 ${i < existing.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
+          ))}
+        </div>
+        <button onClick={() => setEditing(true)} className="ml-auto inline-flex cursor-pointer items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-surface-elevated">
+          <Pencil className="h-3.5 w-3.5" /> Edit
+        </button>
+        <button onClick={() => del.mutate({ bookId })} className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-rose-500/40 px-3 py-1.5 text-xs text-rose-300 hover:bg-rose-500/10">
+          <Trash2 className="h-3.5 w-3.5" /> Delete
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="glass-card mb-4 rounded-2xl p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <span className="text-sm font-medium">Your rating:</span>
+        {Array.from({ length: 5 }).map((_, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => setRating(i + 1)}
+            className="cursor-pointer"
+            aria-label={`${i + 1} stars`}
+          >
+            <Star className={`h-5 w-5 ${i < rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/40 hover:text-amber-200"}`} />
+          </button>
+        ))}
+      </div>
+      <textarea
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        placeholder="Share your thoughts (optional)…"
+        rows={3}
+        className="w-full rounded-xl border border-border bg-background/50 px-4 py-3 text-sm outline-none focus:border-primary"
+      />
+      <div className="mt-3 flex gap-2">
+        <button
+          onClick={() => upsert.mutate({ bookId, rating, body: body.trim() }, { onSuccess: () => setEditing(false) })}
+          disabled={upsert.isPending}
+          className="cursor-pointer rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
+        >
+          {existing ? "Update review" : "Post review"}
+        </button>
+        {existing && (
+          <button onClick={() => { setEditing(false); setRating(existing.rating); setBody(existing.body); }} className="cursor-pointer rounded-lg border border-border px-4 py-2 text-sm hover:bg-surface-elevated">
+            Cancel
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
