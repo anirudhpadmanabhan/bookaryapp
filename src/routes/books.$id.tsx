@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
-import { fetchBook, synopsisFor } from "@/lib/books";
+import { displayRating as catalogRating, fetchBook, genreEnglish, genreMalayalam, synopsisFor } from "@/lib/books";
 import { BookCover } from "@/components/BookCover";
 import {
   Heart, Star, Calendar, ArrowLeft, NotebookPen,
@@ -46,7 +46,9 @@ function BookPage() {
 
   const isFav = !!favorites?.some((f) => f.book_id === book.id);
   const activeRental = rentals?.find((r: any) => r.book_id === book.id && !r.returned_at);
-  const displayRating = avgRating ?? Number(book.rating);
+  const displayRating = avgRating ?? catalogRating(book);
+  const enGenre = genreEnglish(book);
+  const mlGenre = genreMalayalam(book);
 
   const requireSignIn = (msg: string) => {
     toast.error(msg);
@@ -79,7 +81,7 @@ function BookPage() {
         </div>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
-            {book.genre} {book.genre_ml && <>· <span className="font-mal text-accent">{book.genre_ml}</span></>}
+            {enGenre} {mlGenre && <>· <span className="font-mal text-accent">{mlGenre}</span></>}
           </div>
           <h1 className="mt-1 text-3xl font-bold md:text-4xl">{book.title}</h1>
           {book.title_ml && <p className="font-mal mt-1 text-xl text-accent">{book.title_ml}</p>}
@@ -120,7 +122,7 @@ function BookPage() {
                 disabled={rent.isPending}
                 className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {rent.isPending ? "Renting…" : "Rent Now · 20 days"}
+                {rent.isPending ? "Confirming…" : "Rent now"}
               </button>
             )}
             <button
