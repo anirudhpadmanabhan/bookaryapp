@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
 import { fetchBooks } from "@/lib/books";
@@ -16,12 +16,12 @@ export const Route = createFileRoute("/loved")({
 
 function LovedPage() {
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user, loading } = useSession();
-  useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [user, loading, navigate]);
+  useEffect(() => { if (!loading && !user) navigate({ to: "/auth", search: { redirect: pathname } }); }, [user, loading, navigate, pathname]);
   const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
   const { data: favorites = [] } = useFavorites();
   const favIds = new Set(favorites.map((f) => f.book_id));
-  // Dedup by id (in addition to the hook-level dedup) — guards against any stale rows.
   const loved = books.filter((b, i, arr) => favIds.has(b.id) && arr.findIndex((x) => x.id === b.id) === i);
 
   return (

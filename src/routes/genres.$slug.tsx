@@ -4,7 +4,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { fetchBooks, sortBooks, unslug, type BookSort } from "@/lib/books";
 import { BooksGrid, type ViewMode } from "@/components/BooksGrid";
 import { SortBar } from "@/components/SortBar";
-import { ArrowLeft, Library } from "lucide-react";
+import { ArrowLeft, Library, BookOpen } from "lucide-react";
 import { useMemo, useState } from "react";
 
 export const Route = createFileRoute("/genres/$slug")({
@@ -25,18 +25,32 @@ function GenrePage() {
   );
   const sorted = useMemo(() => sortBooks(inGenre, sort), [inGenre, sort]);
   const mlName = inGenre[0]?.genre_ml;
+  const authors = [...new Set(inGenre.map((b) => b.author))];
 
   return (
     <AppLayout>
       <Link to="/genres" className="mb-4 inline-flex cursor-pointer items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" /> All genres
       </Link>
-      <div className="mb-1 flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
-        <Library className="h-4 w-4 text-primary" /> Genre
+
+      <div className="glass-card mb-6 grid gap-5 rounded-3xl p-6 md:grid-cols-[120px_1fr]">
+        <div className="grid h-28 w-28 place-items-center rounded-2xl bg-gradient-to-br from-primary to-accent">
+          <Library className="h-12 w-12 text-white" />
+        </div>
+        <div className="min-w-0">
+          <div className="mb-1 flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+            <Library className="h-3.5 w-3.5 text-primary" /> Genre
+          </div>
+          <h1 className="text-3xl font-bold capitalize">{inGenre[0]?.genre ?? target}</h1>
+          {mlName && <p className="font-mal mt-1 text-xl text-accent">{mlName}</p>}
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-3 py-1 text-xs text-primary">
+              <BookOpen className="h-3 w-3" /> {inGenre.length.toLocaleString()} title{inGenre.length !== 1 && "s"}
+            </span>
+            <span className="rounded-full bg-surface px-3 py-1 text-xs text-muted-foreground">{authors.length} author{authors.length !== 1 && "s"}</span>
+          </div>
+        </div>
       </div>
-      <h1 className="text-3xl font-bold capitalize">{inGenre[0]?.genre ?? target}</h1>
-      {mlName && <p className="font-mal mt-1 text-xl text-accent">{mlName}</p>}
-      <p className="mb-5 mt-2 text-sm text-muted-foreground">{inGenre.length.toLocaleString()} title{inGenre.length !== 1 && "s"} in this genre</p>
 
       <SortBar count={inGenre.length} sort={sort} onSortChange={setSort} view={view} onViewChange={setView} />
       {isLoading ? <p className="text-sm text-muted-foreground">Loading…</p> : <BooksGrid books={sorted} view={view} />}

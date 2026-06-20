@@ -22,15 +22,14 @@ export type Book = {
   created_at?: string;
 };
 
-// Reordered for maximum visual contrast between neighbours — warms and cools alternated,
-// so position-based assignment in grids never lands 3 similar covers in a row.
+// Palette — every entry must have a matching .cover-<name> rule in styles.css.
+// Background is deep indigo-violet, so violet/plum/midnight/indigo are kept as
+// classes but excluded from the rotation so book covers never blend into the page.
 export const COVER_PALETTE = [
   "amber","teal","rose","forest","gold","cobalt","crimson","sage",
-  "butter","plum","sienna","sapphire","rust","emerald","wine","fog",
-  "violet","oxblood","stone",
+  "butter","rust","wine","fog","oxblood","stone",
 ] as const;
 
-// Stable hash → palette index (used when no position is available).
 export function colorForBook(id: string): string {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
@@ -39,7 +38,6 @@ export function colorForBook(id: string): string {
 
 // Position-based palette walk that guarantees no two adjacent picks repeat.
 export function colorAt(index: number): string {
-  // Coprime stride keeps spread even.
   return COVER_PALETTE[(index * 5) % COVER_PALETTE.length];
 }
 
@@ -65,7 +63,7 @@ export function sortBooks(books: Book[], sort: BookSort): Book[] {
       });
     case "newest":
     default:
-      return arr; // already created_at desc from query
+      return arr;
   }
 }
 
@@ -92,6 +90,22 @@ export async function fetchBook(id: string): Promise<Book | null> {
   return data as Book | null;
 }
 
+// Newly-arrived shelf codes — pinned at the top of the home page in this order.
+export const NEW_ARRIVAL_SHELF_CODES = ["4556", "4586", "4616", "4615", "4499"];
+
+export async function fetchNewArrivals(): Promise<Book[]> {
+  const { data, error } = await supabase
+    .from("books")
+    .select("*")
+    .in("shelf_code", NEW_ARRIVAL_SHELF_CODES);
+  if (error) throw error;
+  const list = (data ?? []) as Book[];
+  // Preserve the order defined in NEW_ARRIVAL_SHELF_CODES.
+  return NEW_ARRIVAL_SHELF_CODES
+    .map((c) => list.find((b) => b.shelf_code === c))
+    .filter((b): b is Book => !!b);
+}
+
 export function synopsisFor(book: Pick<Book, "description" | "title" | "title_ml" | "author" | "genre" | "genre_ml">): string {
   if (book.description && book.description.trim().length > 0) return book.description;
   const ml = book.title_ml ? ` (${book.title_ml})` : "";
@@ -99,7 +113,6 @@ export function synopsisFor(book: Pick<Book, "description" | "title" | "title_ml
   return `${book.title}${ml} is a ${g.toLowerCase()} work by ${book.author}, part of the Cherukad Smaraka Vayanasala collection.`;
 }
 
-// Slugify (used for /genres/$slug and /writers/$slug routes).
 export function slugify(value: string): string {
   return encodeURIComponent(value.trim().toLowerCase().replace(/\s+/g, "-"));
 }

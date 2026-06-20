@@ -18,7 +18,7 @@ export function useProfile() {
   });
 }
 
-// FAVORITES — deduped at query level so stale duplicate rows can't show twice on Loved.
+// FAVORITES — deduped at query level.
 export function useFavorites() {
   const { user } = useSession();
   return useQuery({
@@ -105,7 +105,23 @@ export function useRentBook() {
   });
 }
 
-// DIARY
+// Notifications — rentals due within 20 days (and overdue).
+export function useDueSoonRentals() {
+  const { data: rentals = [] } = useRentals();
+  const now = Date.now();
+  const horizon = 20 * 24 * 60 * 60 * 1000;
+  return (rentals as any[])
+    .filter((r) => !r.returned_at)
+    .map((r) => {
+      const due = new Date(r.due_at).getTime();
+      const daysLeft = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+      return { ...r, daysLeft, overdue: due < now };
+    })
+    .filter((r) => r.daysLeft <= 20)
+    .sort((a, b) => a.daysLeft - b.daysLeft);
+}
+
+// DIARY — book_id is nullable so users can log reading thoughts on any book.
 export function useDiary() {
   const { user } = useSession();
   return useQuery({
@@ -126,9 +142,11 @@ export function useAddDiary() {
   const qc = useQueryClient();
   const { user } = useSession();
   return useMutation({
-    mutationFn: async ({ bookId, note, progress }: { bookId: string; note: string; progress: number }) => {
+    mutationFn: async ({ bookId, note, progress }: { bookId: string | null; note: string; progress: number }) => {
       if (!user) throw new Error("Sign in");
-      const { error } = await supabase.from("reading_diary").insert({ user_id: user.id, book_id: bookId, note, progress_pct: progress });
+      const { error } = await supabase
+        .from("reading_diary")
+        .insert({ user_id: user.id, book_id: bookId, note, progress_pct: progress });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -178,7 +196,6 @@ export type Review = {
   body: string;
   created_at: string;
   updated_at: string;
-  reviewer_name?: string;
 };
 
 export function useReviews(bookId: string) {
@@ -209,10 +226,17 @@ export function useUpsertReview() {
           { onConflict: "book_id,user_id" },
         );
       if (error) throw error;
+      // Also log this review to the reading diary so the user's activity feed reflects it.
+      const noteParts = [`Rated ${rating}/5`];
+      if (body.trim()) noteParts.push(body.trim());
+      await supabase
+        .from("reading_diary")
+        .insert({ user_id: user.id, book_id: bookId, note: noteParts.join(" — "), progress_pct: 100 });
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["reviews", vars.bookId] });
-      toast.success("Review saved");
+      qc.invalidateQueries({ queryKey: ["diary"] });
+      toast.success("Review saved & added to your diary");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -291,4 +315,54 @@ export function useSuggestBook() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+}
+
+// INSIGHTS — derive reading insights from diary + favorites + rentals.
+export function useReadingInsights() {
+  const { user } = useSession();
+  const { data: diary = [] } = useDiary();
+  const { data: favorites = [] } = useFavorites();
+  const { data: rentals = [] } = useRentals();
+
+  if (!user) return null;
+
+  // Streak: consecutive days (ending today or yesterday) with at least one diary entry.
+  const dayKeys = new Set(
+    (diary as any[]).map((e) => new Date(e.created_at).toISOString().slice(0, 10)),
+  );
+  let streak = 0;
+  const cursor = new Date();
+  // If no entry today, allow streak to anchor on yesterday.
+  if (!dayKeys.has(cursor.toISOString().slice(0, 10))) cursor.setDate(cursor.getDate() - 1);
+  while (dayKeys.has(cursor.toISOString().slice(0, 10))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  const booksRead = new Set(
+    (rentals as any[]).filter((r) => r.returned_at).map((r) => r.book_id),
+  ).size;
+
+  const genreCounts = new Map<string, number>();
+  const authorCounts = new Map<string, number>();
+  for (const r of rentals as any[]) {
+    if (!r.books) continue;
+    genreCounts.set(r.books.genre, (genreCounts.get(r.books.genre) ?? 0) + 1);
+    authorCounts.set(r.books.author, (authorCounts.get(r.books.author) ?? 0) + 1);
+  }
+  const topGenre = [...genreCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+  const topAuthor = [...authorCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+
+  const totalSpent = (rentals as any[]).reduce((s, r) => s + Number(r.price_paid ?? 0), 0);
+
+  return {
+    streak,
+    diaryCount: diary.length,
+    lovedCount: favorites.length,
+    booksRead,
+    activeRentals: (rentals as any[]).filter((r) => !r.returned_at).length,
+    topGenre,
+    topAuthor,
+    totalSpent,
+  };
 }
