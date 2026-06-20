@@ -269,6 +269,12 @@ function RentModal({
           </div>
         </div>
 
+        <div className="mb-4 grid grid-cols-3 gap-2 text-center text-[11px]">
+          <div className="rounded-lg bg-primary/15 px-2 py-2 text-primary">1. Address</div>
+          <div className="rounded-lg bg-emerald-500/10 px-2 py-2 text-emerald-300">2. Wallet</div>
+          <div className="rounded-lg bg-accent/10 px-2 py-2 text-accent">3. Tracking</div>
+        </div>
+
         <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Delivery address</label>
         <textarea
           value={address}
@@ -280,8 +286,7 @@ function RentModal({
         <p className="mt-1 text-[11px] text-muted-foreground">Saved to your profile so future rentals pre-fill.</p>
 
         <div className="mt-4 rounded-xl border border-border/60 bg-surface/40 px-3 py-2.5 text-xs text-muted-foreground">
-          Return window: <span className="font-medium text-foreground">20 days</span> from confirmation.
-          You'll see live tracking in your Profile → Active rentals.
+          Return window: <span className="font-medium text-foreground">20 days</span> from confirmation. A reminder appears in the top-right bell and Profile when the return date is within 20 days.
         </div>
 
         <div className="mt-5 flex gap-2">
