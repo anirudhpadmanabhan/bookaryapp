@@ -83,11 +83,30 @@ function ProfilePage() {
         <div className="grid h-20 w-20 place-items-center rounded-2xl bg-gradient-to-br from-primary to-accent text-2xl font-bold">
           {profile.display_name.slice(0, 1).toUpperCase()}
         </div>
-        <div className="flex-1">
+        <div className="flex-1 min-w-[220px]">
           <h1 className="text-2xl font-bold">{profile.display_name}</h1>
           <p className="text-sm text-muted-foreground">{user?.email}</p>
           <p className="mt-1 text-xs text-muted-foreground">Reader since {new Date(profile.created_at).toLocaleDateString()}</p>
+          {editingDetails ? (
+            <div className="mt-3 flex flex-col gap-2">
+              <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone" className="rounded-lg border border-border bg-background/50 px-3 py-2 text-sm outline-none focus:border-primary" />
+              <textarea value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Delivery address" rows={2} className="rounded-lg border border-border bg-background/50 px-3 py-2 text-sm outline-none focus:border-primary" />
+              <div className="flex gap-2">
+                <button onClick={saveDetails} className="cursor-pointer rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90">Save</button>
+                <button onClick={() => setEditingDetails(false)} className="cursor-pointer rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-surface-elevated">Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+              {(profile as any).phone && <span>📞 {(profile as any).phone}</span>}
+              {(profile as any).address && <span className="max-w-xs truncate">📍 {(profile as any).address}</span>}
+              <button onClick={() => setEditingDetails(true)} className="cursor-pointer rounded-md border border-border px-2 py-0.5 text-[11px] hover:bg-surface-elevated">
+                {(profile as any).phone || (profile as any).address ? "Edit details" : "Add phone & address"}
+              </button>
+            </div>
+          )}
         </div>
+
         <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-emerald-300">
           <div className="flex items-center gap-2 text-xs uppercase tracking-wider"><Wallet className="h-3.5 w-3.5" />Wallet</div>
           <div className="text-2xl font-bold">₹{Number(profile.wallet_balance).toFixed(0)}</div>
