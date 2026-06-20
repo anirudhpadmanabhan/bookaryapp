@@ -109,6 +109,9 @@ export function BookRow({ book, hideShelf = false }: { book: Book; hideShelf?: b
           {book.publisher && ` · ${book.publisher}`}
         </p>
       </div>
+      <span className="hidden items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-1 text-[11px] text-amber-300 sm:inline-flex">
+        <Star className="h-3 w-3 fill-amber-300" /> {displayRating(book).toFixed(1)}
+      </span>
       {!hideShelf && book.shelf_code && (
         <span className="hidden items-center gap-1 rounded-full bg-surface px-2.5 py-1 text-[11px] text-muted-foreground sm:inline-flex">
           <MapPin className="h-3 w-3" /> {book.shelf_code}
