@@ -17,6 +17,7 @@ import { Route as GenresRouteImport } from './routes/genres'
 import { Route as DiaryRouteImport } from './routes/diary'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as GenresIndexRouteImport } from './routes/genres.index'
 import { Route as WritersSlugRouteImport } from './routes/writers.$slug'
 import { Route as GenresSlugRouteImport } from './routes/genres.$slug'
 import { Route as BooksIdRouteImport } from './routes/books.$id'
@@ -61,6 +62,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GenresIndexRoute = GenresIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => GenresRoute,
+} as any)
 const WritersSlugRoute = WritersSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
@@ -89,12 +95,12 @@ export interface FileRoutesByFullPath {
   '/books/$id': typeof BooksIdRoute
   '/genres/$slug': typeof GenresSlugRoute
   '/writers/$slug': typeof WritersSlugRoute
+  '/genres/': typeof GenresIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/diary': typeof DiaryRoute
-  '/genres': typeof GenresRouteWithChildren
   '/loved': typeof LovedRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
@@ -102,6 +108,7 @@ export interface FileRoutesByTo {
   '/books/$id': typeof BooksIdRoute
   '/genres/$slug': typeof GenresSlugRoute
   '/writers/$slug': typeof WritersSlugRoute
+  '/genres': typeof GenresIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -116,6 +123,7 @@ export interface FileRoutesById {
   '/books/$id': typeof BooksIdRoute
   '/genres/$slug': typeof GenresSlugRoute
   '/writers/$slug': typeof WritersSlugRoute
+  '/genres/': typeof GenresIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -131,12 +139,12 @@ export interface FileRouteTypes {
     | '/books/$id'
     | '/genres/$slug'
     | '/writers/$slug'
+    | '/genres/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
     | '/diary'
-    | '/genres'
     | '/loved'
     | '/profile'
     | '/search'
@@ -144,6 +152,7 @@ export interface FileRouteTypes {
     | '/books/$id'
     | '/genres/$slug'
     | '/writers/$slug'
+    | '/genres'
   id:
     | '__root__'
     | '/'
@@ -157,6 +166,7 @@ export interface FileRouteTypes {
     | '/books/$id'
     | '/genres/$slug'
     | '/writers/$slug'
+    | '/genres/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -229,6 +239,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/genres/': {
+      id: '/genres/'
+      path: '/'
+      fullPath: '/genres/'
+      preLoaderRoute: typeof GenresIndexRouteImport
+      parentRoute: typeof GenresRoute
+    }
     '/writers/$slug': {
       id: '/writers/$slug'
       path: '/$slug'
@@ -255,10 +272,12 @@ declare module '@tanstack/react-router' {
 
 interface GenresRouteChildren {
   GenresSlugRoute: typeof GenresSlugRoute
+  GenresIndexRoute: typeof GenresIndexRoute
 }
 
 const GenresRouteChildren: GenresRouteChildren = {
   GenresSlugRoute: GenresSlugRoute,
+  GenresIndexRoute: GenresIndexRoute,
 }
 
 const GenresRouteWithChildren =
