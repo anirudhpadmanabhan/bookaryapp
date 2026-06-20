@@ -85,25 +85,32 @@ export function useRentBook() {
   const qc = useQueryClient();
   const { user } = useSession();
   return useMutation({
-    mutationFn: async ({ bookId, price }: { bookId: string; price: number }) => {
+    mutationFn: async ({ bookId, price, address }: { bookId: string; price: number; address?: string }) => {
       if (!user) throw new Error("Sign in to rent");
-      const { data: prof, error: pErr } = await supabase.from("profiles").select("wallet_balance").eq("id", user.id).single();
+      const { data: prof, error: pErr } = await supabase.from("profiles").select("wallet_balance, address").eq("id", user.id).single();
       if (pErr) throw pErr;
       const balance = Number(prof.wallet_balance);
       if (balance < price) throw new Error(`Need ₹${price - balance} more in wallet`);
-      const { error: rErr } = await supabase.from("rentals").insert({ user_id: user.id, book_id: bookId, price_paid: price });
+      const deliveryAddress = (address ?? prof.address ?? "").trim() || null;
+      const { error: rErr } = await supabase.from("rentals").insert({
+        user_id: user.id, book_id: bookId, price_paid: price,
+        delivery_address: deliveryAddress, tracking_status: "confirmed",
+      } as any);
       if (rErr) throw rErr;
-      const { error: uErr } = await supabase.from("profiles").update({ wallet_balance: balance - price }).eq("id", user.id);
+      const updates: any = { wallet_balance: balance - price };
+      if (address && address.trim() && address.trim() !== (prof.address ?? "")) updates.address = address.trim();
+      const { error: uErr } = await supabase.from("profiles").update(updates).eq("id", user.id);
       if (uErr) throw uErr;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["rentals"] });
       qc.invalidateQueries({ queryKey: ["profile"] });
-      toast.success("Rented — happy reading!");
+      toast.success("Rented — tracking added to your profile");
     },
     onError: (e: Error) => toast.error(e.message),
   });
 }
+
 
 // Notifications — rentals due within 20 days (and overdue).
 export function useDueSoonRentals() {
@@ -217,18 +224,18 @@ export function useUpsertReview() {
   const qc = useQueryClient();
   const { user } = useSession();
   return useMutation({
-    mutationFn: async ({ bookId, rating, body }: { bookId: string; rating: number; body: string }) => {
+    mutationFn: async ({ bookId, rating, body, quote }: { bookId: string; rating: number; body: string; quote?: string }) => {
       if (!user) throw new Error("Sign in to write a review");
       const { error } = await supabase
         .from("reviews")
         .upsert(
-          { book_id: bookId, user_id: user.id, rating, body },
+          { book_id: bookId, user_id: user.id, rating, body, favorite_quote: quote?.trim() || null } as any,
           { onConflict: "book_id,user_id" },
         );
       if (error) throw error;
-      // Also log this review to the reading diary so the user's activity feed reflects it.
       const noteParts = [`Rated ${rating}/5`];
       if (body.trim()) noteParts.push(body.trim());
+      if (quote?.trim()) noteParts.push(`Quote: "${quote.trim()}"`);
       await supabase
         .from("reading_diary")
         .insert({ user_id: user.id, book_id: bookId, note: noteParts.join(" — "), progress_pct: 100 });
@@ -241,6 +248,7 @@ export function useUpsertReview() {
     onError: (e: Error) => toast.error(e.message),
   });
 }
+
 
 export function useDeleteReview() {
   const qc = useQueryClient();
