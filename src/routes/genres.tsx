@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { Outlet } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
 import { fetchBooks, colorAt, genreEnglish, genreMalayalam, slugify } from "@/lib/books";
@@ -15,10 +16,10 @@ export const Route = createFileRoute("/genres")({
       { name: "description", content: "Browse the Cherukad library by genre." },
     ],
   }),
-  component: GenresPage,
+  component: () => <Outlet />,
 });
 
-function GenresPage() {
+export function GenresPage() {
   const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<GenreSort>("popular");
