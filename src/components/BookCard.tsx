@@ -16,7 +16,6 @@ type Props = {
 
 export function BookCard({ book, minimal = false, coverColor, hideShelf = true }: Props) {
   const { user } = useSession();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { data: favorites } = useFavorites();
   const toggle = useToggleFavorite();
   const isFav = !!favorites?.some((f) => f.book_id === book.id);
