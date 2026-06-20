@@ -2,16 +2,14 @@ import { Link } from "@tanstack/react-router";
 import { Heart, Star, MapPin } from "lucide-react";
 import type { Book } from "@/lib/books";
 import { BookCover } from "./BookCover";
-import { useFavorites, useToggleFavorite } from "@/lib/userdata";
+import { useFavorites, useToggleFavorite, useRentBook } from "@/lib/userdata";
 import { useSession } from "@/lib/auth";
 import { toast } from "sonner";
 
 type Props = {
   book: Book;
   minimal?: boolean;
-  /** Position in parent list — enables alternating cover colors. */
   index?: number;
-  /** Resolved alternating cover color (preferred over index). */
   coverColor?: string;
 };
 
@@ -19,7 +17,14 @@ export function BookCard({ book, minimal = false, coverColor }: Props) {
   const { user } = useSession();
   const { data: favorites } = useFavorites();
   const toggle = useToggleFavorite();
+  const rent = useRentBook();
   const isFav = !!favorites?.some((f) => f.book_id === book.id);
+
+  const handleRent = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!user) return toast.error("Sign in to rent");
+    rent.mutate({ bookId: book.id, price: Number(book.rent_price) });
+  };
 
   return (
     <div className="group flex flex-col">
@@ -64,26 +69,24 @@ export function BookCard({ book, minimal = false, coverColor }: Props) {
           <h3 className="line-clamp-1 text-xs font-semibold text-foreground group-hover:text-primary">{book.title}</h3>
         </Link>
         <p className="line-clamp-1 text-[11px] text-muted-foreground">by {book.author}</p>
-        <div className="mt-2 flex items-center justify-between">
-          <span className="text-[11px] text-muted-foreground">₹{book.rent_price}/20d</span>
-          <Link
-            to="/books/$id"
-            params={{ id: book.id }}
-            className="cursor-pointer rounded-md bg-primary/15 px-2.5 py-1 text-[11px] font-medium text-primary hover:bg-primary/25"
-          >
-            Rent ›
-          </Link>
-        </div>
+        <button
+          type="button"
+          onClick={handleRent}
+          disabled={rent.isPending}
+          className="mt-2 w-full cursor-pointer rounded-md bg-primary/15 px-2.5 py-1.5 text-[11px] font-semibold text-primary hover:bg-primary/25 disabled:opacity-60"
+        >
+          {rent.isPending ? "…" : "Rent now"}
+        </button>
       </div>
     </div>
   );
 }
 
-/** Compact list-view row variant used when user toggles list view. */
 export function BookRow({ book }: { book: Book }) {
   const { user } = useSession();
   const { data: favorites } = useFavorites();
   const toggle = useToggleFavorite();
+  const rent = useRentBook();
   const isFav = !!favorites?.some((f) => f.book_id === book.id);
   return (
     <div className="glass-card flex items-center gap-4 rounded-xl p-3">
@@ -107,7 +110,6 @@ export function BookRow({ book }: { book: Book }) {
           <MapPin className="h-3 w-3" /> {book.shelf_code}
         </span>
       )}
-      <span className="hidden text-xs text-muted-foreground sm:inline">₹{book.rent_price}</span>
       <button
         type="button"
         onClick={() => {
@@ -119,13 +121,17 @@ export function BookRow({ book }: { book: Book }) {
       >
         <Heart className={`h-4 w-4 ${isFav ? "fill-rose-500 text-rose-500" : "text-muted-foreground"}`} />
       </button>
-      <Link
-        to="/books/$id"
-        params={{ id: book.id }}
-        className="cursor-pointer rounded-lg bg-primary/15 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/25"
+      <button
+        type="button"
+        onClick={() => {
+          if (!user) return toast.error("Sign in to rent");
+          rent.mutate({ bookId: book.id, price: Number(book.rent_price) });
+        }}
+        disabled={rent.isPending}
+        className="cursor-pointer rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60"
       >
-        Open
-      </Link>
+        Rent now
+      </button>
     </div>
   );
 }

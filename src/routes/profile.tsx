@@ -1,8 +1,14 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useRouterState } from "@tanstack/react-router";
 import { AppLayout } from "@/components/AppLayout";
 import { useSession } from "@/lib/auth";
-import { useProfile, useRentals, useTopUpWallet, useSuggestions, useSuggestBook } from "@/lib/userdata";
-import { Wallet, BookOpen, CheckCircle2, Lightbulb, Clock } from "lucide-react";
+import {
+  useProfile, useRentals, useTopUpWallet, useSuggestions, useSuggestBook,
+  useReadingInsights, useFavorites, useDueSoonRentals,
+} from "@/lib/userdata";
+import {
+  Wallet, BookOpen, CheckCircle2, Lightbulb, Clock, Flame, Heart, NotebookPen,
+  Trophy, BookMarked, AlertTriangle,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -16,11 +22,15 @@ export const Route = createFileRoute("/profile")({
 
 function ProfilePage() {
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user, loading } = useSession();
-  useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [user, loading, navigate]);
+  useEffect(() => { if (!loading && !user) navigate({ to: "/auth", search: { redirect: pathname } }); }, [user, loading, navigate, pathname]);
   const { data: profile } = useProfile();
   const { data: rentals = [] } = useRentals();
+  const { data: favorites = [] } = useFavorites();
   const { data: suggestions = [] } = useSuggestions();
+  const insights = useReadingInsights();
+  const dueSoon = useDueSoonRentals();
   const topUp = useTopUpWallet();
   const suggest = useSuggestBook();
   const qc = useQueryClient();
@@ -29,8 +39,9 @@ function ProfilePage() {
   const [sAuthor, setSAuthor] = useState("");
   const [sNote, setSNote] = useState("");
 
-  const active = rentals.filter((r: any) => !r.returned_at);
-  const past = rentals.filter((r: any) => r.returned_at);
+  const active = (rentals as any[]).filter((r) => !r.returned_at);
+  const past = (rentals as any[]).filter((r) => r.returned_at);
+  const totalSpent = (rentals as any[]).reduce((s, r) => s + Number(r.price_paid ?? 0), 0);
 
   const returnBook = async (rentalId: string) => {
     const { error } = await supabase.from("rentals").update({ returned_at: new Date().toISOString() }).eq("id", rentalId);
@@ -42,16 +53,16 @@ function ProfilePage() {
   const submitSuggestion = (e: React.FormEvent) => {
     e.preventDefault();
     if (!sTitle.trim()) return toast.error("Add a book title");
-    suggest.mutate(
-      { title: sTitle, author: sAuthor, note: sNote },
-      { onSuccess: () => { setSTitle(""); setSAuthor(""); setSNote(""); } },
-    );
+    suggest.mutate({ title: sTitle, author: sAuthor, note: sNote }, {
+      onSuccess: () => { setSTitle(""); setSAuthor(""); setSNote(""); },
+    });
   };
 
   if (!profile) return <AppLayout><div className="h-40 animate-pulse rounded-2xl bg-surface" /></AppLayout>;
 
   return (
     <AppLayout>
+      {/* Identity card */}
       <div className="glass-card mb-8 flex flex-wrap items-center gap-6 rounded-3xl p-7">
         <div className="grid h-20 w-20 place-items-center rounded-2xl bg-gradient-to-br from-primary to-accent text-2xl font-bold">
           {profile.display_name.slice(0, 1).toUpperCase()}
@@ -68,6 +79,64 @@ function ProfilePage() {
         </div>
       </div>
 
+      {/* Insights */}
+      {insights && (
+        <section className="mb-10">
+          <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><Trophy className="h-4 w-4 text-amber-300" /> Reading insights</h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Stat icon={Flame} tint="rose"    label="Day streak"     value={insights.streak} sub={insights.streak === 0 ? "Log today to start" : `${insights.streak} day${insights.streak === 1 ? "" : "s"} in a row`} />
+            <Stat icon={BookMarked} tint="primary" label="Books read"      value={insights.booksRead} sub={`${insights.activeRentals} active right now`} />
+            <Stat icon={NotebookPen} tint="accent" label="Diary entries"   value={insights.diaryCount} sub="All-time" />
+            <Stat icon={Heart} tint="rose"   label="Loved"           value={favorites.length} sub="Books in your shelf" />
+          </div>
+          {(insights.topGenre || insights.topAuthor) && (
+            <div className="glass-card mt-4 grid gap-3 rounded-2xl p-5 sm:grid-cols-2">
+              {insights.topGenre && (
+                <div>
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">Favorite genre</div>
+                  <div className="mt-1 text-lg font-semibold">{insights.topGenre}</div>
+                </div>
+              )}
+              {insights.topAuthor && (
+                <div>
+                  <div className="text-xs uppercase tracking-wider text-muted-foreground">Most-read writer</div>
+                  <div className="mt-1 text-lg font-semibold">{insights.topAuthor}</div>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Return reminders */}
+      {dueSoon.length > 0 && (
+        <section className="mb-10">
+          <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><AlertTriangle className="h-4 w-4 text-amber-300" /> Due within 20 days</h2>
+          <ul className="space-y-2">
+            {dueSoon.map((r) => (
+              <li key={r.id} className={`flex items-center justify-between rounded-xl border px-4 py-3 text-sm ${r.overdue ? "border-rose-500/40 bg-rose-500/10" : "border-amber-400/30 bg-amber-500/10"}`}>
+                <span><span className="font-semibold">{r.books?.title}</span> <span className="text-muted-foreground">· due {new Date(r.due_at).toLocaleDateString()}</span></span>
+                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${r.overdue ? "bg-rose-500/20 text-rose-300" : "bg-amber-500/20 text-amber-300"}`}>
+                  {r.overdue ? `${Math.abs(r.daysLeft)}d overdue` : `${r.daysLeft}d left`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Ledger */}
+      <section className="mb-10">
+        <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><Wallet className="h-4 w-4 text-emerald-400" /> Ledger</h2>
+        <div className="glass-card grid grid-cols-2 gap-4 rounded-2xl p-5 sm:grid-cols-4">
+          <Stat icon={Wallet} tint="emerald" label="Balance" value={`₹${Number(profile.wallet_balance).toFixed(0)}`} sub="Available to rent" />
+          <Stat icon={Coins} tint="amber"   label="Total spent" value={`₹${totalSpent.toFixed(0)}`} sub={`${rentals.length} rental${rentals.length === 1 ? "" : "s"}`} />
+          <Stat icon={BookOpen} tint="primary" label="Active rentals" value={active.length} sub="Out right now" />
+          <Stat icon={CheckCircle2} tint="emerald" label="Returned" value={past.length} sub="Completed" />
+        </div>
+      </section>
+
+      {/* Active rentals */}
       <section className="mb-10">
         <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><BookOpen className="h-4 w-4 text-primary" /> Active rentals ({active.length})</h2>
         {active.length === 0 ? (
@@ -82,7 +151,7 @@ function ProfilePage() {
               const overdue = msLeft < 0;
               return (
                 <div key={r.id} className="glass-card flex flex-wrap items-center gap-4 rounded-2xl p-4">
-                  <div className={`cover cover-${r.books?.cover_color || "indigo"} h-20 w-14 flex-shrink-0 !aspect-auto !p-2`}>
+                  <div className={`cover cover-${r.books?.cover_color || "amber"} h-20 w-14 flex-shrink-0 !aspect-auto !p-2`}>
                     <span className="font-mal text-[8px] text-white/90">{r.books?.title_ml}</span>
                   </div>
                   <div className="flex-1">
@@ -108,28 +177,13 @@ function ProfilePage() {
         )}
       </section>
 
+      {/* Suggest a book */}
       <section className="mb-10">
         <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><Lightbulb className="h-4 w-4 text-amber-300" /> Suggest a book to the library</h2>
         <form onSubmit={submitSuggestion} className="glass-card grid gap-3 rounded-2xl p-5 sm:grid-cols-2">
-          <input
-            value={sTitle}
-            onChange={(e) => setSTitle(e.target.value)}
-            placeholder="Book title *"
-            className="rounded-xl border border-border bg-background/50 px-4 py-2.5 text-sm outline-none focus:border-primary"
-          />
-          <input
-            value={sAuthor}
-            onChange={(e) => setSAuthor(e.target.value)}
-            placeholder="Author (optional)"
-            className="rounded-xl border border-border bg-background/50 px-4 py-2.5 text-sm outline-none focus:border-primary"
-          />
-          <textarea
-            value={sNote}
-            onChange={(e) => setSNote(e.target.value)}
-            placeholder="Why should we add it?"
-            rows={2}
-            className="rounded-xl border border-border bg-background/50 px-4 py-2.5 text-sm outline-none focus:border-primary sm:col-span-2"
-          />
+          <input value={sTitle} onChange={(e) => setSTitle(e.target.value)} placeholder="Book title *" className="rounded-xl border border-border bg-background/50 px-4 py-2.5 text-sm outline-none focus:border-primary" />
+          <input value={sAuthor} onChange={(e) => setSAuthor(e.target.value)} placeholder="Author (optional)" className="rounded-xl border border-border bg-background/50 px-4 py-2.5 text-sm outline-none focus:border-primary" />
+          <textarea value={sNote} onChange={(e) => setSNote(e.target.value)} placeholder="Why should we add it?" rows={2} className="rounded-xl border border-border bg-background/50 px-4 py-2.5 text-sm outline-none focus:border-primary sm:col-span-2" />
           <div className="flex items-center justify-between sm:col-span-2">
             <span className="text-xs text-muted-foreground">{suggestions.length} previous suggestion{suggestions.length !== 1 && "s"}</span>
             <button type="submit" disabled={suggest.isPending} className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
@@ -137,16 +191,6 @@ function ProfilePage() {
             </button>
           </div>
         </form>
-        {suggestions.length > 0 && (
-          <ul className="mt-3 space-y-1.5">
-            {suggestions.slice(0, 5).map((s: any) => (
-              <li key={s.id} className="flex items-center justify-between rounded-lg border border-border bg-surface/40 px-3 py-2 text-xs">
-                <span><span className="font-medium text-foreground">{s.title}</span>{s.author && <span className="text-muted-foreground"> · {s.author}</span>}</span>
-                <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">{s.status}</span>
-              </li>
-            ))}
-          </ul>
-        )}
       </section>
 
       {past.length > 0 && (
@@ -167,4 +211,27 @@ function ProfilePage() {
       )}
     </AppLayout>
   );
+}
+
+const TINTS: Record<string, string> = {
+  rose:    "bg-rose-500/10 text-rose-300 border-rose-500/20",
+  primary: "bg-primary/10 text-primary border-primary/20",
+  accent:  "bg-accent/10 text-accent border-accent/20",
+  amber:   "bg-amber-500/10 text-amber-300 border-amber-500/20",
+  emerald: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20",
+};
+
+function Stat({ icon: Icon, tint, label, value, sub }: { icon: any; tint: keyof typeof TINTS | string; label: string; value: number | string; sub: string }) {
+  return (
+    <div className={`rounded-2xl border p-4 ${TINTS[tint] ?? TINTS.primary}`}>
+      <div className="flex items-center gap-2 text-xs uppercase tracking-wider opacity-80"><Icon className="h-3.5 w-3.5" />{label}</div>
+      <div className="mt-1 text-2xl font-bold text-foreground">{value}</div>
+      <div className="text-xs text-muted-foreground">{sub}</div>
+    </div>
+  );
+}
+
+// Coins icon — re-imported here to avoid touching the import block above for the stat.
+function Coins(props: any) {
+  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></svg>;
 }

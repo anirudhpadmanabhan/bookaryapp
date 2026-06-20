@@ -1,19 +1,24 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
+import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { BookMarked } from "lucide-react";
 import { toast } from "sonner";
 import { useSession } from "@/lib/auth";
 
+const authSearchSchema = z.object({ redirect: z.string().optional() });
+
 export const Route = createFileRoute("/auth")({
   ssr: false,
+  validateSearch: authSearchSchema,
   head: () => ({ meta: [{ title: "Sign in · Bookary" }, { name: "description", content: "Sign in to rent and save Malayalam books." }] }),
   component: AuthPage,
 });
 
 function AuthPage() {
   const navigate = useNavigate();
+  const { redirect } = Route.useSearch();
   const { user, loading } = useSession();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
@@ -21,9 +26,12 @@ function AuthPage() {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // Send the user back to where they came from (defaults to home).
+  const dest = redirect && redirect !== "/auth" ? redirect : "/";
+
   useEffect(() => {
-    if (!loading && user) navigate({ to: "/", replace: true });
-  }, [user, loading, navigate]);
+    if (!loading && user) navigate({ to: dest, replace: true });
+  }, [user, loading, navigate, dest]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +49,7 @@ function AuthPage() {
         if (error) throw error;
         toast.success("Welcome back");
       }
-      navigate({ to: "/", replace: true });
+      navigate({ to: dest, replace: true });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -51,10 +59,12 @@ function AuthPage() {
 
   const google = async () => {
     setBusy(true);
-    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+    // Build absolute redirect URL so the OAuth provider returns the user to the right page.
+    const target = new URL(dest, window.location.origin).toString();
+    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: target });
     if (result.error) { toast.error("Google sign-in failed"); setBusy(false); return; }
     if (result.redirected) return;
-    navigate({ to: "/", replace: true });
+    navigate({ to: dest, replace: true });
   };
 
   return (
@@ -76,7 +86,7 @@ function AuthPage() {
             <span className="font-mal text-accent">വായന</span> never ends.
           </h2>
           <p className="mt-4 max-w-md text-white/80">
-            Sign in to rent volumes for 14 days, save the books you love, and keep a diary of your reading journey.
+            Sign in to rent volumes for 20 days, save the books you love, and keep a diary of your reading journey.
           </p>
         </div>
         <p className="relative text-xs text-white/50">© Bookary — A reading sanctuary.</p>
@@ -87,9 +97,12 @@ function AuthPage() {
           <h1 className="text-2xl font-bold">{mode === "signup" ? "Create your account" : "Welcome back"}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {mode === "signup" ? "Get ₹100 wallet credit to start renting." : "Sign in to continue reading."}
+            {redirect && redirect !== "/" && (
+              <span className="ml-1 text-xs text-primary">You'll return to {redirect} after signing in.</span>
+            )}
           </p>
 
-          <button onClick={google} disabled={busy} className="mt-6 flex w-full items-center justify-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 text-sm font-medium hover:bg-surface-elevated disabled:opacity-50">
+          <button onClick={google} disabled={busy} className="mt-6 flex w-full cursor-pointer items-center justify-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 text-sm font-medium hover:bg-surface-elevated disabled:opacity-50">
             <GoogleIcon /> Continue with Google
           </button>
 
@@ -103,14 +116,14 @@ function AuthPage() {
             )}
             <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required placeholder="Email" className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:border-primary" />
             <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required minLength={6} placeholder="Password" className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-sm outline-none focus:border-primary" />
-            <button type="submit" disabled={busy} className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50">
+            <button type="submit" disabled={busy} className="w-full cursor-pointer rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50">
               {busy ? "Please wait…" : mode === "signup" ? "Create account" : "Sign in"}
             </button>
           </form>
 
           <p className="mt-5 text-center text-sm text-muted-foreground">
             {mode === "signup" ? "Already have an account?" : "New to Bookary?"}{" "}
-            <button onClick={() => setMode(mode === "signup" ? "signin" : "signup")} className="font-medium text-primary hover:underline">
+            <button onClick={() => setMode(mode === "signup" ? "signin" : "signup")} className="cursor-pointer font-medium text-primary hover:underline">
               {mode === "signup" ? "Sign in" : "Create one"}
             </button>
           </p>

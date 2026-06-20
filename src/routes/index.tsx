@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
-import { fetchBooks, sortBooks, type BookSort, slugify } from "@/lib/books";
+import { fetchBooks, fetchNewArrivals, sortBooks, type BookSort, slugify } from "@/lib/books";
 import { BooksGrid, type ViewMode } from "@/components/BooksGrid";
+import { BookCard } from "@/components/BookCard";
+import { colorAt } from "@/lib/books";
 import { SortBar } from "@/components/SortBar";
 import { ArrowRight, Library, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -22,6 +24,7 @@ const HOME_LIMIT = 60;
 
 function HomePage() {
   const { data: books = [], isLoading } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
+  const { data: newArrivals = [] } = useQuery({ queryKey: ["new-arrivals"], queryFn: fetchNewArrivals });
   const [sort, setSort] = useState<BookSort>("newest");
   const [view, setView] = useState<ViewMode>("tile");
   const [genresOpen, setGenresOpen] = useState(false);
@@ -65,6 +68,26 @@ function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Newly Arrived — pinned 5 books from latest delivery */}
+      {newArrivals.length > 0 && (
+        <section className="mb-10">
+          <div className="mb-4 flex items-end justify-between gap-3">
+            <div>
+              <div className="mb-1 flex items-center gap-2 text-xs uppercase tracking-wider text-accent">
+                <Sparkles className="h-4 w-4" /> Just added to the shelf
+              </div>
+              <h2 className="text-xl font-bold">Newly Arrived Volumes</h2>
+            </div>
+            <span className="text-xs text-muted-foreground">{newArrivals.length} new this week</span>
+          </div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+            {newArrivals.map((b, i) => (
+              <BookCard key={b.id} book={b} coverColor={colorAt(i)} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Genres — minimized strip */}
       <section className="mb-8">
