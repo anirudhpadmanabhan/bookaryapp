@@ -216,8 +216,12 @@ export function synopsisFor(book: Pick<Book, "description" | "title" | "title_ml
 }
 
 export function slugify(value: string): string {
-  return encodeURIComponent(value.trim().toLowerCase().replace(/\s+/g, "-"));
+  return value.trim().toLowerCase().replace(/\s+/g, "-");
 }
 export function unslug(value: string): string {
-  return decodeURIComponent(value).replace(/-/g, " ");
+  try {
+    return decodeURIComponent(value).replace(/-/g, " ");
+  } catch {
+    return value.replace(/-/g, " ");
+  }
 }
