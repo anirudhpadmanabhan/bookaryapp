@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { Outlet } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
 import { fetchBooks, colorAt, slugify } from "@/lib/books";
@@ -10,7 +11,7 @@ type WriterSort = "popular" | "az";
 export const Route = createFileRoute("/writers")({
   ssr: false,
   head: () => ({ meta: [{ title: "Writers · Bookary" }, { name: "description", content: "Discover Malayalam writers in the Cherukad library." }] }),
-  component: WritersPage,
+  component: () => <Outlet />,
 });
 
 const CSVG_KEYWORDS = ["csvg", "cherukad smaraka", "ചെറുകാട്"];
@@ -20,7 +21,7 @@ function isCsvg(name: string, ml: string | null): boolean {
   return CSVG_KEYWORDS.some((k) => hay.includes(k));
 }
 
-function WritersPage() {
+export function WritersPage() {
   const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<WriterSort>("popular");
