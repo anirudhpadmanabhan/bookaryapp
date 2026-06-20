@@ -1,0 +1,1 @@
+ALTER TABLE public.reading_diary ALTER COLUMN book_id DROP NOT NULL;

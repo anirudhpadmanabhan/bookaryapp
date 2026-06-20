@@ -165,7 +165,7 @@ export type Database = {
       }
       reading_diary: {
         Row: {
-          book_id: string
+          book_id: string | null
           created_at: string
           id: string
           note: string
@@ -174,7 +174,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          book_id: string
+          book_id?: string | null
           created_at?: string
           id?: string
           note: string
@@ -183,7 +183,7 @@ export type Database = {
           user_id: string
         }
         Update: {
-          book_id?: string
+          book_id?: string | null
           created_at?: string
           id?: string
           note?: string
