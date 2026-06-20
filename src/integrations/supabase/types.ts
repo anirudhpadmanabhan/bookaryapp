@@ -56,6 +56,7 @@ export type Database = {
           genre_ml: string | null
           id: string
           language: string | null
+          library_id: string | null
           original_author: string | null
           pages: number | null
           published_year: number | null
@@ -77,6 +78,7 @@ export type Database = {
           genre_ml?: string | null
           id?: string
           language?: string | null
+          library_id?: string | null
           original_author?: string | null
           pages?: number | null
           published_year?: number | null
@@ -98,6 +100,7 @@ export type Database = {
           genre_ml?: string | null
           id?: string
           language?: string | null
+          library_id?: string | null
           original_author?: string | null
           pages?: number | null
           published_year?: number | null
@@ -108,7 +111,15 @@ export type Database = {
           title?: string
           title_ml?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "books_library_id_fkey"
+            columns: ["library_id"]
+            isOneToOne: false
+            referencedRelation: "libraries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       favorites: {
         Row: {
@@ -138,6 +149,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      libraries: {
+        Row: {
+          created_at: string
+          id: string
+          is_default: boolean
+          location: string | null
+          name: string
+          name_ml: string | null
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          location?: string | null
+          name: string
+          name_ml?: string | null
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          location?: string | null
+          name?: string
+          name_ml?: string | null
+          slug?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
