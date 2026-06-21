@@ -6,15 +6,17 @@ export const getRouter = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
-        // Books collection rarely changes during a session — cache aggressively
-        // so navigating between Home/Search/Genres/Writers reuses the same data.
-        staleTime: 5 * 60 * 1000,
-        gcTime: 30 * 60 * 1000,
+        // Library catalog is essentially static during a session.
+        // Cache aggressively so navigation is instant.
+        staleTime: 30 * 60 * 1000,
+        gcTime: 60 * 60 * 1000,
         refetchOnWindowFocus: false,
+        refetchOnMount: false,
         retry: 1,
       },
     },
   });
+
 
   const router = createRouter({
     routeTree,

@@ -6,6 +6,9 @@ import {
 import { useState, useRef, useEffect, useMemo, type ReactNode } from "react";
 import { useSession } from "@/lib/auth";
 import { useProfile, useDueSoonRentals, useNotifications, useMarkNotificationsRead, useRentals } from "@/lib/userdata";
+import { useIsStaff } from "@/lib/admin";
+import { Shield } from "lucide-react";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { LibrarySwitcher } from "@/components/LibrarySwitcher";
@@ -49,9 +52,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { data: rentals = [] } = useRentals();
   const { data: notifs = [] } = useNotifications();
   const markRead = useMarkNotificationsRead();
+  const isStaff = useIsStaff();
   const [bellOpen, setBellOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+
   const bellRef = useRef<HTMLDivElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -287,12 +292,22 @@ export function AppLayout({ children }: { children: ReactNode }) {
                       <Link to="/loved" onClick={() => setMenuOpen(false)} className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-surface-elevated">
                         <Heart className="h-4 w-4" /> Loved books
                       </Link>
+                      {isStaff && (
+                        <Link
+                          to="/admin"
+                          onClick={() => setMenuOpen(false)}
+                          className="flex cursor-pointer items-center gap-2 border-t border-border/60 bg-gradient-to-r from-primary/10 to-accent/10 px-3 py-2.5 text-sm font-semibold text-primary hover:from-primary/20 hover:to-accent/20"
+                        >
+                          <Shield className="h-4 w-4" /> Library admin
+                        </Link>
+                      )}
                       <button onClick={signOut} className="flex w-full cursor-pointer items-center gap-2 border-t border-border/60 px-3 py-2.5 text-sm text-rose-300 hover:bg-rose-500/10">
                         <LogOut className="h-4 w-4" /> Sign out
                       </button>
                     </div>
                   )}
                 </div>
+
               </>
             ) : null}
           </div>

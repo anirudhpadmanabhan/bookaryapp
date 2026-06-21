@@ -121,12 +121,14 @@ function BookPage() {
         type="button"
         onClick={() => user ? setShowRent(true) : requireSignIn("Sign in to rent")}
         disabled={rent.isPending}
-        className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
+        className={`relative inline-flex cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-primary via-primary to-accent px-7 py-3.5 text-sm font-bold uppercase tracking-wide text-primary-foreground shadow-[0_18px_40px_-12px_hsl(var(--primary)/0.7)] transition hover:scale-[1.02] hover:shadow-[0_22px_50px_-12px_hsl(var(--primary)/0.85)] disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
       >
-        {rent.isPending ? "Confirming…" : `Rent now · ₹${rentPrice}/20 days`}
+        <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+        {rent.isPending ? "Confirming…" : `Rent now · ₹${rentPrice} / 20 days`}
       </button>
     );
   };
+
 
   return (
     <AppLayout>

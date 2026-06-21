@@ -66,8 +66,8 @@ export function BookCard({ book, minimal = false, coverColor, hideShelf = true }
         <p className="line-clamp-1 text-[11px] text-muted-foreground">by {book.author}</p>
         <div className="mt-2">
           {user ? (
-            <span className="inline-flex w-full items-center justify-center rounded-md bg-primary/15 px-2.5 py-1.5 text-[11px] font-semibold text-primary group-hover:bg-primary group-hover:text-primary-foreground">
-              View &amp; Rent
+            <span className="inline-flex w-full items-center justify-center rounded-md bg-gradient-to-r from-primary to-accent px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wide text-primary-foreground shadow-md shadow-primary/30 transition group-hover:shadow-lg group-hover:shadow-primary/50">
+              Rent now
             </span>
           ) : (
             <span className="inline-flex w-full items-center justify-center rounded-md border border-border bg-background/40 px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground group-hover:border-primary/50 group-hover:text-primary">
@@ -75,6 +75,7 @@ export function BookCard({ book, minimal = false, coverColor, hideShelf = true }
             </span>
           )}
         </div>
+
       </div>
     </Link>
   );

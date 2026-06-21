@@ -3,11 +3,12 @@ import type { BookSort, SortDirection } from "@/lib/books";
 import type { ViewMode } from "./BooksGrid";
 
 const SORT_OPTIONS: { value: BookSort; label: string }[] = [
-  { value: "newest", label: "New on shelf" },
-  { value: "shelf", label: "Shelf code" },
-  { value: "title", label: "Title" },
+  { value: "newest", label: "New on shelf (latest rack)" },
+  { value: "shelf", label: "Rack code (numeric)" },
+  { value: "title", label: "Title A–Z" },
   { value: "rating", label: "Rating" },
 ];
+
 
 export function SortBar({
   count,
