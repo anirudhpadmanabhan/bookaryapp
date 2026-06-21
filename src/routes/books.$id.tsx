@@ -5,7 +5,7 @@ import { displayRating as catalogRating, fetchBook, genreEnglish, genreMalayalam
 import { BookCover } from "@/components/BookCover";
 import {
   Heart, Star, Calendar, ArrowLeft, NotebookPen,
-  Building2, MapPin, Globe, User as UserIcon, MessageSquare, Trash2, Pencil, Quote, X, Crosshair, Clock,
+  Building2, MapPin, Globe, MessageSquare, Trash2, Pencil, Quote, X, Crosshair, Clock,
 } from "lucide-react";
 import {
   useFavorites, useRentals, useRentBook, useToggleFavorite, useAddDiary,
