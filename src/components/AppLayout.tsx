@@ -32,10 +32,10 @@ const mobileNav = [
 ];
 
 const TIPS: { title: string; body: string }[] = [
-  { title: "Sort what you see", body: "Every list has a Sort menu — new arrivals, shelf code, rating, or price." },
+  { title: "Sort what you see", body: "Every list has a Sort menu and an Asc/Desc toggle." },
   { title: "Switch tile or list", body: "Use the grid icon to flip between rich tiles and a dense list." },
   { title: "Rate without typing", body: "Pick a star count on any book — even a silent rating helps other readers." },
-  { title: "Thumbnails carry the title", body: "Every cover is illustrated with its Malayalam and English title — scan the shelf at a glance." },
+  { title: "Thumbnails carry the title", body: "Every cover is illustrated with its Malayalam and English title." },
   { title: "Loved syncs everywhere", body: "Tap the heart anywhere — it shows up on your Loved tab instantly." },
 ];
 
@@ -47,23 +47,27 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const qc = useQueryClient();
   const dueSoon = useDueSoonRentals();
   const [bellOpen, setBellOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const bellRef = useRef<HTMLDivElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   const tip = TIPS[Math.floor(Date.now() / (1000 * 60 * 60 * 6)) % TIPS.length];
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
       if (bellRef.current && !bellRef.current.contains(e.target as Node)) setBellOpen(false);
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
     };
-    if (bellOpen) document.addEventListener("mousedown", onDown);
+    document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
-  }, [bellOpen]);
+  }, []);
 
   const signOut = async () => {
     await qc.cancelQueries();
     qc.clear();
     await supabase.auth.signOut();
+    setMenuOpen(false);
     navigate({ to: "/" });
   };
 
@@ -74,8 +78,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen pb-20 text-foreground md:pb-0">
       <header className="sticky top-0 z-30 border-b border-border/60 bg-background/70 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-4 px-4 md:px-6">
-          <div className="flex items-center gap-3">
+        <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-2 px-3 md:gap-4 md:px-6">
+          <div className="flex min-w-0 items-center gap-3">
             <Link to="/" className="flex cursor-pointer items-center gap-2.5">
               <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/30">
                 <BookMarked className="h-5 w-5 text-white" />
@@ -90,7 +94,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </div>
           </div>
 
-          {/* Live header search — hidden on /search to avoid duplication */}
           {pathname !== "/search" && (
             <form
               onSubmit={(e) => { e.preventDefault(); goSearch(searchValue); }}
@@ -114,8 +117,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </form>
           )}
 
-
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 md:gap-3">
             {user && profile ? (
               <>
                 <div className="hidden items-center gap-2 rounded-full bg-emerald-500/15 px-3 py-1.5 text-sm text-emerald-400 sm:flex">
@@ -123,7 +125,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   ₹{Number(profile.wallet_balance).toFixed(0)}
                 </div>
 
-                {/* Notification bell — rentals due within 20 days */}
+                {/* Notification bell */}
                 <div ref={bellRef} className="relative">
                   <button
                     type="button"
@@ -139,14 +141,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
                     )}
                   </button>
                   {bellOpen && (
-                    <div className="absolute right-0 top-12 z-50 w-80 rounded-2xl border border-border bg-popover p-2 shadow-2xl">
-                      <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Return reminders (20-day window)
+                    <div className="fixed inset-x-2 top-16 z-50 max-w-sm rounded-2xl border border-border bg-popover p-2 shadow-2xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-12 sm:w-80">
+                      <div className="flex items-center justify-between px-3 py-2">
+                        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Return reminders</div>
+                        <button onClick={() => setBellOpen(false)} className="sm:hidden cursor-pointer text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
                       </div>
                       {dueSoon.length === 0 ? (
                         <p className="px-3 py-4 text-sm text-muted-foreground">Nothing due soon. Happy reading.</p>
                       ) : (
-                        <ul className="max-h-80 space-y-1 overflow-y-auto">
+                        <ul className="max-h-[60vh] space-y-1 overflow-y-auto sm:max-h-80">
                           {dueSoon.map((r) => (
                             <li key={r.id}>
                               <Link
@@ -171,27 +174,57 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   )}
                 </div>
 
-                <Link to="/profile" className="flex cursor-pointer items-center gap-2 rounded-full bg-surface px-3 py-1.5 hover:bg-surface-elevated">
-                  <div className="grid h-7 w-7 place-items-center rounded-full bg-gradient-to-br from-primary to-accent text-xs font-bold">
-                    {profile.display_name.slice(0, 1).toUpperCase()}
-                  </div>
-                  <span className="hidden text-sm font-medium sm:inline">{profile.display_name}</span>
-                </Link>
-                <button onClick={signOut} title="Sign out" className="grid h-9 w-9 cursor-pointer place-items-center rounded-full text-muted-foreground hover:bg-surface hover:text-foreground">
-                  <LogOut className="h-4 w-4" />
-                </button>
+                {/* Profile circle with dropdown menu (includes logout) */}
+                <div ref={menuRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setMenuOpen((o) => !o)}
+                    className="flex cursor-pointer items-center gap-2 rounded-full bg-surface px-2 py-1 hover:bg-surface-elevated md:px-3 md:py-1.5"
+                    aria-label="Profile menu"
+                  >
+                    <div className="grid h-7 w-7 place-items-center rounded-full bg-gradient-to-br from-primary to-accent text-xs font-bold">
+                      {profile.display_name.slice(0, 1).toUpperCase()}
+                    </div>
+                    <span className="hidden text-sm font-medium md:inline">{profile.display_name}</span>
+                  </button>
+                  {menuOpen && (
+                    <div className="absolute right-0 top-12 z-50 w-56 overflow-hidden rounded-2xl border border-border bg-popover shadow-2xl">
+                      <div className="border-b border-border/60 px-3 py-3">
+                        <div className="truncate text-sm font-semibold">{profile.display_name}</div>
+                        {(profile as any).tag && (
+                          <div className="mt-0.5 inline-block rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-accent">
+                            {(profile as any).tag}
+                          </div>
+                        )}
+                        <div className="mt-1 truncate text-xs text-muted-foreground">{user.email}</div>
+                        <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs text-emerald-300">
+                          <Wallet className="h-3 w-3" /> ₹{Number(profile.wallet_balance).toFixed(0)}
+                        </div>
+                      </div>
+                      <Link to="/profile" onClick={() => setMenuOpen(false)} className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-surface-elevated">
+                        <UserRound className="h-4 w-4" /> Profile & tracking
+                      </Link>
+                      <Link to="/diary" onClick={() => setMenuOpen(false)} className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-surface-elevated">
+                        <NotebookPen className="h-4 w-4" /> Reading diary
+                      </Link>
+                      <Link to="/loved" onClick={() => setMenuOpen(false)} className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-surface-elevated">
+                        <Heart className="h-4 w-4" /> Loved books
+                      </Link>
+                      <button onClick={signOut} className="flex w-full cursor-pointer items-center gap-2 border-t border-border/60 px-3 py-2.5 text-sm text-rose-300 hover:bg-rose-500/10">
+                        <LogOut className="h-4 w-4" /> Sign out
+                      </button>
+                    </div>
+                  )}
+                </div>
               </>
-            ) : null /* Sign-in CTA hidden while the platform is still being built. */}
+            ) : null}
           </div>
         </div>
       </header>
 
-      {/* Mobile library switcher — sits right under the BOOKARY logo */}
       <div className="border-b border-border/60 bg-background/60 px-4 py-2 sm:hidden">
         <LibrarySwitcher compact />
       </div>
-
-
 
       <div className="mx-auto flex max-w-[1400px] gap-6 px-4 py-6 md:px-6">
         <aside className="sticky top-20 hidden h-[calc(100vh-6rem)] w-60 shrink-0 flex-col gap-6 md:flex">
