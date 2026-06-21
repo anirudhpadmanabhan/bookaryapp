@@ -256,11 +256,19 @@ function BookPage() {
           onConfirm={(addr) => {
             rent.mutate(
               { bookId: book.id, price: rentPrice, address: addr },
-              { onSuccess: () => setShowRent(false) },
+              {
+                onSuccess: () => {
+                  setShowRent(false);
+                  toast.success("Rental confirmed — tracking saved to your profile", {
+                    action: { label: "Track", onClick: () => navigate({ to: "/profile" }) },
+                  });
+                },
+              },
             );
           }}
           pending={rent.isPending}
         />
+
       )}
 
       {/* Waitlist join modal */}
