@@ -86,25 +86,32 @@ function shelfNum(code: string | null): number {
 
 export function sortBooks(books: Book[], sort: BookSort, direction: SortDirection = "desc"): Book[] {
   const arr = [...books];
-  const dirMul = direction === "asc" ? 1 : -1;
   switch (sort) {
     case "title":
-      // For title, "asc" = A→Z (intuitive). Flip multiplier so default desc still works.
       return arr.sort((a, b) => a.title.localeCompare(b.title) * (direction === "asc" ? 1 : -1));
     case "rating":
       return arr.sort((a, b) => (displayRating(a) - displayRating(b)) * (direction === "asc" ? 1 : -1));
     case "shelf":
-      return arr.sort((a, b) => (shelfNum(a.shelf_code) - shelfNum(b.shelf_code)) * (direction === "asc" ? 1 : -1));
+      // Always numeric by shelf code; books without a shelf go to the end.
+      return arr.sort((a, b) => {
+        const na = shelfNum(a.shelf_code), nb = shelfNum(b.shelf_code);
+        const ma = Number.isFinite(na) ? 0 : 1, mb = Number.isFinite(nb) ? 0 : 1;
+        if (ma !== mb) return ma - mb;
+        return (na - nb) * (direction === "asc" ? 1 : -1);
+      });
     case "newest":
     default:
-      // Sort by created_at; falls back to id ordering when dates are equal.
+      // "New on shelf" = highest shelf code first (newest physical entries).
+      // Books without a shelf are pushed to the end regardless of direction.
       return arr.sort((a, b) => {
-        const ta = a.created_at ? Date.parse(a.created_at) : 0;
-        const tb = b.created_at ? Date.parse(b.created_at) : 0;
-        return (ta - tb) * (direction === "asc" ? 1 : -1);
+        const na = shelfNum(a.shelf_code), nb = shelfNum(b.shelf_code);
+        const ma = Number.isFinite(na) ? 0 : 1, mb = Number.isFinite(nb) ? 0 : 1;
+        if (ma !== mb) return ma - mb;
+        return (nb - na) * (direction === "desc" ? 1 : -1);
       });
   }
 }
+
 
 const LIST_COLUMNS =
   "id,title,title_ml,author,author_ml,original_author,genre,genre_ml,rating,rent_price,cover_color,pages,published_year,publisher,shelf_code,language,cover_url,created_at,library_id";
