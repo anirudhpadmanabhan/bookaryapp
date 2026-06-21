@@ -1,12 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
-import { fetchBooks, fetchNewArrivals, genreEnglish, genreMalayalam, sortBooks, type BookSort, slugify } from "@/lib/books";
+import {
+  fetchBooks, fetchNewArrivals, genreEnglish, genreMalayalam,
+  sortBooks, type BookSort, type SortDirection, slugify,
+} from "@/lib/books";
 import { BooksGrid, type ViewMode } from "@/components/BooksGrid";
 import { BookCard } from "@/components/BookCard";
 import { colorAt } from "@/lib/books";
 import { SortBar } from "@/components/SortBar";
-import { ArrowRight, Library, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowRight, Library, PenLine, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
 import { useMemo, useState } from "react";
 
 export const Route = createFileRoute("/")({
@@ -24,12 +27,14 @@ const HOME_LIMIT = 60;
 
 function HomePage() {
   const { data: books = [], isLoading } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
-  const { data: newArrivals = [] } = useQuery({ queryKey: ["new-arrivals"], queryFn: fetchNewArrivals });
+  const { data: newArrivals = [] } = useQuery({ queryKey: ["new-arrivals"], queryFn: () => fetchNewArrivals(6) });
   const [sort, setSort] = useState<BookSort>("newest");
+  const [direction, setDirection] = useState<SortDirection>("desc");
   const [view, setView] = useState<ViewMode>("tile");
   const [genresOpen, setGenresOpen] = useState(false);
+  const [writersOpen, setWritersOpen] = useState(false);
 
-  const sorted = useMemo(() => sortBooks(books, sort), [books, sort]);
+  const sorted = useMemo(() => sortBooks(books, sort, direction), [books, sort, direction]);
   const shown = sorted.slice(0, HOME_LIMIT);
 
   const genres = useMemo(() => {
@@ -38,6 +43,16 @@ function HomePage() {
       const cur = map.get(b.genre);
       if (cur) cur.count++;
       else map.set(b.genre, { count: 1, ml: genreMalayalam(b), en: genreEnglish(b) });
+    }
+    return Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count);
+  }, [books]);
+
+  const writers = useMemo(() => {
+    const map = new Map<string, { count: number; ml: string | null }>();
+    for (const b of books) {
+      const cur = map.get(b.author);
+      if (cur) cur.count++;
+      else map.set(b.author, { count: 1, ml: b.author_ml });
     }
     return Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count);
   }, [books]);
@@ -56,32 +71,35 @@ function HomePage() {
             <span className="font-mal text-accent">ചെറുകാട്</span> reading library — every book on every rack.
           </h1>
           <p className="mt-4 text-base text-foreground/80 md:text-lg">
-            Uploaded catalogue: {books.length.toLocaleString()} books across {genres.length} genres.
+            Uploaded catalogue: {books.length.toLocaleString()} books · {genres.length} genres · {writers.length} writers.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link to="/search" className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90">
               Browse the catalog <ArrowRight className="h-4 w-4" />
             </Link>
             <Link to="/genres" className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface/50 px-5 py-3 text-sm font-semibold hover:bg-surface">
-              Explore genres
+              <Library className="h-4 w-4" /> Explore genres
+            </Link>
+            <Link to="/writers" className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface/50 px-5 py-3 text-sm font-semibold hover:bg-surface">
+              <PenLine className="h-4 w-4" /> Explore writers
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Newly Arrived — pinned 5 books from latest delivery */}
+      {/* Newly Arrived */}
       {newArrivals.length > 0 && (
         <section className="mb-10">
           <div className="mb-4 flex items-end justify-between gap-3">
             <div>
               <div className="mb-1 flex items-center gap-2 text-xs uppercase tracking-wider text-accent">
-                <Sparkles className="h-4 w-4" /> Just added to the shelf
+                <Sparkles className="h-4 w-4" /> Latest shelf entries
               </div>
-              <h2 className="text-xl font-bold">Newly Arrived Volumes</h2>
+              <h2 className="text-xl font-bold">New on the Shelf</h2>
             </div>
-            <span className="text-xs text-muted-foreground">{newArrivals.length} new this week</span>
+            <span className="text-xs text-muted-foreground">{newArrivals.length} highest shelf numbers</span>
           </div>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
             {newArrivals.map((b, i) => (
               <BookCard key={b.id} book={b} coverColor={colorAt(i)} />
             ))}
@@ -90,7 +108,7 @@ function HomePage() {
       )}
 
       {/* Genres — minimized strip */}
-      <section className="mb-8">
+      <section className="mb-4">
         <button
           type="button"
           onClick={() => setGenresOpen((o) => !o)}
@@ -121,6 +139,38 @@ function HomePage() {
         )}
       </section>
 
+      {/* Writers — minimized strip */}
+      <section className="mb-8">
+        <button
+          type="button"
+          onClick={() => setWritersOpen((o) => !o)}
+          className="flex w-full cursor-pointer items-center justify-between rounded-xl bg-surface/40 px-4 py-3 text-sm hover:bg-surface/60"
+        >
+          <span className="flex items-center gap-2 font-semibold">
+            <PenLine className="h-4 w-4 text-accent" /> Browse by Writer
+            <span className="text-xs font-normal text-muted-foreground">({writers.length})</span>
+          </span>
+          {writersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </button>
+        {writersOpen && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {writers.slice(0, 40).map(([w, info]) => (
+              <Link
+                key={w}
+                to="/writers/$slug"
+                params={{ slug: slugify(w) }}
+                className="cursor-pointer rounded-full border border-border bg-surface/60 px-3 py-1.5 text-xs hover:border-accent/60 hover:text-accent"
+              >
+                {w}{info.ml ? ` / ${info.ml}` : ""} <span className="text-muted-foreground">· {info.count}</span>
+              </Link>
+            ))}
+            <Link to="/writers" className="cursor-pointer rounded-full bg-accent/15 px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/25">
+              All writers ›
+            </Link>
+          </div>
+        )}
+      </section>
+
       {/* All Books */}
       <section>
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
@@ -140,6 +190,8 @@ function HomePage() {
           total={books.length}
           sort={sort}
           onSortChange={setSort}
+          direction={direction}
+          onDirectionChange={setDirection}
           view={view}
           onViewChange={setView}
         />

@@ -17,7 +17,7 @@ export function useProfile() {
       const displayName = user.user_metadata?.display_name || user.email?.split("@")[0] || "Reader";
       const { data: created, error: createError } = await supabase
         .from("profiles")
-        .insert({ id: user.id, display_name: displayName })
+        .insert({ id: user.id, display_name: displayName, wallet_balance: 100 } as any)
         .select("*")
         .single();
       if (createError) throw createError;
@@ -26,7 +26,24 @@ export function useProfile() {
   });
 }
 
-// FAVORITES — deduped at query level.
+export function useUpdateProfile() {
+  const qc = useQueryClient();
+  const { user } = useSession();
+  return useMutation({
+    mutationFn: async (updates: { display_name?: string; tag?: string | null; phone?: string | null; address?: string | null }) => {
+      if (!user) throw new Error("Sign in");
+      const { error } = await supabase.from("profiles").update(updates as any).eq("id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["profile"] });
+      toast.success("Profile updated");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+// FAVORITES
 export function useFavorites() {
   const { user } = useSession();
   return useQuery({
@@ -100,12 +117,17 @@ export function useRentBook() {
       if (!prof) throw new Error("Add your profile details before renting");
       const { data: existing, error: activeErr } = await supabase
         .from("rentals")
-        .select("id, due_at")
+        .select("id, user_id, due_at")
         .eq("book_id", bookId)
         .is("returned_at", null)
         .maybeSingle();
       if (activeErr) throw activeErr;
-      if (existing) throw new Error(`Already rented — due ${new Date(existing.due_at).toLocaleDateString()}`);
+      if (existing) {
+        if (existing.user_id === user.id) {
+          throw new Error(`You've already rented this — due ${new Date(existing.due_at).toLocaleDateString()}`);
+        }
+        throw new Error("This book is rented out — join the waiting list instead.");
+      }
       const balance = Number(prof.wallet_balance);
       if (balance < price) throw new Error(`Need ₹${price - balance} more in wallet`);
       const deliveryAddress = (address ?? prof.address ?? "").trim() || null;
@@ -128,12 +150,62 @@ export function useRentBook() {
   });
 }
 
+// WAITLIST
+export function useWaitlist(bookId?: string) {
+  const { user } = useSession();
+  return useQuery({
+    enabled: !!user,
+    queryKey: ["waitlist", user?.id, bookId ?? "all"],
+    queryFn: async () => {
+      let q = supabase.from("waitlist").select("*, books(*)").order("created_at", { ascending: true });
+      if (bookId) q = q.eq("book_id", bookId);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useJoinWaitlist() {
+  const qc = useQueryClient();
+  const { user } = useSession();
+  return useMutation({
+    mutationFn: async ({ bookId, address }: { bookId: string; address?: string }) => {
+      if (!user) throw new Error("Sign in");
+      const { error } = await supabase.from("waitlist").insert({
+        user_id: user.id, book_id: bookId, delivery_address: address?.trim() || null,
+      } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["waitlist"] });
+      toast.success("Added to the waiting list — you'll be assigned when it's returned.");
+    },
+    onError: (e: Error) => toast.error(e.message.includes("duplicate") ? "You're already on the waiting list." : e.message),
+  });
+}
+
+export function useLeaveWaitlist() {
+  const qc = useQueryClient();
+  const { user } = useSession();
+  return useMutation({
+    mutationFn: async (bookId: string) => {
+      if (!user) throw new Error("Sign in");
+      const { error } = await supabase.from("waitlist").delete().eq("book_id", bookId).eq("user_id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["waitlist"] });
+      toast.success("Removed from waiting list");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
 
 // Notifications — rentals due within 20 days (and overdue).
 export function useDueSoonRentals() {
   const { data: rentals = [] } = useRentals();
   const now = Date.now();
-  const horizon = 20 * 24 * 60 * 60 * 1000;
   return (rentals as any[])
     .filter((r) => !r.returned_at)
     .map((r) => {
@@ -145,7 +217,7 @@ export function useDueSoonRentals() {
     .sort((a, b) => a.daysLeft - b.daysLeft);
 }
 
-// DIARY — book_id is nullable so users can log reading thoughts on any book.
+// DIARY
 export function useDiary() {
   const { user } = useSession();
   return useQuery({
@@ -166,11 +238,11 @@ export function useAddDiary() {
   const qc = useQueryClient();
   const { user } = useSession();
   return useMutation({
-    mutationFn: async ({ bookId, note, progress }: { bookId: string | null; note: string; progress: number }) => {
+    mutationFn: async ({ bookId, note }: { bookId: string | null; note: string }) => {
       if (!user) throw new Error("Sign in");
       const { error } = await supabase
         .from("reading_diary")
-        .insert({ user_id: user.id, book_id: bookId, note, progress_pct: progress });
+        .insert({ user_id: user.id, book_id: bookId, note, progress_pct: 0 });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -184,8 +256,8 @@ export function useAddDiary() {
 export function useEditDiary() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, note, progress }: { id: string; note: string; progress: number }) => {
-      const { error } = await supabase.from("reading_diary").update({ note, progress_pct: progress }).eq("id", id);
+    mutationFn: async ({ id, note }: { id: string; note: string }) => {
+      const { error } = await supabase.from("reading_diary").update({ note }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -223,7 +295,6 @@ export type Review = {
   updated_at: string;
 };
 
-
 export function useReviews(bookId: string) {
   return useQuery({
     queryKey: ["reviews", bookId],
@@ -252,22 +323,14 @@ export function useUpsertReview() {
           { onConflict: "book_id,user_id" },
         );
       if (error) throw error;
-      const noteParts = [`Rated ${rating}/5`];
-      if (body.trim()) noteParts.push(body.trim());
-      if (quote?.trim()) noteParts.push(`Quote: "${quote.trim()}"`);
-      await supabase
-        .from("reading_diary")
-        .insert({ user_id: user.id, book_id: bookId, note: noteParts.join(" — "), progress_pct: 100 });
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["reviews", vars.bookId] });
-      qc.invalidateQueries({ queryKey: ["diary"] });
-      toast.success("Review saved & added to your diary");
+      toast.success("Review saved");
     },
     onError: (e: Error) => toast.error(e.message),
   });
 }
-
 
 export function useDeleteReview() {
   const qc = useQueryClient();
@@ -344,7 +407,7 @@ export function useSuggestBook() {
   });
 }
 
-// INSIGHTS — derive reading insights from diary + favorites + rentals.
+// INSIGHTS
 export function useReadingInsights() {
   const { user } = useSession();
   const { data: diary = [] } = useDiary();
@@ -353,13 +416,11 @@ export function useReadingInsights() {
 
   if (!user) return null;
 
-  // Streak: consecutive days (ending today or yesterday) with at least one diary entry.
   const dayKeys = new Set(
     (diary as any[]).map((e) => new Date(e.created_at).toISOString().slice(0, 10)),
   );
   let streak = 0;
   const cursor = new Date();
-  // If no entry today, allow streak to anchor on yesterday.
   if (!dayKeys.has(cursor.toISOString().slice(0, 10))) cursor.setDate(cursor.getDate() - 1);
   while (dayKeys.has(cursor.toISOString().slice(0, 10))) {
     streak += 1;
