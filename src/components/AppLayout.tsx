@@ -3,9 +3,9 @@ import {
   Home, Search, BookMarked, PenLine, Heart, UserRound,
   Library, NotebookPen, Wallet, LogOut, Sparkles, Bell, X,
 } from "lucide-react";
-import { useState, useRef, useEffect, type ReactNode } from "react";
+import { useState, useRef, useEffect, useMemo, type ReactNode } from "react";
 import { useSession } from "@/lib/auth";
-import { useProfile, useDueSoonRentals } from "@/lib/userdata";
+import { useProfile, useDueSoonRentals, useNotifications, useMarkNotificationsRead, useRentals } from "@/lib/userdata";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { LibrarySwitcher } from "@/components/LibrarySwitcher";
@@ -46,6 +46,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const dueSoon = useDueSoonRentals();
+  const { data: rentals = [] } = useRentals();
+  const { data: notifs = [] } = useNotifications();
+  const markRead = useMarkNotificationsRead();
   const [bellOpen, setBellOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
@@ -53,6 +56,51 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   const tip = TIPS[Math.floor(Date.now() / (1000 * 60 * 60 * 6)) % TIPS.length];
+
+  // Merge persisted notifications + derived due-soon reminders + tracking updates into one inbox.
+  const inbox = useMemo(() => {
+    const items: { id: string; kind: string; title: string; body?: string; ts: number; unread: boolean; bookId?: string }[] = [];
+    for (const n of notifs as any[]) {
+      items.push({
+        id: `n-${n.id}`,
+        kind: n.kind,
+        title: n.title,
+        body: n.body ?? undefined,
+        ts: new Date(n.created_at).getTime(),
+        unread: !n.read_at,
+        bookId: n.book_id ?? undefined,
+      });
+    }
+    for (const r of dueSoon as any[]) {
+      items.push({
+        id: `due-${r.id}`,
+        kind: r.overdue ? "overdue" : "due_soon",
+        title: r.overdue ? `${r.books?.title ?? "Book"} is overdue` : `${r.books?.title ?? "Book"} due in ${r.daysLeft}d`,
+        body: `by ${r.books?.author ?? ""} · return by ${new Date(r.due_at).toLocaleDateString()}`,
+        ts: new Date(r.due_at).getTime(),
+        unread: true,
+        bookId: r.book_id,
+      });
+    }
+    // Tracking updates for shipments that aren't yet delivered
+    for (const r of rentals as any[]) {
+      if (r.returned_at) continue;
+      const status = r.tracking_status ?? "confirmed";
+      if (status === "delivered" || status === "returned") continue;
+      items.push({
+        id: `track-${r.id}`,
+        kind: "tracking",
+        title: `Tracking · ${r.books?.title ?? "Your rental"}`,
+        body: `Status: ${status.replace(/_/g, " ")}`,
+        ts: new Date(r.rented_at).getTime(),
+        unread: false,
+        bookId: r.book_id,
+      });
+    }
+    return items.sort((a, b) => b.ts - a.ts);
+  }, [notifs, dueSoon, rentals]);
+
+  const unreadCount = inbox.filter((i) => i.unread).length;
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
@@ -62,6 +110,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, []);
+
+  const openBell = () => {
+    setBellOpen((o) => {
+      if (!o && unreadCount > 0) markRead.mutate();
+      return !o;
+    });
+  };
 
   const signOut = async () => {
     await qc.cancelQueries();
@@ -120,59 +175,81 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-1.5 md:gap-3">
             {user && profile ? (
               <>
-                <div className="hidden items-center gap-2 rounded-full bg-emerald-500/15 px-3 py-1.5 text-sm text-emerald-400 sm:flex">
+                <Link
+                  to="/profile"
+                  className="hidden cursor-pointer items-center gap-2 rounded-full bg-emerald-500/15 px-3 py-1.5 text-sm text-emerald-400 transition hover:bg-emerald-500/25 sm:flex"
+                  title="Manage wallet"
+                >
                   <Wallet className="h-3.5 w-3.5" />
                   ₹{Number(profile.wallet_balance).toFixed(0)}
-                </div>
+                </Link>
 
-                {/* Notification bell */}
+                {/* Notification bell — unified inbox */}
                 <div ref={bellRef} className="relative">
                   <button
                     type="button"
-                    onClick={() => setBellOpen((o) => !o)}
+                    onClick={openBell}
                     className="relative grid h-9 w-9 cursor-pointer place-items-center rounded-full bg-surface/60 hover:bg-surface-elevated"
                     aria-label="Notifications"
                   >
                     <Bell className="h-4 w-4" />
-                    {dueSoon.length > 0 && (
+                    {unreadCount > 0 && (
                       <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
-                        {dueSoon.length}
+                        {unreadCount}
                       </span>
                     )}
                   </button>
                   {bellOpen && (
-                    <div className="fixed inset-x-2 top-16 z-50 max-w-sm rounded-2xl border border-border bg-popover p-2 shadow-2xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-12 sm:w-80">
+                    <div className="fixed inset-x-2 top-16 z-50 max-w-sm rounded-2xl border border-border bg-popover p-2 shadow-2xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-12 sm:w-96">
                       <div className="flex items-center justify-between px-3 py-2">
-                        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Return reminders</div>
+                        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Notifications</div>
                         <button onClick={() => setBellOpen(false)} className="sm:hidden cursor-pointer text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
                       </div>
-                      {dueSoon.length === 0 ? (
-                        <p className="px-3 py-4 text-sm text-muted-foreground">Nothing due soon. Happy reading.</p>
+                      {inbox.length === 0 ? (
+                        <p className="px-3 py-6 text-sm text-muted-foreground">No new notifications. We'll ping you about rentals, tracking, returns, and waitlist openings.</p>
                       ) : (
-                        <ul className="max-h-[60vh] space-y-1 overflow-y-auto sm:max-h-80">
-                          {dueSoon.map((r) => (
-                            <li key={r.id}>
-                              <Link
-                                to="/books/$id"
-                                params={{ id: r.book_id }}
-                                onClick={() => setBellOpen(false)}
-                                className="flex cursor-pointer items-center justify-between gap-3 rounded-xl px-3 py-2.5 hover:bg-surface-elevated"
-                              >
+                        <ul className="max-h-[65vh] space-y-1 overflow-y-auto sm:max-h-96">
+                          {inbox.map((item) => {
+                            const tone =
+                              item.kind === "waitlist_assigned" ? "bg-emerald-500/20 text-emerald-300" :
+                              item.kind === "overdue" ? "bg-rose-500/20 text-rose-300" :
+                              item.kind === "due_soon" ? "bg-amber-500/20 text-amber-300" :
+                              item.kind === "tracking" ? "bg-primary/15 text-primary" :
+                              "bg-surface text-foreground/80";
+                            const label =
+                              item.kind === "waitlist_assigned" ? "Available" :
+                              item.kind === "overdue" ? "Overdue" :
+                              item.kind === "due_soon" ? "Due soon" :
+                              item.kind === "tracking" ? "Tracking" :
+                              "New";
+                            const Inner = (
+                              <div className="flex items-start justify-between gap-3 rounded-xl px-3 py-2.5 hover:bg-surface-elevated">
                                 <div className="min-w-0">
-                                  <div className="truncate text-sm font-medium">{r.books?.title}</div>
-                                  <div className="truncate text-xs text-muted-foreground">{r.books?.author}</div>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${tone}`}>{label}</span>
+                                    {item.unread && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+                                  </div>
+                                  <div className="mt-1 truncate text-sm font-medium">{item.title}</div>
+                                  {item.body && <div className="truncate text-xs text-muted-foreground">{item.body}</div>}
                                 </div>
-                                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${r.overdue ? "bg-rose-500/20 text-rose-300" : r.daysLeft <= 5 ? "bg-amber-500/20 text-amber-300" : "bg-emerald-500/15 text-emerald-300"}`}>
-                                  {r.overdue ? `${Math.abs(r.daysLeft)}d overdue` : `${r.daysLeft}d left`}
-                                </span>
-                              </Link>
-                            </li>
-                          ))}
+                              </div>
+                            );
+                            return (
+                              <li key={item.id}>
+                                {item.bookId ? (
+                                  <Link to="/books/$id" params={{ id: item.bookId }} onClick={() => setBellOpen(false)} className="block cursor-pointer">{Inner}</Link>
+                                ) : (
+                                  <Link to="/profile" onClick={() => setBellOpen(false)} className="block cursor-pointer">{Inner}</Link>
+                                )}
+                              </li>
+                            );
+                          })}
                         </ul>
                       )}
                     </div>
                   )}
                 </div>
+
 
                 {/* Profile circle with dropdown menu (includes logout) */}
                 <div ref={menuRef} className="relative">

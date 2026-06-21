@@ -97,8 +97,12 @@ export function sortBooks(books: Book[], sort: BookSort, direction: SortDirectio
       return arr.sort((a, b) => (shelfNum(a.shelf_code) - shelfNum(b.shelf_code)) * (direction === "asc" ? 1 : -1));
     case "newest":
     default:
-      // Default = newest first (desc by created_at). If "asc", reverse.
-      return direction === "asc" ? arr.reverse() : arr;
+      // Sort by created_at; falls back to id ordering when dates are equal.
+      return arr.sort((a, b) => {
+        const ta = a.created_at ? Date.parse(a.created_at) : 0;
+        const tb = b.created_at ? Date.parse(b.created_at) : 0;
+        return (ta - tb) * (direction === "asc" ? 1 : -1);
+      });
   }
 }
 

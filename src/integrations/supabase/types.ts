@@ -180,6 +180,50 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          body: string | null
+          book_id: string | null
+          created_at: string
+          id: string
+          kind: string
+          link_url: string | null
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          book_id?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          link_url?: string | null
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          book_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          link_url?: string | null
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           address: string | null
@@ -220,6 +264,7 @@ export type Database = {
           id: string
           note: string
           progress_pct: number
+          rating: number | null
           updated_at: string
           user_id: string
         }
@@ -229,6 +274,7 @@ export type Database = {
           id?: string
           note: string
           progress_pct?: number
+          rating?: number | null
           updated_at?: string
           user_id: string
         }
@@ -238,6 +284,7 @@ export type Database = {
           id?: string
           note?: string
           progress_pct?: number
+          rating?: number | null
           updated_at?: string
           user_id?: string
         }
@@ -370,7 +417,27 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      profiles_public: {
+        Row: {
+          created_at: string | null
+          display_name: string | null
+          id: string | null
+          tag: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          display_name?: string | null
+          id?: string | null
+          tag?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          display_name?: string | null
+          id?: string | null
+          tag?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never

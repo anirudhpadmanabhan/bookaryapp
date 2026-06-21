@@ -5,7 +5,7 @@ import { displayRating as catalogRating, fetchBook, genreEnglish, genreMalayalam
 import { BookCover } from "@/components/BookCover";
 import {
   Heart, Star, Calendar, ArrowLeft, NotebookPen,
-  Building2, MapPin, Globe, User as UserIcon, MessageSquare, Trash2, Pencil, Quote, X, Crosshair, Clock,
+  Building2, MapPin, Globe, MessageSquare, Trash2, Pencil, Quote, X, Crosshair, Clock,
 } from "lucide-react";
 import {
   useFavorites, useRentals, useRentBook, useToggleFavorite, useAddDiary,
@@ -256,11 +256,19 @@ function BookPage() {
           onConfirm={(addr) => {
             rent.mutate(
               { bookId: book.id, price: rentPrice, address: addr },
-              { onSuccess: () => setShowRent(false) },
+              {
+                onSuccess: () => {
+                  setShowRent(false);
+                  toast.success("Rental confirmed — tracking saved to your profile", {
+                    action: { label: "Track", onClick: () => navigate({ to: "/profile" }) },
+                  });
+                },
+              },
             );
           }}
           pending={rent.isPending}
         />
+
       )}
 
       {/* Waitlist join modal */}
@@ -300,13 +308,22 @@ function BookPage() {
             {reviews.map((r) => (
               <article key={r.id} className="glass-card rounded-2xl p-5">
                 <div className="mb-2 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
+                  <Link
+                    to="/u/$id"
+                    params={{ id: r.user_id }}
+                    className="flex cursor-pointer items-center gap-2 hover:opacity-90"
+                  >
                     <div className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-primary to-accent text-xs font-bold text-white">
-                      <UserIcon className="h-3.5 w-3.5" />
+                      {(r.author_display_name ?? "R").slice(0, 1).toUpperCase()}
                     </div>
-                    <span className="text-sm font-medium">{r.user_id === user?.id ? "You" : "Reader"}</span>
+                    <span className="text-sm font-medium">
+                      {r.user_id === user?.id ? "You" : (r.author_display_name ?? "Reader")}
+                    </span>
+                    {r.author_tag && (
+                      <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-accent">{r.author_tag}</span>
+                    )}
                     <span className="text-xs text-muted-foreground">· {new Date(r.created_at).toLocaleDateString()}</span>
-                  </div>
+                  </Link>
                   <div className="flex">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <Star key={i} className={`h-4 w-4 ${i < r.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />

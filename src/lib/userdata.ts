@@ -238,16 +238,31 @@ export function useAddDiary() {
   const qc = useQueryClient();
   const { user } = useSession();
   return useMutation({
-    mutationFn: async ({ bookId, note }: { bookId: string | null; note: string }) => {
+    mutationFn: async ({ bookId, note, rating }: { bookId: string | null; note: string; rating?: number | null }) => {
       if (!user) throw new Error("Sign in");
       const { error } = await supabase
         .from("reading_diary")
-        .insert({ user_id: user.id, book_id: bookId, note, progress_pct: 0 });
+        .insert({ user_id: user.id, book_id: bookId, note, rating: rating ?? null, progress_pct: 0 } as any);
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["diary"] });
       toast.success("Diary entry saved");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useEditDiaryFull() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, note, rating }: { id: string; note: string; rating?: number | null }) => {
+      const { error } = await supabase.from("reading_diary").update({ note, rating: rating ?? null } as any).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["diary"] });
+      toast.success("Entry updated");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -295,6 +310,11 @@ export type Review = {
   updated_at: string;
 };
 
+export type ReviewWithAuthor = Review & {
+  author_display_name: string | null;
+  author_tag: string | null;
+};
+
 export function useReviews(bookId: string) {
   return useQuery({
     queryKey: ["reviews", bookId],
@@ -305,8 +325,74 @@ export function useReviews(bookId: string) {
         .eq("book_id", bookId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as Review[];
+      const reviews = (data ?? []) as Review[];
+      if (reviews.length === 0) return [] as ReviewWithAuthor[];
+      const ids = [...new Set(reviews.map((r) => r.user_id))];
+      const { data: profiles } = await supabase
+        .from("profiles_public" as any)
+        .select("id, display_name, tag")
+        .in("id", ids);
+      const lookup = new Map<string, { display_name: string; tag: string | null }>();
+      for (const p of (profiles ?? []) as any[]) lookup.set(p.id, { display_name: p.display_name, tag: p.tag });
+      return reviews.map((r) => ({
+        ...r,
+        author_display_name: lookup.get(r.user_id)?.display_name ?? null,
+        author_tag: lookup.get(r.user_id)?.tag ?? null,
+      })) as ReviewWithAuthor[];
     },
+  });
+}
+
+// PUBLIC PROFILE — safe columns only via profiles_public view
+export function usePublicProfile(userId: string | undefined) {
+  return useQuery({
+    enabled: !!userId,
+    queryKey: ["public-profile", userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles_public" as any)
+        .select("id, display_name, tag, created_at")
+        .eq("id", userId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { id: string; display_name: string; tag: string | null; created_at: string } | null;
+    },
+  });
+}
+
+// NOTIFICATIONS
+export function useNotifications() {
+  const { user } = useSession();
+  return useQuery({
+    enabled: !!user,
+    queryKey: ["notifications", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("notifications" as any)
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+    refetchInterval: 30_000,
+  });
+}
+
+export function useMarkNotificationsRead() {
+  const qc = useQueryClient();
+  const { user } = useSession();
+  return useMutation({
+    mutationFn: async () => {
+      if (!user) return;
+      const { error } = await supabase
+        .from("notifications" as any)
+        .update({ read_at: new Date().toISOString() } as any)
+        .eq("user_id", user.id)
+        .is("read_at", null);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
   });
 }
 
