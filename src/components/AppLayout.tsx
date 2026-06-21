@@ -3,9 +3,9 @@ import {
   Home, Search, BookMarked, PenLine, Heart, UserRound,
   Library, NotebookPen, Wallet, LogOut, Sparkles, Bell, X,
 } from "lucide-react";
-import { useState, useRef, useEffect, type ReactNode } from "react";
+import { useState, useRef, useEffect, useMemo, type ReactNode } from "react";
 import { useSession } from "@/lib/auth";
-import { useProfile, useDueSoonRentals } from "@/lib/userdata";
+import { useProfile, useDueSoonRentals, useNotifications, useMarkNotificationsRead, useRentals } from "@/lib/userdata";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { LibrarySwitcher } from "@/components/LibrarySwitcher";
