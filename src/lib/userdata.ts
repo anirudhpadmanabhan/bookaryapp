@@ -238,16 +238,31 @@ export function useAddDiary() {
   const qc = useQueryClient();
   const { user } = useSession();
   return useMutation({
-    mutationFn: async ({ bookId, note }: { bookId: string | null; note: string }) => {
+    mutationFn: async ({ bookId, note, rating }: { bookId: string | null; note: string; rating?: number | null }) => {
       if (!user) throw new Error("Sign in");
       const { error } = await supabase
         .from("reading_diary")
-        .insert({ user_id: user.id, book_id: bookId, note, progress_pct: 0 });
+        .insert({ user_id: user.id, book_id: bookId, note, rating: rating ?? null, progress_pct: 0 } as any);
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["diary"] });
       toast.success("Diary entry saved");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useEditDiaryFull() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, note, rating }: { id: string; note: string; rating?: number | null }) => {
+      const { error } = await supabase.from("reading_diary").update({ note, rating: rating ?? null } as any).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["diary"] });
+      toast.success("Entry updated");
     },
     onError: (e: Error) => toast.error(e.message),
   });
