@@ -187,6 +187,7 @@ export type Database = {
           display_name: string
           id: string
           phone: string | null
+          tag: string | null
           updated_at: string
           wallet_balance: number
         }
@@ -196,6 +197,7 @@ export type Database = {
           display_name?: string
           id: string
           phone?: string | null
+          tag?: string | null
           updated_at?: string
           wallet_balance?: number
         }
@@ -205,6 +207,7 @@ export type Database = {
           display_name?: string
           id?: string
           phone?: string | null
+          tag?: string | null
           updated_at?: string
           wallet_balance?: number
         }
@@ -326,6 +329,38 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "reviews_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      waitlist: {
+        Row: {
+          book_id: string
+          created_at: string
+          delivery_address: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          book_id: string
+          created_at?: string
+          delivery_address?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          book_id?: string
+          created_at?: string
+          delivery_address?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waitlist_book_id_fkey"
             columns: ["book_id"]
             isOneToOne: false
             referencedRelation: "books"
