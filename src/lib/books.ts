@@ -23,9 +23,6 @@ export type Book = {
   created_at?: string;
 };
 
-// Palette — every entry must have a matching .cover-<name> rule in styles.css.
-// Background is deep indigo-violet, so violet/plum/midnight/indigo are kept as
-// classes but excluded from the rotation so book covers never blend into the page.
 export const COVER_PALETTE = [
   "amber","teal","rose","forest","gold","cobalt","crimson","sage",
   "butter","rust","wine","fog","oxblood","stone",
@@ -37,77 +34,30 @@ export function colorForBook(id: string): string {
   return COVER_PALETTE[h % COVER_PALETTE.length];
 }
 
-// Position-based palette walk that guarantees no two adjacent picks repeat.
 export function colorAt(index: number): string {
   return COVER_PALETTE[(index * 5) % COVER_PALETTE.length];
 }
 
-export type BookSort = "newest" | "title" | "rating" | "price-asc" | "price-desc" | "shelf";
+// Price options removed per product decision (flat ₹10 / 20 days).
+export type BookSort = "newest" | "title" | "rating" | "shelf";
+export type SortDirection = "asc" | "desc";
 
 const GENRE_ENGLISH: Record<string, string> = {
-  "നോവൽ": "Novel",
-  "ഡി.നോവൽ": "Detective novel",
-  "ക്രൈം നോവൽ": "Crime novel",
-  "ലഘുനോവൽ": "Short novel",
-  "കഥ": "Stories",
-  "ചെറുകഥ": "Short stories",
-  "നർമ്മകഥ": "Humour stories",
-  "ബാലസാഹിത്യം": "Children's literature",
-  "കവിത": "Poetry",
-  "ലേഖനം": "Essays",
-  "ഉപന്യാസം": "Essays",
-  "പഠനം": "Studies",
-  "ജി.കെ.പഠനം": "General knowledge studies",
-  "നാടക പഠനം": "Drama studies",
-  "ഗണിതപഠനം": "Mathematics studies",
-  "ചരിത്രം": "History",
-  "ജീവചരിത്രം": "Biography",
-  "ആത്മകഥ": "Autobiography",
-  "നാടകം": "Drama",
-  "ശാസ്ത്രം": "Science",
-  "വിജ്ഞാനം": "Knowledge",
-  "വൈജ്ഞാനികം": "Informative",
-  "ഓർമ്മകൾ": "Memoirs",
-  "ഓർമ്മകുറിപ്പ്": "Memoir notes",
-  "ഓ൪മ്മകുറിപ്പ്": "Memoir notes",
-  "യാത്രാവിവരണം": "Travelogue",
-  "യാത്രകുറിപ്പ്": "Travel notes",
-  "യാത്രാനുഭവം": "Travel experience",
-  "പുരാണം": "Mythology",
-  "റഫറ൯സ്": "Reference",
-  "ക്വിസ്സ്": "Quiz",
-  "ആരോഗ്യം": "Health",
-  "അനുഭവം": "Experience",
-  "നിരൂപണം": "Criticism",
-  "തിരക്കഥ": "Screenplay",
-  "വിവർത്തനം": "Translation",
-  "വിവരണം": "Description",
-  "സാഹിത്യം": "Literature",
-  "ഗണിതം": "Mathematics",
-  "വിശകലനം": "Analysis",
-  "കുറിപ്പുകൾ": "Notes",
-  "ഹാസ്യം": "Humour",
-  "കാറ്റലോക്": "Catalogue",
-  "മന:ശാസ്ത്രം": "Psychology",
-  "സിനിമ": "Cinema",
-  "ഇതിഹാസം": "Epic",
-  "നിഘണ്ടു": "Dictionary",
-  "അഭിമുഖം": "Interview",
-  "റിപ്പോർട്ട്": "Report",
-  "ഫലിതം": "Jokes",
-  "പ്രഭാഷണം": "Lecture",
-  "പ്രസംഗം": "Speech",
-  "വിദ്യാഭ്യാസം": "Education",
-  "ഫോക് ലോർ": "Folklore",
-  "നർമ്മം": "Humour",
-  "കടങ്കഥ": "Riddles",
-  "വിമർശനം": "Review",
-  "ഡയറി": "Diary",
-  "പ്രബന്ധം": "Treatise",
-  "നാടോടിസാഹിത്യം": "Folk literature",
-  "ഗാനങ്ങൾ": "Songs",
-  "കത്തുകൾ": "Letters",
-  "സോവിയറ്റ്സമീക്ഷ": "Soviet review",
+  "നോവൽ": "Novel","ഡി.നോവൽ": "Detective novel","ക്രൈം നോവൽ": "Crime novel","ലഘുനോവൽ": "Short novel",
+  "കഥ": "Stories","ചെറുകഥ": "Short stories","നർമ്മകഥ": "Humour stories","ബാലസാഹിത്യം": "Children's literature",
+  "കവിത": "Poetry","ലേഖനം": "Essays","ഉപന്യാസം": "Essays","പഠനം": "Studies","ജി.കെ.പഠനം": "General knowledge studies",
+  "നാടക പഠനം": "Drama studies","ഗണിതപഠനം": "Mathematics studies","ചരിത്രം": "History","ജീവചരിത്രം": "Biography",
+  "ആത്മകഥ": "Autobiography","നാടകം": "Drama","ശാസ്ത്രം": "Science","വിജ്ഞാനം": "Knowledge","വൈജ്ഞാനികം": "Informative",
+  "ഓർമ്മകൾ": "Memoirs","ഓർമ്മകുറിപ്പ്": "Memoir notes","ഓ൪മ്മകുറിപ്പ്": "Memoir notes",
+  "യാത്രാവിവരണം": "Travelogue","യാത്രകുറിപ്പ്": "Travel notes","യാത്രാനുഭവം": "Travel experience",
+  "പുരാണം": "Mythology","റഫറ൯സ്": "Reference","ക്വിസ്സ്": "Quiz","ആരോഗ്യം": "Health","അനുഭവം": "Experience",
+  "നിരൂപണം": "Criticism","തിരക്കഥ": "Screenplay","വിവർത്തനം": "Translation","വിവരണം": "Description",
+  "സാഹിത്യം": "Literature","ഗണിതം": "Mathematics","വിശകലനം": "Analysis","കുറിപ്പുകൾ": "Notes",
+  "ഹാസ്യം": "Humour","കാറ്റലോക്": "Catalogue","മന:ശാസ്ത്രം": "Psychology","സിനിമ": "Cinema","ഇതിഹാസം": "Epic",
+  "നിഘണ്ടു": "Dictionary","അഭിമുഖം": "Interview","റിപ്പോർട്ട്": "Report","ഫലിതം": "Jokes",
+  "പ്രഭാഷണം": "Lecture","പ്രസംഗം": "Speech","വിദ്യാഭ്യാസം": "Education","ഫോക് ലോർ": "Folklore",
+  "നർമ്മം": "Humour","കടങ്കഥ": "Riddles","വിമർശനം": "Review","ഡയറി": "Diary","പ്രബന്ധം": "Treatise",
+  "നാടോടിസാഹിത്യം": "Folk literature","ഗാനങ്ങൾ": "Songs","കത്തുകൾ": "Letters","സോവിയറ്റ്സമീക്ഷ": "Soviet review",
 };
 
 export function displayRating(book: Pick<Book, "rating" | "id">): number {
@@ -129,32 +79,29 @@ export function genreMalayalam(book: Pick<Book, "genre" | "genre_ml">): string |
   return /[\u0D00-\u0D7F]/.test(book.genre) ? book.genre : null;
 }
 
-export function sortBooks(books: Book[], sort: BookSort): Book[] {
+function shelfNum(code: string | null): number {
+  const n = Number(code ?? Number.NaN);
+  return Number.isFinite(n) ? n : Number.NEGATIVE_INFINITY;
+}
+
+export function sortBooks(books: Book[], sort: BookSort, direction: SortDirection = "desc"): Book[] {
   const arr = [...books];
+  const dirMul = direction === "asc" ? 1 : -1;
   switch (sort) {
     case "title":
-      return arr.sort((a, b) => a.title.localeCompare(b.title));
+      // For title, "asc" = A→Z (intuitive). Flip multiplier so default desc still works.
+      return arr.sort((a, b) => a.title.localeCompare(b.title) * (direction === "asc" ? 1 : -1));
     case "rating":
-      return arr.sort((a, b) => displayRating(b) - displayRating(a));
-    case "price-asc":
-      return arr.sort((a, b) => Number(a.rent_price) - Number(b.rent_price));
-    case "price-desc":
-      return arr.sort((a, b) => Number(b.rent_price) - Number(a.rent_price));
+      return arr.sort((a, b) => (displayRating(a) - displayRating(b)) * (direction === "asc" ? 1 : -1));
     case "shelf":
-      return arr.sort((a, b) => {
-        const sa = Number(a.shelf_code ?? Infinity);
-        const sb = Number(b.shelf_code ?? Infinity);
-        if (!Number.isNaN(sa) && !Number.isNaN(sb) && sa !== sb) return sa - sb;
-        return (a.shelf_code ?? "").localeCompare(b.shelf_code ?? "");
-      });
+      return arr.sort((a, b) => (shelfNum(a.shelf_code) - shelfNum(b.shelf_code)) * (direction === "asc" ? 1 : -1));
     case "newest":
     default:
-      return arr;
+      // Default = newest first (desc by created_at). If "asc", reverse.
+      return direction === "asc" ? arr.reverse() : arr;
   }
 }
 
-// Columns needed for the grid/list views. We deliberately omit `description`
-// (large text) — it's only used on the book detail page, fetched via fetchBook.
 const LIST_COLUMNS =
   "id,title,title_ml,author,author_ml,original_author,genre,genre_ml,rating,rent_price,cover_color,pages,published_year,publisher,shelf_code,language,cover_url,created_at,library_id";
 
@@ -192,20 +139,21 @@ export async function fetchBook(id: string): Promise<Book | null> {
   return data as Book | null;
 }
 
-// Newly-arrived shelf codes — pinned at the top of the home page in this order.
-export const NEW_ARRIVAL_SHELF_CODES = ["4556", "4586", "4616", "4615", "4499"];
-
-export async function fetchNewArrivals(): Promise<Book[]> {
+/**
+ * "New on shelf" = highest numeric shelf codes (latest entries on the rack).
+ * Falls back to created_at if nothing numeric is available.
+ */
+export async function fetchNewArrivals(limit = 6): Promise<Book[]> {
   const libraryId = getSelectedLibraryId();
-  let q = supabase.from("books").select("*").in("shelf_code", NEW_ARRIVAL_SHELF_CODES);
+  let q = supabase.from("books").select("*").not("shelf_code", "is", null);
   if (libraryId) q = q.eq("library_id", libraryId);
   const { data, error } = await q;
   if (error) throw error;
   const list = (data ?? []) as Book[];
-  // Preserve the order defined in NEW_ARRIVAL_SHELF_CODES.
-  return NEW_ARRIVAL_SHELF_CODES
-    .map((c) => list.find((b) => b.shelf_code === c))
-    .filter((b): b is Book => !!b);
+  return list
+    .filter((b) => Number.isFinite(Number(b.shelf_code)))
+    .sort((a, b) => Number(b.shelf_code) - Number(a.shelf_code))
+    .slice(0, limit);
 }
 
 export function synopsisFor(book: Pick<Book, "description" | "title" | "title_ml" | "author" | "genre" | "genre_ml">): string {

@@ -1,14 +1,12 @@
-import { LayoutGrid, List, ArrowDownUp } from "lucide-react";
-import type { BookSort } from "@/lib/books";
+import { LayoutGrid, List, ArrowDownUp, ArrowDownAZ, ArrowUpAZ } from "lucide-react";
+import type { BookSort, SortDirection } from "@/lib/books";
 import type { ViewMode } from "./BooksGrid";
 
 const SORT_OPTIONS: { value: BookSort; label: string }[] = [
   { value: "newest", label: "New on shelf" },
   { value: "shelf", label: "Shelf code" },
-  { value: "title", label: "Title A–Z" },
-  { value: "rating", label: "Highest rated" },
-  { value: "price-asc", label: "Price ↑" },
-  { value: "price-desc", label: "Price ↓" },
+  { value: "title", label: "Title" },
+  { value: "rating", label: "Rating" },
 ];
 
 export function SortBar({
@@ -16,6 +14,8 @@ export function SortBar({
   total,
   sort,
   onSortChange,
+  direction = "desc",
+  onDirectionChange,
   view,
   onViewChange,
 }: {
@@ -23,9 +23,12 @@ export function SortBar({
   total?: number;
   sort: BookSort;
   onSortChange: (s: BookSort) => void;
+  direction?: SortDirection;
+  onDirectionChange?: (d: SortDirection) => void;
   view: ViewMode;
   onViewChange: (v: ViewMode) => void;
 }) {
+  const toggleDir = () => onDirectionChange?.(direction === "asc" ? "desc" : "asc");
   return (
     <div className="mb-4 flex flex-wrap items-center gap-3">
       <span className="text-sm text-muted-foreground">
@@ -48,13 +51,23 @@ export function SortBar({
             ))}
           </select>
         </label>
+        {onDirectionChange && (
+          <button
+            type="button"
+            onClick={toggleDir}
+            className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-surface/60 px-2.5 py-1.5 text-xs font-medium hover:bg-surface-elevated"
+            title={direction === "asc" ? "Ascending — click to flip" : "Descending — click to flip"}
+          >
+            {direction === "asc" ? <ArrowUpAZ className="h-3.5 w-3.5" /> : <ArrowDownAZ className="h-3.5 w-3.5" />}
+            {direction === "asc" ? "Asc" : "Desc"}
+          </button>
+        )}
         <div className="flex overflow-hidden rounded-lg border border-border bg-surface/60">
           <button
             type="button"
             onClick={() => onViewChange("tile")}
             className={`grid h-8 w-8 cursor-pointer place-items-center ${view === "tile" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:bg-surface-elevated"}`}
             aria-label="Tile view"
-            title="Tile view"
           >
             <LayoutGrid className="h-4 w-4" />
           </button>
@@ -63,7 +76,6 @@ export function SortBar({
             onClick={() => onViewChange("list")}
             className={`grid h-8 w-8 cursor-pointer place-items-center ${view === "list" ? "bg-primary/20 text-primary" : "text-muted-foreground hover:bg-surface-elevated"}`}
             aria-label="List view"
-            title="List view"
           >
             <List className="h-4 w-4" />
           </button>
