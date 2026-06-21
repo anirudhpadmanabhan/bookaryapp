@@ -46,6 +46,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const dueSoon = useDueSoonRentals();
+  const { data: rentals = [] } = useRentals();
+  const { data: notifs = [] } = useNotifications();
+  const markRead = useMarkNotificationsRead();
   const [bellOpen, setBellOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
@@ -53,6 +56,51 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   const tip = TIPS[Math.floor(Date.now() / (1000 * 60 * 60 * 6)) % TIPS.length];
+
+  // Merge persisted notifications + derived due-soon reminders + tracking updates into one inbox.
+  const inbox = useMemo(() => {
+    const items: { id: string; kind: string; title: string; body?: string; ts: number; unread: boolean; bookId?: string }[] = [];
+    for (const n of notifs as any[]) {
+      items.push({
+        id: `n-${n.id}`,
+        kind: n.kind,
+        title: n.title,
+        body: n.body ?? undefined,
+        ts: new Date(n.created_at).getTime(),
+        unread: !n.read_at,
+        bookId: n.book_id ?? undefined,
+      });
+    }
+    for (const r of dueSoon as any[]) {
+      items.push({
+        id: `due-${r.id}`,
+        kind: r.overdue ? "overdue" : "due_soon",
+        title: r.overdue ? `${r.books?.title ?? "Book"} is overdue` : `${r.books?.title ?? "Book"} due in ${r.daysLeft}d`,
+        body: `by ${r.books?.author ?? ""} · return by ${new Date(r.due_at).toLocaleDateString()}`,
+        ts: new Date(r.due_at).getTime(),
+        unread: true,
+        bookId: r.book_id,
+      });
+    }
+    // Tracking updates for shipments that aren't yet delivered
+    for (const r of rentals as any[]) {
+      if (r.returned_at) continue;
+      const status = r.tracking_status ?? "confirmed";
+      if (status === "delivered" || status === "returned") continue;
+      items.push({
+        id: `track-${r.id}`,
+        kind: "tracking",
+        title: `Tracking · ${r.books?.title ?? "Your rental"}`,
+        body: `Status: ${status.replace(/_/g, " ")}`,
+        ts: new Date(r.rented_at).getTime(),
+        unread: false,
+        bookId: r.book_id,
+      });
+    }
+    return items.sort((a, b) => b.ts - a.ts);
+  }, [notifs, dueSoon, rentals]);
+
+  const unreadCount = inbox.filter((i) => i.unread).length;
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
@@ -62,6 +110,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, []);
+
+  const openBell = () => {
+    setBellOpen((o) => {
+      if (!o && unreadCount > 0) markRead.mutate();
+      return !o;
+    });
+  };
 
   const signOut = async () => {
     await qc.cancelQueries();
