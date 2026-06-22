@@ -8,11 +8,13 @@ import {
   useAdminLibraries, useCreateLibrary, useUpdateLibrary, useDeleteLibrary,
   useStaffRoles, useSetUserRole,
   useStaffUserSummary,
-  useBulkImportBooks, useLibraryBookCounts, type BookImportRow,
+  useBulkImportBooks, useLibraryBookCounts, type BookImportRow, type ImportMode,
+  useAdminUsers, useTransactionLog,
 } from "@/lib/admin";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchBooks, displayRating } from "@/lib/books";
 import { useLibrary } from "@/lib/library";
+import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useState, useRef } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
@@ -20,10 +22,10 @@ import { toast } from "sonner";
 import {
   Shield, Library as LibIcon, Package, Clock, Lightbulb,
   Search as SearchIcon, Trash2, CheckCircle2, Plus, Pencil, X, Save,
-  Upload, Grid3x3, List as ListIcon, Building2, Users, Mail, Star,
+  Upload, Grid3x3, List as ListIcon, Building2, Users, Mail, Star, Activity,
 } from "lucide-react";
 
-type Tab = "books" | "rentals" | "waitlist" | "suggestions" | "libraries" | "roles";
+type Tab = "books" | "rentals" | "waitlist" | "suggestions" | "libraries" | "roles" | "users" | "activity";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
