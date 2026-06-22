@@ -303,6 +303,28 @@ export function useDeleteLibrary() {
   });
 }
 
+export function useLibraryBookCounts() {
+  return useQuery({
+    queryKey: ["admin-library-book-counts"],
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data: libs, error: libErr } = await supabase.from("libraries").select("id");
+      if (libErr) throw libErr;
+      const ids = (libs ?? []).map((l: any) => l.id);
+      const counts: Record<string, number> = {};
+      await Promise.all(
+        ids.map(async (id: string) => {
+          const { count } = await supabase.from("books").select("id", { count: "exact", head: true }).eq("library_id", id);
+          counts[id] = count ?? 0;
+        }),
+      );
+      const { count: unassigned } = await supabase.from("books").select("id", { count: "exact", head: true }).is("library_id", null);
+      counts.__unassigned = unassigned ?? 0;
+      return counts;
+    },
+  });
+}
+
 // ===== STAFF ROLE MANAGEMENT =====
 export type StaffRoleRow = {
   user_id: string;
