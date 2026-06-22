@@ -1125,3 +1125,205 @@ function Stat({ label, value }: { label: string; value: number }) {
     </div>
   );
 }
+
+// ===== USERS (admin) =====
+function UsersTab() {
+  const { data: users = [], isLoading } = useAdminUsers();
+  const [viewingUser, setViewingUser] = useState<string | null>(null);
+  const [q, setQ] = useState("");
+
+  const filtered = useMemo(() => {
+    if (!q.trim()) return users;
+    const needle = q.toLowerCase();
+    return users.filter(
+      (u) =>
+        u.email.toLowerCase().includes(needle) ||
+        (u.display_name ?? "").toLowerCase().includes(needle),
+    );
+  }, [users, q]);
+
+  if (isLoading) return <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-14 animate-pulse rounded-xl bg-surface/60" />)}</div>;
+
+  return (
+    <div>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-1 min-w-[200px] items-center gap-2 rounded-xl border border-border bg-surface/50 px-4 py-2.5">
+          <SearchIcon className="h-4 w-4 text-muted-foreground" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search by name or email…"
+            className="w-full bg-transparent text-sm outline-none"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">{users.length.toLocaleString()} total members</p>
+      </div>
+
+      <div className="overflow-x-auto rounded-xl border border-border">
+        <table className="w-full text-sm">
+          <thead className="sticky top-0 z-10 bg-surface text-xs uppercase tracking-wider text-muted-foreground">
+            <tr>
+              <th className="px-3 py-2.5 text-left">Member</th>
+              <th className="px-3 py-2.5 text-left">Email</th>
+              <th className="px-3 py-2.5 text-left">Roles</th>
+              <th className="px-3 py-2.5 text-left">Wallet</th>
+              <th className="px-3 py-2.5 text-left">Active</th>
+              <th className="px-3 py-2.5 text-left">Total rentals</th>
+              <th className="px-3 py-2.5 text-left">Joined</th>
+              <th className="px-3 py-2.5"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((u) => (
+              <tr key={u.user_id} className="border-t border-border/40 hover:bg-surface/40">
+                <td className="px-3 py-2 font-medium">{u.display_name ?? u.email.split("@")[0]}</td>
+                <td className="px-3 py-2 text-xs text-muted-foreground">{u.email}</td>
+                <td className="px-3 py-2">
+                  <div className="flex flex-wrap gap-1">
+                    {u.roles.length === 0 ? (
+                      <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] text-muted-foreground">reader</span>
+                    ) : (
+                      u.roles.map((r) => (
+                        <span key={r} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${r === "admin" ? "bg-amber-500/20 text-amber-300" : "bg-primary/15 text-primary"}`}>{r}</span>
+                      ))
+                    )}
+                  </div>
+                </td>
+                <td className="px-3 py-2 text-xs">₹{Number(u.wallet_balance).toFixed(0)}</td>
+                <td className="px-3 py-2 text-xs">
+                  {Number(u.active_rentals) > 0 ? (
+                    <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-300">{u.active_rentals}</span>
+                  ) : (
+                    <span className="text-muted-foreground">0</span>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-xs text-muted-foreground">{u.total_rentals}</td>
+                <td className="px-3 py-2 text-xs text-muted-foreground">{new Date(u.created_at).toLocaleDateString()}</td>
+                <td className="px-3 py-2 text-right">
+                  <button
+                    onClick={() => setViewingUser(u.user_id)}
+                    className="cursor-pointer rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-elevated"
+                  >
+                    Open
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {viewingUser && <UserDashboardModal userId={viewingUser} onClose={() => setViewingUser(null)} />}
+    </div>
+  );
+}
+
+// ===== ACTIVITY LOG (admin) =====
+const ACTION_STYLE: Record<string, { label: string; cls: string }> = {
+  rental_created: { label: "Rented", cls: "bg-emerald-500/15 text-emerald-300" },
+  rental_returned: { label: "Returned", cls: "bg-blue-500/15 text-blue-300" },
+  rental_status: { label: "Tracking", cls: "bg-slate-500/15 text-slate-300" },
+  waitlist_joined: { label: "Waitlisted", cls: "bg-amber-500/15 text-amber-300" },
+  waitlist_cancelled: { label: "Wait cancel", cls: "bg-rose-500/15 text-rose-300" },
+  waitlist_assigned: { label: "Wait → rented", cls: "bg-violet-500/15 text-violet-300" },
+  role_granted: { label: "Role +", cls: "bg-primary/15 text-primary" },
+  role_revoked: { label: "Role −", cls: "bg-rose-500/15 text-rose-300" },
+  book_created: { label: "Book +", cls: "bg-emerald-500/15 text-emerald-300" },
+  book_updated: { label: "Book ✎", cls: "bg-slate-500/15 text-slate-300" },
+  book_deleted: { label: "Book −", cls: "bg-rose-500/15 text-rose-300" },
+};
+
+function ActivityLogTab() {
+  const { data: log = [], isLoading } = useTransactionLog(300);
+  const [filter, setFilter] = useState<string>("all");
+
+  const ACTIONS = ["all", ...Object.keys(ACTION_STYLE)];
+  const shown = filter === "all" ? log : log.filter((l) => l.action === filter);
+
+  if (isLoading) return <div className="space-y-2">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-12 animate-pulse rounded-xl bg-surface/60" />)}</div>;
+
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap gap-1.5 rounded-xl border border-border bg-surface/40 p-1.5">
+        {ACTIONS.map((a) => (
+          <button
+            key={a}
+            type="button"
+            onClick={() => setFilter(a)}
+            className={`cursor-pointer rounded-md px-2.5 py-1 text-[11px] font-medium ${filter === a ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            {a === "all" ? "All" : ACTION_STYLE[a]?.label ?? a}
+          </button>
+        ))}
+      </div>
+
+      {shown.length === 0 ? (
+        <p className="glass-card rounded-2xl p-8 text-center text-sm text-muted-foreground">No activity yet.</p>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 z-10 bg-surface text-xs uppercase tracking-wider text-muted-foreground">
+              <tr>
+                <th className="px-3 py-2.5 text-left">When</th>
+                <th className="px-3 py-2.5 text-left">Action</th>
+                <th className="px-3 py-2.5 text-left">Actor</th>
+                <th className="px-3 py-2.5 text-left">Subject</th>
+                <th className="px-3 py-2.5 text-left">Book</th>
+                <th className="px-3 py-2.5 text-left">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map((row) => {
+                const style = ACTION_STYLE[row.action] ?? { label: row.action, cls: "bg-surface text-muted-foreground" };
+                const dt = new Date(row.created_at);
+                return (
+                  <tr key={row.id} className="border-t border-border/40 hover:bg-surface/40">
+                    <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{dt.toLocaleDateString()} <span className="text-foreground/60">{dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span></td>
+                    <td className="px-3 py-2"><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${style.cls}`}>{style.label}</span></td>
+                    <td className="px-3 py-2 text-xs">{row.actor_name ?? "system"}</td>
+                    <td className="px-3 py-2 text-xs">{row.subject_user_name ?? "—"}</td>
+                    <td className="px-3 py-2 text-xs">
+                      {row.book_id ? (
+                        <Link to="/books/$id" params={{ id: row.book_id }} className="cursor-pointer hover:text-primary">{row.book_title ?? "Book"}</Link>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-[11px] text-muted-foreground">
+                      {row.metadata && Object.keys(row.metadata).length > 0
+                        ? Object.entries(row.metadata).map(([k, v]) => `${k}: ${String(v)}`).join(" · ")
+                        : ""}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ===== REALTIME STAFF TOASTS =====
+function RealtimeStaffToasts({ enabled }: { enabled: boolean }) {
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!enabled) return;
+    const ch = supabase
+      .channel("staff-activity")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "transaction_log" }, (payload) => {
+        const row = payload.new as any;
+        const style = ACTION_STYLE[row.action];
+        toast(`${style?.label ?? row.action} · ${row.subject_user_name ?? row.actor_name ?? ""}`, {
+          description: row.book_title ?? undefined,
+        });
+        qc.invalidateQueries({ queryKey: ["admin-transaction-log"] });
+        qc.invalidateQueries({ queryKey: ["admin-rentals"] });
+        qc.invalidateQueries({ queryKey: ["admin-waitlist"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [enabled, qc]);
+  return null;
+}
