@@ -255,6 +255,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   )}
                 </div>
 
+                {/* Staff: top-level Admin button (always visible, doesn't depend on dropdown) */}
+                {isStaff && (
+                  <Link
+                    to="/admin"
+                    className="hidden cursor-pointer items-center gap-1.5 rounded-full bg-gradient-to-r from-primary to-accent px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-lg shadow-primary/30 hover:opacity-90 sm:inline-flex"
+                    title="Library admin"
+                  >
+                    <Shield className="h-3.5 w-3.5" /> Admin
+                  </Link>
+                )}
 
                 {/* Profile circle with dropdown menu (includes logout) */}
                 <div ref={menuRef} className="relative">
@@ -309,7 +319,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 </div>
 
               </>
-            ) : null}
+            ) : (
+              <Link
+                to="/auth"
+                className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30 hover:opacity-90"
+              >
+                <UserRound className="h-4 w-4" /> Sign in
+              </Link>
+            )}
           </div>
         </div>
       </header>
