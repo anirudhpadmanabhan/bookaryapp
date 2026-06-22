@@ -10,7 +10,8 @@ export function useMyRoles() {
   return useQuery({
     enabled: !!user,
     queryKey: ["my-roles", user?.id],
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("user_roles")
