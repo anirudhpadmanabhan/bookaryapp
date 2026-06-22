@@ -244,7 +244,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                                 {item.bookId ? (
                                   <Link to="/books/$id" params={{ id: item.bookId }} onClick={() => setBellOpen(false)} className="block cursor-pointer">{Inner}</Link>
                                 ) : (
-                                  <Link to="/profile" onClick={() => setBellOpen(false)} className="block cursor-pointer">{Inner}</Link>
+                                  <Link to="/tracking" onClick={() => setBellOpen(false)} className="block cursor-pointer">{Inner}</Link>
                                 )}
                               </li>
                             );
