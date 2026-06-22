@@ -803,7 +803,7 @@ function LibrariesTab() {
                   {lib.is_default && <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary">Default</span>}
                 </div>
                 {lib.name_ml && <p className="font-mal text-xs text-accent">{lib.name_ml}</p>}
-                <p className="mt-0.5 text-[11px] text-muted-foreground">slug: <code>{lib.slug}</code>{lib.location && ` · ${lib.location}`}</p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">slug: <code>{lib.slug}</code>{lib.location && ` · ${lib.location}`} · <span className="font-semibold text-primary">{(counts[lib.id] ?? 0).toLocaleString()} books</span></p>
               </div>
               <div className="flex gap-2">
                 {!lib.is_default && (
