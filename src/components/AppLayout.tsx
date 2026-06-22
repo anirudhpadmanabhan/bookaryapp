@@ -116,6 +116,24 @@ export function AppLayout({ children }: { children: ReactNode }) {
     return () => document.removeEventListener("mousedown", onDown);
   }, []);
 
+  // Realtime: live-refresh notifications/rentals for the signed-in user.
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`user-${user.id}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, () => {
+        qc.invalidateQueries({ queryKey: ["notifications"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "rentals", filter: `user_id=eq.${user.id}` }, () => {
+        qc.invalidateQueries({ queryKey: ["rentals"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "waitlist", filter: `user_id=eq.${user.id}` }, () => {
+        qc.invalidateQueries({ queryKey: ["waitlist"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id, qc]);
+
   const openBell = () => {
     setBellOpen((o) => {
       if (!o && unreadCount > 0) markRead.mutate();
