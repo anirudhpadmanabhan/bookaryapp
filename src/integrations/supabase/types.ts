@@ -471,7 +471,25 @@ export type Database = {
           user_id: string
         }[]
       }
+      admin_list_staff_roles: {
+        Args: never
+        Returns: {
+          display_name: string
+          email: string
+          granted_at: string
+          roles: Database["public"]["Enums"]["app_role"][]
+          user_id: string
+        }[]
+      }
       admin_revoke_librarian: { Args: { _email: string }; Returns: Json }
+      admin_set_user_role: {
+        Args: {
+          _email: string
+          _enabled: boolean
+          _role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
