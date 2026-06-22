@@ -129,30 +129,62 @@ type BooksView = "grid" | "table";
 
 function BooksTab() {
   const { data: books = [], isLoading } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
+  const { data: libs = [] } = useAdminLibraries();
   const [q, setQ] = useState("");
   const [view, setView] = useState<BooksView>("table");
   const [editing, setEditing] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [libFilter, setLibFilter] = useState<string>("all"); // "all" | lib.id | "__unassigned"
+
+  const rackCompare = (a: string | null | undefined, b: string | null | undefined) => {
+    if (!a && !b) return 0;
+    if (!a) return 1;
+    if (!b) return -1;
+    return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: "base" });
+  };
 
   const filtered = useMemo(() => {
-    if (!q.trim()) return books.slice(0, 200);
-    const needle = q.toLowerCase();
-    return books
-      .filter(
+    let pool = books as any[];
+    if (libFilter === "__unassigned") pool = pool.filter((b) => !b.library_id);
+    else if (libFilter !== "all") pool = pool.filter((b) => b.library_id === libFilter);
+
+    if (q.trim()) {
+      const needle = q.toLowerCase();
+      pool = pool.filter(
         (b) =>
           b.title.toLowerCase().includes(needle) ||
           b.author.toLowerCase().includes(needle) ||
-          (b.shelf_code ?? "").includes(needle) ||
+          (b.shelf_code ?? "").toLowerCase().includes(needle) ||
           (b.title_ml ?? "").includes(q) ||
           (b.author_ml ?? "").includes(q),
-      )
-      .slice(0, 300);
-  }, [books, q]);
+      );
+    }
+    pool = [...pool].sort((a, b) => rackCompare(a.shelf_code, b.shelf_code));
+    return pool.slice(0, 500);
+  }, [books, q, libFilter]);
+
+  const totalForScope = useMemo(() => {
+    if (libFilter === "all") return books.length;
+    if (libFilter === "__unassigned") return (books as any[]).filter((b) => !b.library_id).length;
+    return (books as any[]).filter((b) => b.library_id === libFilter).length;
+  }, [books, libFilter]);
 
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-3">
+        <select
+          value={libFilter}
+          onChange={(e) => setLibFilter(e.target.value)}
+          className="cursor-pointer rounded-xl border border-border bg-surface/50 px-3 py-2.5 text-sm font-medium"
+          title="Filter by library"
+        >
+          <option value="all">All libraries</option>
+          {libs.map((l) => (
+            <option key={l.id} value={l.id}>{l.name}</option>
+          ))}
+          <option value="__unassigned">Unassigned</option>
+        </select>
         <div className="flex flex-1 min-w-[200px] items-center gap-2 rounded-xl border border-border bg-surface/50 px-4 py-2.5">
           <SearchIcon className="h-4 w-4 text-muted-foreground" />
           <input
@@ -203,7 +235,7 @@ function BooksTab() {
       ) : (
         <>
           <p className="mb-2 text-xs text-muted-foreground">
-            Showing {filtered.length.toLocaleString()} of {books.length.toLocaleString()} books{q && ` matching "${q}"`}.
+            Showing {filtered.length.toLocaleString()} of {totalForScope.toLocaleString()} books{q && ` matching "${q}"`} · sorted by rack code.
           </p>
           {view === "table" ? (
             <BooksTable books={filtered} editing={editing} setEditing={setEditing} />
@@ -213,8 +245,8 @@ function BooksTab() {
         </>
       )}
 
-      {adding && <AddBookModal onClose={() => setAdding(false)} />}
-      {importing && <ImportBooksModal onClose={() => setImporting(false)} />}
+      {adding && <AddBookModal onClose={() => setAdding(false)} defaultLibraryId={libFilter !== "all" && libFilter !== "__unassigned" ? libFilter : undefined} />}
+      {importing && <ImportBooksModal onClose={() => setImporting(false)} defaultLibraryId={libFilter !== "all" && libFilter !== "__unassigned" ? libFilter : undefined} />}
       {editing && view === "grid" && (
         <EditBookModal
           book={books.find((b) => b.id === editing)!}
