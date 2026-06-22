@@ -777,34 +777,42 @@ function LibrariesTab() {
   );
 }
 
-// ===== LIBRARIANS (admin) =====
-function LibrariansTab() {
-  const { data: list = [], isLoading } = useLibrarians();
-  const grant = useGrantLibrarian();
-  const revoke = useRevokeLibrarian();
+// ===== ROLE MANAGEMENT (admin) =====
+function StaffRolesTab() {
+  const { data: list = [], isLoading } = useStaffRoles();
+  const setRole = useSetUserRole();
   const [email, setEmail] = useState("");
+  const [role, setRoleValue] = useState<"admin" | "librarian">("librarian");
 
   return (
     <div>
       <div className="glass-card mb-4 rounded-xl p-4">
         <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
-          <Mail className="h-4 w-4 text-accent" /> Grant librarian access by email
+          <Mail className="h-4 w-4 text-accent" /> Grant staff access by email
         </div>
         <p className="mb-3 text-xs text-muted-foreground">
-          The user must have signed in at least once. Librarians can manage books, rentals, waitlist, and view reader dashboards. Only admins can add other admins (via secure backend tools).
+          The user must have signed in at least once. Admins can manage libraries and staff roles; librarians can manage books, rentals, waitlist, and reader dashboards.
         </p>
         <div className="flex flex-wrap gap-2">
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="librarian@example.com"
+            placeholder="user@example.com"
             className="flex-1 min-w-[200px] rounded-lg border border-border bg-background/50 px-3 py-2 text-sm"
           />
+          <select
+            value={role}
+            onChange={(e) => setRoleValue(e.target.value as "admin" | "librarian")}
+            className="rounded-lg border border-border bg-background/50 px-3 py-2 text-sm"
+          >
+            <option value="librarian">Librarian</option>
+            <option value="admin">Admin</option>
+          </select>
           <button
             type="button"
-            disabled={grant.isPending || !email.trim()}
-            onClick={() => grant.mutate(email, { onSuccess: () => setEmail("") })}
+            disabled={setRole.isPending || !email.trim()}
+            onClick={() => setRole.mutate({ email, role, enabled: true }, { onSuccess: () => setEmail("") })}
             className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
           >
             <Plus className="h-4 w-4" /> Grant
@@ -815,7 +823,7 @@ function LibrariansTab() {
       {isLoading ? (
         <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-16 animate-pulse rounded-xl bg-surface/60" />)}</div>
       ) : list.length === 0 ? (
-        <p className="glass-card rounded-2xl p-8 text-center text-sm text-muted-foreground">No librarians granted yet.</p>
+        <p className="glass-card rounded-2xl p-8 text-center text-sm text-muted-foreground">No staff roles granted yet.</p>
       ) : (
         <div className="space-y-2">
           {list.map((l) => (
@@ -823,14 +831,31 @@ function LibrariansTab() {
               <div className="min-w-0">
                 <div className="text-sm font-semibold">{l.display_name ?? l.email}</div>
                 <div className="text-xs text-muted-foreground">{l.email}</div>
-                <div className="text-[11px] text-muted-foreground/70">Granted {new Date(l.granted_at).toLocaleDateString()}</div>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {l.roles.map((r) => (
+                    <span key={r} className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">{r}</span>
+                  ))}
+                </div>
+                <div className="mt-1 text-[11px] text-muted-foreground/70">First granted {new Date(l.granted_at).toLocaleDateString()}</div>
               </div>
-              <button
-                onClick={() => { if (confirm(`Revoke librarian access for ${l.email}?`)) revoke.mutate(l.email); }}
-                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-rose-500/40 px-2.5 py-1.5 text-xs text-rose-300 hover:bg-rose-500/10"
-              >
-                <Trash2 className="h-3 w-3" /> Revoke
-              </button>
+              <div className="flex flex-wrap gap-2">
+                {(["admin", "librarian"] as const).map((r) => {
+                  const enabled = l.roles.includes(r);
+                  return (
+                    <button
+                      key={r}
+                      onClick={() => {
+                        if (!enabled) return setRole.mutate({ email: l.email, role: r, enabled: true });
+                        if (confirm(`Revoke ${r} access for ${l.email}?`)) setRole.mutate({ email: l.email, role: r, enabled: false });
+                      }}
+                      className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs ${enabled ? "border-rose-500/40 text-rose-300 hover:bg-rose-500/10" : "border-border hover:bg-surface-elevated"}`}
+                    >
+                      {enabled ? <Trash2 className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                      {enabled ? `Revoke ${r}` : `Grant ${r}`}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           ))}
         </div>
