@@ -1,7 +1,7 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   Home, Search, BookMarked, PenLine, Heart, UserRound,
-  Library, NotebookPen, Wallet, LogOut, Sparkles, Bell, X,
+  Library, NotebookPen, Wallet, LogOut, Sparkles, Bell, X, Truck,
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo, type ReactNode } from "react";
 import { useSession } from "@/lib/auth";
