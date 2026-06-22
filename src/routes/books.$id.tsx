@@ -388,7 +388,7 @@ function RentModal({
             <h2 className="text-lg font-bold">Confirm rental</h2>
             <p className="text-xs text-muted-foreground">{title}</p>
           </div>
-          <button onClick={onClose} className="cursor-pointer text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+          <button onClick={onClose} aria-label="Close" className="cursor-pointer text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
         </div>
 
         <div className="mb-4 grid grid-cols-2 gap-3 text-sm">
@@ -463,7 +463,7 @@ function WaitlistModal({
             <h2 className="text-lg font-bold">Join the waiting list</h2>
             <p className="text-xs text-muted-foreground">{title}</p>
           </div>
-          <button onClick={onClose} className="cursor-pointer text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+          <button onClick={onClose} aria-label="Close" className="cursor-pointer text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
         </div>
         <p className="mb-3 rounded-xl bg-amber-500/10 px-3 py-2.5 text-xs text-amber-200">
           When the current reader returns this book, you'll be automatically assigned a rental and the wallet will be charged.

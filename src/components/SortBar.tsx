@@ -41,6 +41,7 @@ export function SortBar({
         <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-surface/60 px-3 py-1.5 text-sm">
           <ArrowDownUp className="h-3.5 w-3.5 text-muted-foreground" />
           <select
+            aria-label="Sort books by"
             value={sort}
             onChange={(e) => onSortChange(e.target.value as BookSort)}
             className="cursor-pointer bg-transparent text-sm outline-none"

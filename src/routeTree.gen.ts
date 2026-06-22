@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WritersRouteImport } from './routes/writers'
 import { Route as TrackingRouteImport } from './routes/tracking'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LovedRouteImport } from './routes/loved'
@@ -34,6 +35,11 @@ const WritersRoute = WritersRouteImport.update({
 const TrackingRoute = TrackingRouteImport.update({
   id: '/tracking',
   path: '/tracking',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SearchRoute = SearchRouteImport.update({
@@ -116,6 +122,7 @@ export interface FileRoutesByFullPath {
   '/loved': typeof LovedRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tracking': typeof TrackingRoute
   '/writers': typeof WritersRouteWithChildren
   '/books/$id': typeof BooksIdRoute
@@ -133,6 +140,7 @@ export interface FileRoutesByTo {
   '/loved': typeof LovedRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tracking': typeof TrackingRoute
   '/books/$id': typeof BooksIdRoute
   '/genres/$slug': typeof GenresSlugRoute
@@ -151,6 +159,7 @@ export interface FileRoutesById {
   '/loved': typeof LovedRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/tracking': typeof TrackingRoute
   '/writers': typeof WritersRouteWithChildren
   '/books/$id': typeof BooksIdRoute
@@ -171,6 +180,7 @@ export interface FileRouteTypes {
     | '/loved'
     | '/profile'
     | '/search'
+    | '/sitemap.xml'
     | '/tracking'
     | '/writers'
     | '/books/$id'
@@ -188,6 +198,7 @@ export interface FileRouteTypes {
     | '/loved'
     | '/profile'
     | '/search'
+    | '/sitemap.xml'
     | '/tracking'
     | '/books/$id'
     | '/genres/$slug'
@@ -205,6 +216,7 @@ export interface FileRouteTypes {
     | '/loved'
     | '/profile'
     | '/search'
+    | '/sitemap.xml'
     | '/tracking'
     | '/writers'
     | '/books/$id'
@@ -224,6 +236,7 @@ export interface RootRouteChildren {
   LovedRoute: typeof LovedRoute
   ProfileRoute: typeof ProfileRoute
   SearchRoute: typeof SearchRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TrackingRoute: typeof TrackingRoute
   WritersRoute: typeof WritersRouteWithChildren
   BooksIdRoute: typeof BooksIdRoute
@@ -244,6 +257,13 @@ declare module '@tanstack/react-router' {
       path: '/tracking'
       fullPath: '/tracking'
       preLoaderRoute: typeof TrackingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/search': {
@@ -382,6 +402,7 @@ const rootRouteChildren: RootRouteChildren = {
   LovedRoute: LovedRoute,
   ProfileRoute: ProfileRoute,
   SearchRoute: SearchRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   TrackingRoute: TrackingRoute,
   WritersRoute: WritersRouteWithChildren,
   BooksIdRoute: BooksIdRoute,
