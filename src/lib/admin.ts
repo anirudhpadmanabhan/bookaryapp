@@ -410,10 +410,12 @@ export type BookImportRow = {
   rent_price?: number;
 };
 
+export type ImportMode = "append" | "overwrite";
+
 export function useBulkImportBooks() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ rows, libraryId }: { rows: BookImportRow[]; libraryId: string | null }) => {
+    mutationFn: async ({ rows, libraryId, mode = "append" }: { rows: BookImportRow[]; libraryId: string | null; mode?: ImportMode }) => {
       if (rows.length === 0) throw new Error("No rows to import");
       const payload = rows.map((r) => ({
         title: String(r.title).trim(),
@@ -426,7 +428,19 @@ export function useBulkImportBooks() {
         rent_price: Number(r.rent_price) > 0 ? Number(r.rent_price) : 10,
         library_id: libraryId,
       }));
-      // Chunked insert
+
+      if (mode === "overwrite") {
+        const codes = Array.from(new Set(payload.map((p) => p.shelf_code).filter((c): c is string => !!c)));
+        const chunk = 200;
+        for (let i = 0; i < codes.length; i += chunk) {
+          const slice = codes.slice(i, i + chunk);
+          let q = supabase.from("books").delete().in("shelf_code", slice);
+          q = libraryId ? q.eq("library_id", libraryId) : q.is("library_id", null);
+          const { error: delErr } = await q;
+          if (delErr) throw new Error(`Overwrite step failed: ${delErr.message}`);
+        }
+      }
+
       const chunkSize = 200;
       let inserted = 0;
       for (let i = 0; i < payload.length; i += chunkSize) {
@@ -440,9 +454,65 @@ export function useBulkImportBooks() {
     onSuccess: (count) => {
       qc.invalidateQueries({ queryKey: ["books"] });
       qc.invalidateQueries({ queryKey: ["new-arrivals"] });
+      qc.invalidateQueries({ queryKey: ["admin-library-book-counts"] });
       toast.success(`${count} books imported`);
     },
     onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+// ===== ADMIN USERS LIST =====
+export type AdminUserRow = {
+  user_id: string;
+  email: string;
+  display_name: string | null;
+  wallet_balance: number;
+  roles: AppRole[];
+  created_at: string;
+  active_rentals: number;
+  total_rentals: number;
+};
+
+export function useAdminUsers() {
+  return useQuery({
+    queryKey: ["admin-users"],
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("admin_list_users" as any);
+      if (error) throw error;
+      return (data ?? []) as AdminUserRow[];
+    },
+  });
+}
+
+// ===== TRANSACTION LOG =====
+export type TxLogRow = {
+  id: string;
+  actor_id: string | null;
+  actor_name: string | null;
+  subject_user_id: string | null;
+  subject_user_name: string | null;
+  book_id: string | null;
+  book_title: string | null;
+  library_id: string | null;
+  action: string;
+  metadata: Record<string, any>;
+  created_at: string;
+};
+
+export function useTransactionLog(limit = 200) {
+  return useQuery({
+    queryKey: ["admin-transaction-log", limit],
+    staleTime: 15_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("transaction_log" as any)
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []) as unknown as TxLogRow[];
+    },
   });
 }
 

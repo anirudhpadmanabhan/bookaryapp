@@ -8,11 +8,13 @@ import {
   useAdminLibraries, useCreateLibrary, useUpdateLibrary, useDeleteLibrary,
   useStaffRoles, useSetUserRole,
   useStaffUserSummary,
-  useBulkImportBooks, useLibraryBookCounts, type BookImportRow,
+  useBulkImportBooks, useLibraryBookCounts, type BookImportRow, type ImportMode,
+  useAdminUsers, useTransactionLog,
 } from "@/lib/admin";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchBooks, displayRating } from "@/lib/books";
 import { useLibrary } from "@/lib/library";
+import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useState, useRef } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
@@ -20,10 +22,10 @@ import { toast } from "sonner";
 import {
   Shield, Library as LibIcon, Package, Clock, Lightbulb,
   Search as SearchIcon, Trash2, CheckCircle2, Plus, Pencil, X, Save,
-  Upload, Grid3x3, List as ListIcon, Building2, Users, Mail, Star,
+  Upload, Grid3x3, List as ListIcon, Building2, Users, Mail, Star, Activity,
 } from "lucide-react";
 
-type Tab = "books" | "rentals" | "waitlist" | "suggestions" | "libraries" | "roles";
+type Tab = "books" | "rentals" | "waitlist" | "suggestions" | "libraries" | "roles" | "users" | "activity";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -71,7 +73,9 @@ function AdminPage() {
     { id: "waitlist", label: "Waitlist", icon: Clock },
     { id: "suggestions", label: "Suggestions", icon: Lightbulb },
     { id: "libraries", label: "Libraries", icon: Building2, adminOnly: true },
-    { id: "roles", label: "Roles", icon: Users, adminOnly: true },
+    { id: "users", label: "Users", icon: Users, adminOnly: true },
+    { id: "roles", label: "Roles", icon: Shield, adminOnly: true },
+    { id: "activity", label: "Activity log", icon: Activity, adminOnly: true },
   ];
 
   return (
@@ -112,7 +116,10 @@ function AdminPage() {
       {tab === "waitlist" && <WaitlistTab />}
       {tab === "suggestions" && <SuggestionsTab />}
       {tab === "libraries" && isAdmin && <LibrariesTab />}
+      {tab === "users" && isAdmin && <UsersTab />}
       {tab === "roles" && isAdmin && <StaffRolesTab />}
+      {tab === "activity" && isAdmin && <ActivityLogTab />}
+      <RealtimeStaffToasts enabled={isStaff} />
     </AppLayout>
   );
 }
@@ -122,30 +129,62 @@ type BooksView = "grid" | "table";
 
 function BooksTab() {
   const { data: books = [], isLoading } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
+  const { data: libs = [] } = useAdminLibraries();
   const [q, setQ] = useState("");
   const [view, setView] = useState<BooksView>("table");
   const [editing, setEditing] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [libFilter, setLibFilter] = useState<string>("all"); // "all" | lib.id | "__unassigned"
+
+  const rackCompare = (a: string | null | undefined, b: string | null | undefined) => {
+    if (!a && !b) return 0;
+    if (!a) return 1;
+    if (!b) return -1;
+    return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: "base" });
+  };
 
   const filtered = useMemo(() => {
-    if (!q.trim()) return books.slice(0, 200);
-    const needle = q.toLowerCase();
-    return books
-      .filter(
+    let pool = books as any[];
+    if (libFilter === "__unassigned") pool = pool.filter((b) => !b.library_id);
+    else if (libFilter !== "all") pool = pool.filter((b) => b.library_id === libFilter);
+
+    if (q.trim()) {
+      const needle = q.toLowerCase();
+      pool = pool.filter(
         (b) =>
           b.title.toLowerCase().includes(needle) ||
           b.author.toLowerCase().includes(needle) ||
-          (b.shelf_code ?? "").includes(needle) ||
+          (b.shelf_code ?? "").toLowerCase().includes(needle) ||
           (b.title_ml ?? "").includes(q) ||
           (b.author_ml ?? "").includes(q),
-      )
-      .slice(0, 300);
-  }, [books, q]);
+      );
+    }
+    pool = [...pool].sort((a, b) => rackCompare(a.shelf_code, b.shelf_code));
+    return pool.slice(0, 500);
+  }, [books, q, libFilter]);
+
+  const totalForScope = useMemo(() => {
+    if (libFilter === "all") return books.length;
+    if (libFilter === "__unassigned") return (books as any[]).filter((b) => !b.library_id).length;
+    return (books as any[]).filter((b) => b.library_id === libFilter).length;
+  }, [books, libFilter]);
 
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-3">
+        <select
+          value={libFilter}
+          onChange={(e) => setLibFilter(e.target.value)}
+          className="cursor-pointer rounded-xl border border-border bg-surface/50 px-3 py-2.5 text-sm font-medium"
+          title="Filter by library"
+        >
+          <option value="all">All libraries</option>
+          {libs.map((l) => (
+            <option key={l.id} value={l.id}>{l.name}</option>
+          ))}
+          <option value="__unassigned">Unassigned</option>
+        </select>
         <div className="flex flex-1 min-w-[200px] items-center gap-2 rounded-xl border border-border bg-surface/50 px-4 py-2.5">
           <SearchIcon className="h-4 w-4 text-muted-foreground" />
           <input
@@ -196,7 +235,7 @@ function BooksTab() {
       ) : (
         <>
           <p className="mb-2 text-xs text-muted-foreground">
-            Showing {filtered.length.toLocaleString()} of {books.length.toLocaleString()} books{q && ` matching "${q}"`}.
+            Showing {filtered.length.toLocaleString()} of {totalForScope.toLocaleString()} books{q && ` matching "${q}"`} · sorted by rack code.
           </p>
           {view === "table" ? (
             <BooksTable books={filtered} editing={editing} setEditing={setEditing} />
@@ -206,8 +245,8 @@ function BooksTab() {
         </>
       )}
 
-      {adding && <AddBookModal onClose={() => setAdding(false)} />}
-      {importing && <ImportBooksModal onClose={() => setImporting(false)} />}
+      {adding && <AddBookModal onClose={() => setAdding(false)} defaultLibraryId={libFilter !== "all" && libFilter !== "__unassigned" ? libFilter : undefined} />}
+      {importing && <ImportBooksModal onClose={() => setImporting(false)} defaultLibraryId={libFilter !== "all" && libFilter !== "__unassigned" ? libFilter : undefined} />}
       {editing && view === "grid" && (
         <EditBookModal
           book={books.find((b) => b.id === editing)!}
@@ -427,9 +466,10 @@ function EditBookModal({ book, onClose }: { book: any; onClose: () => void }) {
   );
 }
 
-function AddBookModal({ onClose }: { onClose: () => void }) {
+function AddBookModal({ onClose, defaultLibraryId }: { onClose: () => void; defaultLibraryId?: string }) {
   const create = useCreateBook();
   const { selectedId } = useLibrary();
+  const { data: libs = [] } = useAdminLibraries();
   const [title, setTitle] = useState("");
   const [titleMl, setTitleMl] = useState("");
   const [author, setAuthor] = useState("");
@@ -437,6 +477,7 @@ function AddBookModal({ onClose }: { onClose: () => void }) {
   const [genre, setGenre] = useState("");
   const [shelf, setShelf] = useState("");
   const [publisher, setPublisher] = useState("");
+  const [libraryId, setLibraryId] = useState<string>(defaultLibraryId ?? selectedId ?? "");
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur" onClick={onClose}>
@@ -446,13 +487,17 @@ function AddBookModal({ onClose }: { onClose: () => void }) {
           <button onClick={onClose} className="cursor-pointer text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
         </div>
         <div className="space-y-2">
+          <select value={libraryId} onChange={(e) => setLibraryId(e.target.value)} className="w-full cursor-pointer rounded-lg border border-border bg-background/50 px-3 py-2 text-sm">
+            <option value="">— No library (unassigned) —</option>
+            {libs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+          </select>
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (English)" className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
           <input value={titleMl} onChange={(e) => setTitleMl(e.target.value)} placeholder="Title (Malayalam)" className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm font-mal" />
           <input value={author} onChange={(e) => setAuthor(e.target.value)} placeholder="Author (English)" className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
           <input value={authorMl} onChange={(e) => setAuthorMl(e.target.value)} placeholder="Author (Malayalam)" className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm font-mal" />
           <input value={genre} onChange={(e) => setGenre(e.target.value)} placeholder="Genre (e.g. നോവൽ / Novel)" className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
           <div className="grid grid-cols-2 gap-2">
-            <input value={shelf} onChange={(e) => setShelf(e.target.value)} placeholder="Rack #" className="rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
+            <input value={shelf} onChange={(e) => setShelf(e.target.value)} placeholder="Rack # (shelf code)" className="rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
             <input value={publisher} onChange={(e) => setPublisher(e.target.value)} placeholder="Publisher" className="rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
           </div>
         </div>
@@ -461,7 +506,7 @@ function AddBookModal({ onClose }: { onClose: () => void }) {
           <button
             disabled={create.isPending || !title.trim() || !author.trim() || !genre.trim()}
             onClick={() => create.mutate(
-              { title, author, genre, title_ml: titleMl, author_ml: authorMl, shelf_code: shelf, publisher, library_id: selectedId ?? undefined },
+              { title, author, genre, title_ml: titleMl, author_ml: authorMl, shelf_code: shelf, publisher, library_id: libraryId || undefined },
               { onSuccess: onClose },
             )}
             className="cursor-pointer rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 hover:opacity-90 disabled:opacity-50"
@@ -500,12 +545,15 @@ function mapRow(raw: Record<string, any>): BookImportRow | null {
   return mapped as BookImportRow;
 }
 
-function ImportBooksModal({ onClose }: { onClose: () => void }) {
+function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; defaultLibraryId?: string }) {
   const importMut = useBulkImportBooks();
   const { selectedId } = useLibrary();
+  const { data: libs = [] } = useAdminLibraries();
   const [rows, setRows] = useState<BookImportRow[]>([]);
   const [filename, setFilename] = useState<string>("");
   const [skipped, setSkipped] = useState(0);
+  const [mode, setMode] = useState<ImportMode>("append");
+  const [libraryId, setLibraryId] = useState<string>(defaultLibraryId ?? selectedId ?? "");
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const handleFile = async (file: File) => {
@@ -538,13 +586,51 @@ function ImportBooksModal({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const overwriteCount = rows.filter((r) => !!r.shelf_code).length;
+  const libName = libs.find((l) => l.id === libraryId)?.name ?? "Unassigned";
+
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="glass-card w-full max-w-2xl rounded-2xl p-6">
+      <div onClick={(e) => e.stopPropagation()} className="glass-card max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl p-6">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold">Import books from CSV / Excel</h2>
           <button onClick={onClose} className="cursor-pointer text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
         </div>
+
+        <div className="mb-3 grid gap-2 sm:grid-cols-2">
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Target library</span>
+            <select value={libraryId} onChange={(e) => setLibraryId(e.target.value)} className="w-full cursor-pointer rounded-lg border border-border bg-background/50 px-3 py-2 text-sm">
+              <option value="">— Unassigned —</option>
+              {libs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            </select>
+          </label>
+          <div>
+            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Import mode</span>
+            <div className="flex gap-1.5 rounded-lg border border-border bg-surface/40 p-1">
+              <button
+                type="button"
+                onClick={() => setMode("append")}
+                className={`flex-1 cursor-pointer rounded-md px-2 py-1.5 text-xs font-medium ${mode === "append" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Append (insert all)
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("overwrite")}
+                className={`flex-1 cursor-pointer rounded-md px-2 py-1.5 text-xs font-medium ${mode === "overwrite" ? "bg-amber-500 text-amber-950" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Overwrite by rack code
+              </button>
+            </div>
+          </div>
+        </div>
+        <p className="mb-3 text-[11px] text-muted-foreground">
+          {mode === "append"
+            ? "Append: every CSV row becomes a new book row. Existing books are untouched."
+            : `Overwrite: rows in ${libName} whose rack code appears in the CSV will be replaced; other racks stay untouched.`}
+        </p>
+
         <div className="rounded-xl border border-dashed border-border bg-surface/30 p-6 text-center">
           <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
           <p className="mt-2 text-sm">Drop a .csv, .xlsx, or .xls file — or pick one below.</p>
@@ -572,8 +658,8 @@ function ImportBooksModal({ onClose }: { onClose: () => void }) {
           <div className="mt-4 rounded-xl border border-border bg-surface/40 p-3 text-sm">
             <div className="font-medium">{filename}</div>
             <div className="text-xs text-muted-foreground">
-              {rows.length.toLocaleString()} ready to import{skipped > 0 && ` · ${skipped} skipped (missing title/author)`}.
-              {selectedId && " · Will attach to currently selected library."}
+              {rows.length.toLocaleString()} ready to import{skipped > 0 && ` · ${skipped} skipped (missing title/author)`} · target: <span className="font-semibold text-primary">{libName}</span>
+              {mode === "overwrite" && overwriteCount > 0 && ` · will replace up to ${overwriteCount} existing rack codes`}
             </div>
             {rows.length > 0 && (
               <div className="mt-2 max-h-40 overflow-y-auto rounded-md border border-border/50 text-xs">
@@ -601,10 +687,13 @@ function ImportBooksModal({ onClose }: { onClose: () => void }) {
           <button onClick={onClose} className="cursor-pointer rounded-lg border border-border px-4 py-2 text-sm hover:bg-surface-elevated">Cancel</button>
           <button
             disabled={importMut.isPending || rows.length === 0}
-            onClick={() => importMut.mutate({ rows, libraryId: selectedId ?? null }, { onSuccess: onClose })}
-            className="cursor-pointer rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 hover:opacity-90 disabled:opacity-50"
+            onClick={() => {
+              if (mode === "overwrite" && !confirm(`Overwrite books with matching rack codes in ${libName}? Books not in the CSV are untouched.`)) return;
+              importMut.mutate({ rows, libraryId: libraryId || null, mode }, { onSuccess: onClose });
+            }}
+            className={`cursor-pointer rounded-lg px-4 py-2 text-sm font-semibold shadow-lg disabled:opacity-50 ${mode === "overwrite" ? "bg-amber-500 text-amber-950 shadow-amber-500/20 hover:opacity-90" : "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-primary/20 hover:opacity-90"}`}
           >
-            {importMut.isPending ? "Importing…" : `Import ${rows.length.toLocaleString()} books`}
+            {importMut.isPending ? "Importing…" : `${mode === "overwrite" ? "Overwrite" : "Import"} ${rows.length.toLocaleString()} books`}
           </button>
         </div>
       </div>
@@ -1035,4 +1124,206 @@ function Stat({ label, value }: { label: string; value: number }) {
       <div className="text-xl font-bold">{value}</div>
     </div>
   );
+}
+
+// ===== USERS (admin) =====
+function UsersTab() {
+  const { data: users = [], isLoading } = useAdminUsers();
+  const [viewingUser, setViewingUser] = useState<string | null>(null);
+  const [q, setQ] = useState("");
+
+  const filtered = useMemo(() => {
+    if (!q.trim()) return users;
+    const needle = q.toLowerCase();
+    return users.filter(
+      (u) =>
+        u.email.toLowerCase().includes(needle) ||
+        (u.display_name ?? "").toLowerCase().includes(needle),
+    );
+  }, [users, q]);
+
+  if (isLoading) return <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-14 animate-pulse rounded-xl bg-surface/60" />)}</div>;
+
+  return (
+    <div>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-1 min-w-[200px] items-center gap-2 rounded-xl border border-border bg-surface/50 px-4 py-2.5">
+          <SearchIcon className="h-4 w-4 text-muted-foreground" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search by name or email…"
+            className="w-full bg-transparent text-sm outline-none"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">{users.length.toLocaleString()} total members</p>
+      </div>
+
+      <div className="overflow-x-auto rounded-xl border border-border">
+        <table className="w-full text-sm">
+          <thead className="sticky top-0 z-10 bg-surface text-xs uppercase tracking-wider text-muted-foreground">
+            <tr>
+              <th className="px-3 py-2.5 text-left">Member</th>
+              <th className="px-3 py-2.5 text-left">Email</th>
+              <th className="px-3 py-2.5 text-left">Roles</th>
+              <th className="px-3 py-2.5 text-left">Wallet</th>
+              <th className="px-3 py-2.5 text-left">Active</th>
+              <th className="px-3 py-2.5 text-left">Total rentals</th>
+              <th className="px-3 py-2.5 text-left">Joined</th>
+              <th className="px-3 py-2.5"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((u) => (
+              <tr key={u.user_id} className="border-t border-border/40 hover:bg-surface/40">
+                <td className="px-3 py-2 font-medium">{u.display_name ?? u.email.split("@")[0]}</td>
+                <td className="px-3 py-2 text-xs text-muted-foreground">{u.email}</td>
+                <td className="px-3 py-2">
+                  <div className="flex flex-wrap gap-1">
+                    {u.roles.length === 0 ? (
+                      <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] text-muted-foreground">reader</span>
+                    ) : (
+                      u.roles.map((r) => (
+                        <span key={r} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${r === "admin" ? "bg-amber-500/20 text-amber-300" : "bg-primary/15 text-primary"}`}>{r}</span>
+                      ))
+                    )}
+                  </div>
+                </td>
+                <td className="px-3 py-2 text-xs">₹{Number(u.wallet_balance).toFixed(0)}</td>
+                <td className="px-3 py-2 text-xs">
+                  {Number(u.active_rentals) > 0 ? (
+                    <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-300">{u.active_rentals}</span>
+                  ) : (
+                    <span className="text-muted-foreground">0</span>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-xs text-muted-foreground">{u.total_rentals}</td>
+                <td className="px-3 py-2 text-xs text-muted-foreground">{new Date(u.created_at).toLocaleDateString()}</td>
+                <td className="px-3 py-2 text-right">
+                  <button
+                    onClick={() => setViewingUser(u.user_id)}
+                    className="cursor-pointer rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-elevated"
+                  >
+                    Open
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {viewingUser && <UserDashboardModal userId={viewingUser} onClose={() => setViewingUser(null)} />}
+    </div>
+  );
+}
+
+// ===== ACTIVITY LOG (admin) =====
+const ACTION_STYLE: Record<string, { label: string; cls: string }> = {
+  rental_created: { label: "Rented", cls: "bg-emerald-500/15 text-emerald-300" },
+  rental_returned: { label: "Returned", cls: "bg-blue-500/15 text-blue-300" },
+  rental_status: { label: "Tracking", cls: "bg-slate-500/15 text-slate-300" },
+  waitlist_joined: { label: "Waitlisted", cls: "bg-amber-500/15 text-amber-300" },
+  waitlist_cancelled: { label: "Wait cancel", cls: "bg-rose-500/15 text-rose-300" },
+  waitlist_assigned: { label: "Wait → rented", cls: "bg-violet-500/15 text-violet-300" },
+  role_granted: { label: "Role +", cls: "bg-primary/15 text-primary" },
+  role_revoked: { label: "Role −", cls: "bg-rose-500/15 text-rose-300" },
+  book_created: { label: "Book +", cls: "bg-emerald-500/15 text-emerald-300" },
+  book_updated: { label: "Book ✎", cls: "bg-slate-500/15 text-slate-300" },
+  book_deleted: { label: "Book −", cls: "bg-rose-500/15 text-rose-300" },
+};
+
+function ActivityLogTab() {
+  const { data: log = [], isLoading } = useTransactionLog(300);
+  const [filter, setFilter] = useState<string>("all");
+
+  const ACTIONS = ["all", ...Object.keys(ACTION_STYLE)];
+  const shown = filter === "all" ? log : log.filter((l) => l.action === filter);
+
+  if (isLoading) return <div className="space-y-2">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-12 animate-pulse rounded-xl bg-surface/60" />)}</div>;
+
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap gap-1.5 rounded-xl border border-border bg-surface/40 p-1.5">
+        {ACTIONS.map((a) => (
+          <button
+            key={a}
+            type="button"
+            onClick={() => setFilter(a)}
+            className={`cursor-pointer rounded-md px-2.5 py-1 text-[11px] font-medium ${filter === a ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            {a === "all" ? "All" : ACTION_STYLE[a]?.label ?? a}
+          </button>
+        ))}
+      </div>
+
+      {shown.length === 0 ? (
+        <p className="glass-card rounded-2xl p-8 text-center text-sm text-muted-foreground">No activity yet.</p>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 z-10 bg-surface text-xs uppercase tracking-wider text-muted-foreground">
+              <tr>
+                <th className="px-3 py-2.5 text-left">When</th>
+                <th className="px-3 py-2.5 text-left">Action</th>
+                <th className="px-3 py-2.5 text-left">Actor</th>
+                <th className="px-3 py-2.5 text-left">Subject</th>
+                <th className="px-3 py-2.5 text-left">Book</th>
+                <th className="px-3 py-2.5 text-left">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map((row) => {
+                const style = ACTION_STYLE[row.action] ?? { label: row.action, cls: "bg-surface text-muted-foreground" };
+                const dt = new Date(row.created_at);
+                return (
+                  <tr key={row.id} className="border-t border-border/40 hover:bg-surface/40">
+                    <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{dt.toLocaleDateString()} <span className="text-foreground/60">{dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span></td>
+                    <td className="px-3 py-2"><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${style.cls}`}>{style.label}</span></td>
+                    <td className="px-3 py-2 text-xs">{row.actor_name ?? "system"}</td>
+                    <td className="px-3 py-2 text-xs">{row.subject_user_name ?? "—"}</td>
+                    <td className="px-3 py-2 text-xs">
+                      {row.book_id ? (
+                        <Link to="/books/$id" params={{ id: row.book_id }} className="cursor-pointer hover:text-primary">{row.book_title ?? "Book"}</Link>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-[11px] text-muted-foreground">
+                      {row.metadata && Object.keys(row.metadata).length > 0
+                        ? Object.entries(row.metadata).map(([k, v]) => `${k}: ${String(v)}`).join(" · ")
+                        : ""}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ===== REALTIME STAFF TOASTS =====
+function RealtimeStaffToasts({ enabled }: { enabled: boolean }) {
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!enabled) return;
+    const ch = supabase
+      .channel("staff-activity")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "transaction_log" }, (payload) => {
+        const row = payload.new as any;
+        const style = ACTION_STYLE[row.action];
+        toast(`${style?.label ?? row.action} · ${row.subject_user_name ?? row.actor_name ?? ""}`, {
+          description: row.book_title ?? undefined,
+        });
+        qc.invalidateQueries({ queryKey: ["admin-transaction-log"] });
+        qc.invalidateQueries({ queryKey: ["admin-rentals"] });
+        qc.invalidateQueries({ queryKey: ["admin-waitlist"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [enabled, qc]);
+  return null;
 }

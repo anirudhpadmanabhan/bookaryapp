@@ -415,6 +415,48 @@ export type Database = {
           },
         ]
       }
+      transaction_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_name: string | null
+          book_id: string | null
+          book_title: string | null
+          created_at: string
+          id: string
+          library_id: string | null
+          metadata: Json
+          subject_user_id: string | null
+          subject_user_name: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_name?: string | null
+          book_id?: string | null
+          book_title?: string | null
+          created_at?: string
+          id?: string
+          library_id?: string | null
+          metadata?: Json
+          subject_user_id?: string | null
+          subject_user_name?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_name?: string | null
+          book_id?: string | null
+          book_title?: string | null
+          created_at?: string
+          id?: string
+          library_id?: string | null
+          metadata?: Json
+          subject_user_id?: string | null
+          subject_user_name?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -501,6 +543,25 @@ export type Database = {
       }
     }
     Functions: {
+      _actor_name: { Args: { _uid: string }; Returns: string }
+      _book_meta: {
+        Args: { _book_id: string }
+        Returns: {
+          library_id: string
+          title: string
+        }[]
+      }
+      _fanout_staff_notify: {
+        Args: {
+          _body: string
+          _book_id: string
+          _kind: string
+          _library_id: string
+          _link: string
+          _title: string
+        }
+        Returns: undefined
+      }
       admin_grant_librarian: { Args: { _email: string }; Returns: Json }
       admin_list_librarians: {
         Args: never
@@ -519,6 +580,19 @@ export type Database = {
           granted_at: string
           roles: Database["public"]["Enums"]["app_role"][]
           user_id: string
+        }[]
+      }
+      admin_list_users: {
+        Args: never
+        Returns: {
+          active_rentals: number
+          created_at: string
+          display_name: string
+          email: string
+          roles: Database["public"]["Enums"]["app_role"][]
+          total_rentals: number
+          user_id: string
+          wallet_balance: number
         }[]
       }
       admin_revoke_librarian: { Args: { _email: string }; Returns: Json }
