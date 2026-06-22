@@ -294,7 +294,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
                         </div>
                       </div>
                       <Link to="/profile" onClick={() => setMenuOpen(false)} className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-surface-elevated">
-                        <UserRound className="h-4 w-4" /> Profile & tracking
+                        <UserRound className="h-4 w-4" /> Profile
+                      </Link>
+                      <Link to="/tracking" onClick={() => setMenuOpen(false)} className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-surface-elevated">
+                        <Truck className="h-4 w-4" /> Tracking & waitlist
                       </Link>
                       <Link to="/diary" onClick={() => setMenuOpen(false)} className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-surface-elevated">
                         <NotebookPen className="h-4 w-4" /> Reading diary
