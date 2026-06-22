@@ -208,7 +208,7 @@ function BooksTab() {
 
       {adding && <AddBookModal onClose={() => setAdding(false)} />}
       {importing && <ImportBooksModal onClose={() => setImporting(false)} />}
-      {editing && (
+      {editing && view === "grid" && (
         <EditBookModal
           book={books.find((b) => b.id === editing)!}
           onClose={() => setEditing(null)}
