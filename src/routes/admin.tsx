@@ -8,7 +8,7 @@ import {
   useAdminLibraries, useCreateLibrary, useUpdateLibrary, useDeleteLibrary,
   useStaffRoles, useSetUserRole,
   useStaffUserSummary,
-  useBulkImportBooks, type BookImportRow,
+  useBulkImportBooks, useLibraryBookCounts, type BookImportRow,
 } from "@/lib/admin";
 import { useQuery } from "@tanstack/react-query";
 import { fetchBooks, displayRating } from "@/lib/books";
