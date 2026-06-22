@@ -766,6 +766,7 @@ function SuggestionsTab() {
 // ===== LIBRARIES (admin) =====
 function LibrariesTab() {
   const { data: libs = [], isLoading } = useAdminLibraries();
+  const { data: counts = {} } = useLibraryBookCounts();
   const create = useCreateLibrary();
   const update = useUpdateLibrary();
   const del = useDeleteLibrary();
@@ -774,6 +775,8 @@ function LibrariesTab() {
   const [slug, setSlug] = useState("");
   const [nameMl, setNameMl] = useState("");
   const [location, setLocation] = useState("");
+
+  const totalBooks = Object.values(counts as Record<string, number>).reduce((a, b) => a + b, 0);
 
   return (
     <div>
