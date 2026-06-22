@@ -461,6 +461,17 @@ export type Database = {
       }
     }
     Functions: {
+      admin_grant_librarian: { Args: { _email: string }; Returns: Json }
+      admin_list_librarians: {
+        Args: never
+        Returns: {
+          display_name: string
+          email: string
+          granted_at: string
+          user_id: string
+        }[]
+      }
+      admin_revoke_librarian: { Args: { _email: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -468,6 +479,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      staff_user_summary: { Args: { _user_id: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "librarian" | "reader"
