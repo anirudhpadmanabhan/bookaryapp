@@ -116,7 +116,10 @@ function AdminPage() {
       {tab === "waitlist" && <WaitlistTab />}
       {tab === "suggestions" && <SuggestionsTab />}
       {tab === "libraries" && isAdmin && <LibrariesTab />}
+      {tab === "users" && isAdmin && <UsersTab />}
       {tab === "roles" && isAdmin && <StaffRolesTab />}
+      {tab === "activity" && isAdmin && <ActivityLogTab />}
+      <RealtimeStaffToasts enabled={isStaff} />
     </AppLayout>
   );
 }
