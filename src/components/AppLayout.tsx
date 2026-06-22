@@ -1,7 +1,7 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   Home, Search, BookMarked, PenLine, Heart, UserRound,
-  Library, NotebookPen, Wallet, LogOut, Sparkles, Bell, X,
+  Library, NotebookPen, Wallet, LogOut, Sparkles, Bell, X, Truck,
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo, type ReactNode } from "react";
 import { useSession } from "@/lib/auth";
@@ -244,7 +244,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                                 {item.bookId ? (
                                   <Link to="/books/$id" params={{ id: item.bookId }} onClick={() => setBellOpen(false)} className="block cursor-pointer">{Inner}</Link>
                                 ) : (
-                                  <Link to="/profile" onClick={() => setBellOpen(false)} className="block cursor-pointer">{Inner}</Link>
+                                  <Link to="/tracking" onClick={() => setBellOpen(false)} className="block cursor-pointer">{Inner}</Link>
                                 )}
                               </li>
                             );
@@ -294,7 +294,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
                         </div>
                       </div>
                       <Link to="/profile" onClick={() => setMenuOpen(false)} className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-surface-elevated">
-                        <UserRound className="h-4 w-4" /> Profile & tracking
+                        <UserRound className="h-4 w-4" /> Profile
+                      </Link>
+                      <Link to="/tracking" onClick={() => setMenuOpen(false)} className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-surface-elevated">
+                        <Truck className="h-4 w-4" /> Tracking & waitlist
                       </Link>
                       <Link to="/diary" onClick={() => setMenuOpen(false)} className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-surface-elevated">
                         <NotebookPen className="h-4 w-4" /> Reading diary
