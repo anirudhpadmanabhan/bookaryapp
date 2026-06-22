@@ -6,7 +6,7 @@ import {
   useAllWaitlist, useRemoveWaitlistEntry, useAllSuggestions,
   useUpdateBook, useDeleteBook, useCreateBook,
   useAdminLibraries, useCreateLibrary, useUpdateLibrary, useDeleteLibrary,
-  useLibrarians, useGrantLibrarian, useRevokeLibrarian,
+  useStaffRoles, useSetUserRole,
   useStaffUserSummary,
   useBulkImportBooks, type BookImportRow,
 } from "@/lib/admin";
@@ -23,7 +23,7 @@ import {
   Upload, Grid3x3, List as ListIcon, Building2, Users, Mail, Star,
 } from "lucide-react";
 
-type Tab = "books" | "rentals" | "waitlist" | "suggestions" | "libraries" | "librarians";
+type Tab = "books" | "rentals" | "waitlist" | "suggestions" | "libraries" | "roles";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -71,7 +71,7 @@ function AdminPage() {
     { id: "waitlist", label: "Waitlist", icon: Clock },
     { id: "suggestions", label: "Suggestions", icon: Lightbulb },
     { id: "libraries", label: "Libraries", icon: Building2, adminOnly: true },
-    { id: "librarians", label: "Librarians", icon: Users, adminOnly: true },
+    { id: "roles", label: "Roles", icon: Users, adminOnly: true },
   ];
 
   return (
@@ -112,7 +112,7 @@ function AdminPage() {
       {tab === "waitlist" && <WaitlistTab />}
       {tab === "suggestions" && <SuggestionsTab />}
       {tab === "libraries" && isAdmin && <LibrariesTab />}
-      {tab === "librarians" && isAdmin && <LibrariansTab />}
+      {tab === "roles" && isAdmin && <StaffRolesTab />}
     </AppLayout>
   );
 }
