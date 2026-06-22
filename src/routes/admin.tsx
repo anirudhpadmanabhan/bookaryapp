@@ -545,12 +545,15 @@ function mapRow(raw: Record<string, any>): BookImportRow | null {
   return mapped as BookImportRow;
 }
 
-function ImportBooksModal({ onClose }: { onClose: () => void }) {
+function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; defaultLibraryId?: string }) {
   const importMut = useBulkImportBooks();
   const { selectedId } = useLibrary();
+  const { data: libs = [] } = useAdminLibraries();
   const [rows, setRows] = useState<BookImportRow[]>([]);
   const [filename, setFilename] = useState<string>("");
   const [skipped, setSkipped] = useState(0);
+  const [mode, setMode] = useState<ImportMode>("append");
+  const [libraryId, setLibraryId] = useState<string>(defaultLibraryId ?? selectedId ?? "");
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const handleFile = async (file: File) => {
@@ -583,13 +586,51 @@ function ImportBooksModal({ onClose }: { onClose: () => void }) {
     }
   };
 
+  const overwriteCount = rows.filter((r) => !!r.shelf_code).length;
+  const libName = libs.find((l) => l.id === libraryId)?.name ?? "Unassigned";
+
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="glass-card w-full max-w-2xl rounded-2xl p-6">
+      <div onClick={(e) => e.stopPropagation()} className="glass-card max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl p-6">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold">Import books from CSV / Excel</h2>
           <button onClick={onClose} className="cursor-pointer text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
         </div>
+
+        <div className="mb-3 grid gap-2 sm:grid-cols-2">
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Target library</span>
+            <select value={libraryId} onChange={(e) => setLibraryId(e.target.value)} className="w-full cursor-pointer rounded-lg border border-border bg-background/50 px-3 py-2 text-sm">
+              <option value="">— Unassigned —</option>
+              {libs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            </select>
+          </label>
+          <div>
+            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Import mode</span>
+            <div className="flex gap-1.5 rounded-lg border border-border bg-surface/40 p-1">
+              <button
+                type="button"
+                onClick={() => setMode("append")}
+                className={`flex-1 cursor-pointer rounded-md px-2 py-1.5 text-xs font-medium ${mode === "append" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Append (insert all)
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("overwrite")}
+                className={`flex-1 cursor-pointer rounded-md px-2 py-1.5 text-xs font-medium ${mode === "overwrite" ? "bg-amber-500 text-amber-950" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Overwrite by rack code
+              </button>
+            </div>
+          </div>
+        </div>
+        <p className="mb-3 text-[11px] text-muted-foreground">
+          {mode === "append"
+            ? "Append: every CSV row becomes a new book row. Existing books are untouched."
+            : `Overwrite: rows in ${libName} whose rack code appears in the CSV will be replaced; other racks stay untouched.`}
+        </p>
+
         <div className="rounded-xl border border-dashed border-border bg-surface/30 p-6 text-center">
           <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
           <p className="mt-2 text-sm">Drop a .csv, .xlsx, or .xls file — or pick one below.</p>
@@ -617,8 +658,8 @@ function ImportBooksModal({ onClose }: { onClose: () => void }) {
           <div className="mt-4 rounded-xl border border-border bg-surface/40 p-3 text-sm">
             <div className="font-medium">{filename}</div>
             <div className="text-xs text-muted-foreground">
-              {rows.length.toLocaleString()} ready to import{skipped > 0 && ` · ${skipped} skipped (missing title/author)`}.
-              {selectedId && " · Will attach to currently selected library."}
+              {rows.length.toLocaleString()} ready to import{skipped > 0 && ` · ${skipped} skipped (missing title/author)`} · target: <span className="font-semibold text-primary">{libName}</span>
+              {mode === "overwrite" && overwriteCount > 0 && ` · will replace up to ${overwriteCount} existing rack codes`}
             </div>
             {rows.length > 0 && (
               <div className="mt-2 max-h-40 overflow-y-auto rounded-md border border-border/50 text-xs">
@@ -646,10 +687,13 @@ function ImportBooksModal({ onClose }: { onClose: () => void }) {
           <button onClick={onClose} className="cursor-pointer rounded-lg border border-border px-4 py-2 text-sm hover:bg-surface-elevated">Cancel</button>
           <button
             disabled={importMut.isPending || rows.length === 0}
-            onClick={() => importMut.mutate({ rows, libraryId: selectedId ?? null }, { onSuccess: onClose })}
-            className="cursor-pointer rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 hover:opacity-90 disabled:opacity-50"
+            onClick={() => {
+              if (mode === "overwrite" && !confirm(`Overwrite books with matching rack codes in ${libName}? Books not in the CSV are untouched.`)) return;
+              importMut.mutate({ rows, libraryId: libraryId || null, mode }, { onSuccess: onClose });
+            }}
+            className={`cursor-pointer rounded-lg px-4 py-2 text-sm font-semibold shadow-lg disabled:opacity-50 ${mode === "overwrite" ? "bg-amber-500 text-amber-950 shadow-amber-500/20 hover:opacity-90" : "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-primary/20 hover:opacity-90"}`}
           >
-            {importMut.isPending ? "Importing…" : `Import ${rows.length.toLocaleString()} books`}
+            {importMut.isPending ? "Importing…" : `${mode === "overwrite" ? "Overwrite" : "Import"} ${rows.length.toLocaleString()} books`}
           </button>
         </div>
       </div>
