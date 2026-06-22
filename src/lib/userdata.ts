@@ -244,9 +244,17 @@ export function useAddDiary() {
         .from("reading_diary")
         .insert({ user_id: user.id, book_id: bookId, note, rating: rating ?? null, progress_pct: 0 } as any);
       if (error) throw error;
+      if (bookId && rating && rating > 0) {
+        const { error: reviewError } = await supabase.from("reviews").upsert(
+          { book_id: bookId, user_id: user.id, rating, body: note } as any,
+          { onConflict: "book_id,user_id" },
+        );
+        if (reviewError) throw reviewError;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["diary"] });
+      if (vars.bookId) qc.invalidateQueries({ queryKey: ["reviews", vars.bookId] });
       toast.success("Diary entry saved");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -255,13 +263,22 @@ export function useAddDiary() {
 
 export function useEditDiaryFull() {
   const qc = useQueryClient();
+  const { user } = useSession();
   return useMutation({
-    mutationFn: async ({ id, note, rating }: { id: string; note: string; rating?: number | null }) => {
+    mutationFn: async ({ id, note, rating, bookId }: { id: string; note: string; rating?: number | null; bookId?: string | null }) => {
       const { error } = await supabase.from("reading_diary").update({ note, rating: rating ?? null } as any).eq("id", id);
       if (error) throw error;
+      if (user && bookId && rating && rating > 0) {
+        const { error: reviewError } = await supabase.from("reviews").upsert(
+          { book_id: bookId, user_id: user.id, rating, body: note } as any,
+          { onConflict: "book_id,user_id" },
+        );
+        if (reviewError) throw reviewError;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["diary"] });
+      if (vars.bookId) qc.invalidateQueries({ queryKey: ["reviews", vars.bookId] });
       toast.success("Entry updated");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -409,9 +426,30 @@ export function useUpsertReview() {
           { onConflict: "book_id,user_id" },
         );
       if (error) throw error;
+      const { data: diary } = await supabase
+        .from("reading_diary")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("book_id", bookId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (diary?.id) {
+        const { error: diaryError } = await supabase
+          .from("reading_diary")
+          .update({ note: body, rating } as any)
+          .eq("id", diary.id);
+        if (diaryError) throw diaryError;
+      } else {
+        const { error: diaryError } = await supabase
+          .from("reading_diary")
+          .insert({ user_id: user.id, book_id: bookId, note: body, rating, progress_pct: 0 } as any);
+        if (diaryError) throw diaryError;
+      }
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["reviews", vars.bookId] });
+      qc.invalidateQueries({ queryKey: ["diary"] });
       toast.success("Review saved");
     },
     onError: (e: Error) => toast.error(e.message),

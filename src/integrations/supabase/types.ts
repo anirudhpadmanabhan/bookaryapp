@@ -224,6 +224,38 @@ export type Database = {
           },
         ]
       }
+      profile_cards: {
+        Row: {
+          created_at: string
+          display_name: string
+          id: string
+          tag: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string
+          id: string
+          tag?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          id?: string
+          tag?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_cards_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           address: string | null
@@ -457,7 +489,15 @@ export type Database = {
           id?: string | null
           tag?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profile_cards_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
@@ -471,7 +511,25 @@ export type Database = {
           user_id: string
         }[]
       }
+      admin_list_staff_roles: {
+        Args: never
+        Returns: {
+          display_name: string
+          email: string
+          granted_at: string
+          roles: Database["public"]["Enums"]["app_role"][]
+          user_id: string
+        }[]
+      }
       admin_revoke_librarian: { Args: { _email: string }; Returns: Json }
+      admin_set_user_role: {
+        Args: {
+          _email: string
+          _enabled: boolean
+          _role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
