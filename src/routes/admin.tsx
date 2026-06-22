@@ -466,9 +466,10 @@ function EditBookModal({ book, onClose }: { book: any; onClose: () => void }) {
   );
 }
 
-function AddBookModal({ onClose }: { onClose: () => void }) {
+function AddBookModal({ onClose, defaultLibraryId }: { onClose: () => void; defaultLibraryId?: string }) {
   const create = useCreateBook();
   const { selectedId } = useLibrary();
+  const { data: libs = [] } = useAdminLibraries();
   const [title, setTitle] = useState("");
   const [titleMl, setTitleMl] = useState("");
   const [author, setAuthor] = useState("");
@@ -476,6 +477,7 @@ function AddBookModal({ onClose }: { onClose: () => void }) {
   const [genre, setGenre] = useState("");
   const [shelf, setShelf] = useState("");
   const [publisher, setPublisher] = useState("");
+  const [libraryId, setLibraryId] = useState<string>(defaultLibraryId ?? selectedId ?? "");
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur" onClick={onClose}>
@@ -485,13 +487,17 @@ function AddBookModal({ onClose }: { onClose: () => void }) {
           <button onClick={onClose} className="cursor-pointer text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
         </div>
         <div className="space-y-2">
+          <select value={libraryId} onChange={(e) => setLibraryId(e.target.value)} className="w-full cursor-pointer rounded-lg border border-border bg-background/50 px-3 py-2 text-sm">
+            <option value="">— No library (unassigned) —</option>
+            {libs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+          </select>
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (English)" className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
           <input value={titleMl} onChange={(e) => setTitleMl(e.target.value)} placeholder="Title (Malayalam)" className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm font-mal" />
           <input value={author} onChange={(e) => setAuthor(e.target.value)} placeholder="Author (English)" className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
           <input value={authorMl} onChange={(e) => setAuthorMl(e.target.value)} placeholder="Author (Malayalam)" className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm font-mal" />
           <input value={genre} onChange={(e) => setGenre(e.target.value)} placeholder="Genre (e.g. നോവൽ / Novel)" className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
           <div className="grid grid-cols-2 gap-2">
-            <input value={shelf} onChange={(e) => setShelf(e.target.value)} placeholder="Rack #" className="rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
+            <input value={shelf} onChange={(e) => setShelf(e.target.value)} placeholder="Rack # (shelf code)" className="rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
             <input value={publisher} onChange={(e) => setPublisher(e.target.value)} placeholder="Publisher" className="rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
           </div>
         </div>
@@ -500,7 +506,7 @@ function AddBookModal({ onClose }: { onClose: () => void }) {
           <button
             disabled={create.isPending || !title.trim() || !author.trim() || !genre.trim()}
             onClick={() => create.mutate(
-              { title, author, genre, title_ml: titleMl, author_ml: authorMl, shelf_code: shelf, publisher, library_id: selectedId ?? undefined },
+              { title, author, genre, title_ml: titleMl, author_ml: authorMl, shelf_code: shelf, publisher, library_id: libraryId || undefined },
               { onSuccess: onClose },
             )}
             className="cursor-pointer rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 hover:opacity-90 disabled:opacity-50"
