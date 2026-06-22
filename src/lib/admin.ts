@@ -303,51 +303,63 @@ export function useDeleteLibrary() {
   });
 }
 
-// ===== LIBRARIAN ROLES =====
-export function useLibrarians() {
+// ===== STAFF ROLE MANAGEMENT =====
+export type StaffRoleRow = {
+  user_id: string;
+  email: string;
+  display_name: string | null;
+  roles: AppRole[];
+  granted_at: string;
+};
+
+export function useStaffRoles() {
   return useQuery({
-    queryKey: ["admin-librarians"],
+    queryKey: ["admin-staff-roles"],
     staleTime: 30_000,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("admin_list_librarians" as any);
+      const { data, error } = await supabase.rpc("admin_list_staff_roles" as any);
       if (error) throw error;
-      return (data ?? []) as { user_id: string; email: string; display_name: string | null; granted_at: string }[];
+      return (data ?? []) as StaffRoleRow[];
     },
   });
+}
+
+export function useSetUserRole() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ email, role, enabled }: { email: string; role: "admin" | "librarian"; enabled: boolean }) => {
+      const { data, error } = await supabase.rpc("admin_set_user_role" as any, {
+        _email: email.trim().toLowerCase(),
+        _role: role,
+        _enabled: enabled,
+      });
+      if (error) throw error;
+      const res = data as { ok: boolean; error?: string };
+      if (!res?.ok) throw new Error(res?.error || "Failed to update role");
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ["admin-staff-roles"] });
+      qc.invalidateQueries({ queryKey: ["admin-librarians"] });
+      qc.invalidateQueries({ queryKey: ["my-roles"] });
+      toast.success(`${vars.role === "admin" ? "Admin" : "Librarian"} access ${vars.enabled ? "granted" : "revoked"}`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useLibrarians() {
+  const roles = useStaffRoles();
+  return { ...roles, data: (roles.data ?? []).filter((u) => u.roles.includes("librarian")) };
 }
 
 export function useGrantLibrarian() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (email: string) => {
-      const { data, error } = await supabase.rpc("admin_grant_librarian" as any, { _email: email.trim().toLowerCase() });
-      if (error) throw error;
-      const res = data as { ok: boolean; error?: string };
-      if (!res?.ok) throw new Error(res?.error || "Failed to grant");
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin-librarians"] });
-      toast.success("Librarian access granted");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
+  const setRole = useSetUserRole();
+  return { ...setRole, mutate: (email: string, options?: any) => setRole.mutate({ email, role: "librarian", enabled: true }, options) };
 }
 
 export function useRevokeLibrarian() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (email: string) => {
-      const { data, error } = await supabase.rpc("admin_revoke_librarian" as any, { _email: email.trim().toLowerCase() });
-      if (error) throw error;
-      const res = data as { ok: boolean; error?: string };
-      if (!res?.ok) throw new Error(res?.error || "Failed to revoke");
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin-librarians"] });
-      toast.success("Librarian access revoked");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
+  const setRole = useSetUserRole();
+  return { ...setRole, mutate: (email: string, options?: any) => setRole.mutate({ email, role: "librarian", enabled: false }, options) };
 }
 
 // ===== STAFF USER DASHBOARD =====
