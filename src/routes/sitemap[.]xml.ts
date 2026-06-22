@@ -26,15 +26,16 @@ export const Route = createFileRoute("/sitemap.xml")({
         try {
           const [{ data: books }, { data: genres }, { data: writers }] = await Promise.all([
             supabase.from("books").select("id").limit(5000),
-            supabase.from("books").select("genre_en").not("genre_en", "is", null).limit(5000),
-            supabase.from("books").select("author_slug").not("author_slug", "is", null).limit(5000),
+            supabase.from("books").select("genre").not("genre", "is", null).limit(5000),
+            supabase.from("books").select("author").not("author", "is", null).limit(5000),
           ]);
-          for (const b of books ?? []) entries.push({ path: `/books/${b.id}`, changefreq: "monthly", priority: "0.6" });
+          const slugify = (s: string) => s.toLowerCase().trim().replace(/[^a-z0-9\u0D00-\u0D7F]+/g, "-").replace(/^-|-$/g, "");
+          for (const b of books ?? []) entries.push({ path: `/books/${(b as any).id}`, changefreq: "monthly", priority: "0.6" });
           const gSet = new Set<string>();
-          for (const g of genres ?? []) { const s = String((g as any).genre_en ?? "").trim(); if (s) gSet.add(s.toLowerCase().replace(/\s+/g, "-")); }
+          for (const g of genres ?? []) { const s = slugify(String((g as any).genre ?? "")); if (s) gSet.add(s); }
           for (const s of gSet) entries.push({ path: `/genres/${s}`, changefreq: "weekly", priority: "0.5" });
           const wSet = new Set<string>();
-          for (const w of writers ?? []) { const s = String((w as any).author_slug ?? "").trim(); if (s) wSet.add(s); }
+          for (const w of writers ?? []) { const s = slugify(String((w as any).author ?? "")); if (s) wSet.add(s); }
           for (const s of wSet) entries.push({ path: `/writers/${s}`, changefreq: "weekly", priority: "0.5" });
         } catch {
           // ignore — ship static entries only on error
