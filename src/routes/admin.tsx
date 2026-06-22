@@ -73,7 +73,9 @@ function AdminPage() {
     { id: "waitlist", label: "Waitlist", icon: Clock },
     { id: "suggestions", label: "Suggestions", icon: Lightbulb },
     { id: "libraries", label: "Libraries", icon: Building2, adminOnly: true },
-    { id: "roles", label: "Roles", icon: Users, adminOnly: true },
+    { id: "users", label: "Users", icon: Users, adminOnly: true },
+    { id: "roles", label: "Roles", icon: Shield, adminOnly: true },
+    { id: "activity", label: "Activity log", icon: Activity, adminOnly: true },
   ];
 
   return (
