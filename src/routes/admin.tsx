@@ -781,7 +781,7 @@ function LibrariesTab() {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between gap-3">
-        <p className="text-xs text-muted-foreground">{libs.length} branches</p>
+        <p className="text-xs text-muted-foreground">{libs.length} branches · {totalBooks.toLocaleString()} books total{(counts.__unassigned ?? 0) > 0 && ` · ${(counts.__unassigned as number).toLocaleString()} unassigned`}</p>
         <button
           type="button"
           onClick={() => setAdding(true)}
