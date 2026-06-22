@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { AppLayout } from "@/components/AppLayout";
-import { useDiary, useEditDiaryFull, useDeleteDiary, useAddDiary } from "@/lib/userdata";
+import { useDiary, useEditDiaryFull, useDeleteDiary, useAddDiary, useProfile } from "@/lib/userdata";
 import { useSession } from "@/lib/auth";
 import { fetchBooks } from "@/lib/books";
 import { useQuery } from "@tanstack/react-query";
@@ -173,13 +173,16 @@ function NewEntryForm() {
 function DiaryItem({ entry }: { entry: any }) {
   const edit = useEditDiaryFull();
   const del = useDeleteDiary();
+  const { user } = useSession();
+  const { data: profile } = useProfile();
   const [editing, setEditing] = useState(false);
   const [note, setNote] = useState(entry.note);
   const [rating, setRating] = useState<number>(entry.rating ?? 0);
+  const reviewerName = profile?.display_name ?? user?.email?.split("@")[0] ?? "Reader";
 
   const save = () => {
     if (!note.trim() && rating === 0) return;
-    edit.mutate({ id: entry.id, note: note.trim(), rating: rating || null }, { onSuccess: () => setEditing(false) });
+    edit.mutate({ id: entry.id, note: note.trim(), rating: rating || null, bookId: entry.book_id }, { onSuccess: () => setEditing(false) });
   };
 
   return (
@@ -196,12 +199,22 @@ function DiaryItem({ entry }: { entry: any }) {
 
       <div className="min-w-0 flex-1">
         <div className="mb-2 flex flex-wrap items-baseline gap-2">
-          <h3 className="text-base font-semibold">{entry.books?.title ?? "Free entry"}</h3>
+          {entry.books ? (
+            <Link to="/books/$id" params={{ id: entry.books.id }} className="cursor-pointer text-base font-semibold hover:text-primary">{entry.books.title}</Link>
+          ) : (
+            <h3 className="text-base font-semibold">Free entry</h3>
+          )}
           {entry.books?.title_ml && <span className="font-mal text-sm text-accent">{entry.books.title_ml}</span>}
           <span className="ml-auto text-xs text-muted-foreground">
             {new Date(entry.created_at).toLocaleDateString()}{entry.books?.author ? ` · ${entry.books.author}` : ""}
           </span>
         </div>
+        <Link to="/u/$id" params={{ id: entry.user_id }} className="mb-2 inline-flex cursor-pointer items-center gap-2 text-xs text-muted-foreground hover:text-primary">
+          <span className="grid h-6 w-6 place-items-center rounded-full bg-gradient-to-br from-primary to-accent text-[10px] font-bold text-white">
+            {reviewerName.slice(0, 1).toUpperCase()}
+          </span>
+          Review by {entry.user_id === user?.id ? "You" : reviewerName}
+        </Link>
 
         {editing ? (
           <>
