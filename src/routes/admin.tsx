@@ -222,45 +222,124 @@ function BooksTable({ books, editing, setEditing }: { books: any[]; editing: str
   return (
     <div className="overflow-x-auto rounded-xl border border-border">
       <table className="w-full text-sm">
-        <thead className="bg-surface/60 text-xs uppercase tracking-wider text-muted-foreground">
+        <thead className="sticky top-0 z-10 bg-surface text-xs uppercase tracking-wider text-muted-foreground">
           <tr>
-            <th className="px-3 py-2.5 text-left">Rack</th>
-            <th className="px-3 py-2.5 text-left">Title</th>
-            <th className="px-3 py-2.5 text-left">Author</th>
-            <th className="px-3 py-2.5 text-left">Genre</th>
-            <th className="px-3 py-2.5 text-left">Rating</th>
-            <th className="px-3 py-2.5"></th>
+            <th className="px-2 py-2.5 text-left w-20">Rack</th>
+            <th className="px-2 py-2.5 text-left">Title</th>
+            <th className="px-2 py-2.5 text-left font-mal">Title (ml)</th>
+            <th className="px-2 py-2.5 text-left">Author</th>
+            <th className="px-2 py-2.5 text-left">Genre</th>
+            <th className="px-2 py-2.5 text-left w-24">Rent ₹</th>
+            <th className="px-2 py-2.5 text-left w-20">★</th>
+            <th className="px-2 py-2.5 w-32"></th>
           </tr>
         </thead>
         <tbody>
           {books.map((b) => (
-            <tr key={b.id} className="border-t border-border/40 hover:bg-surface/40">
-              <td className="px-3 py-2 text-xs font-bold text-primary">{b.shelf_code ?? "—"}</td>
-              <td className="px-3 py-2">
-                <Link to="/books/$id" params={{ id: b.id }} className="cursor-pointer font-medium hover:text-primary">{b.title}</Link>
-                {b.title_ml && <div className="font-mal text-xs text-accent">{b.title_ml}</div>}
-              </td>
-              <td className="px-3 py-2 text-xs text-foreground/80">{b.author}</td>
-              <td className="px-3 py-2 text-xs text-muted-foreground">{b.genre}</td>
-              <td className="px-3 py-2 text-xs">
-                <span className="inline-flex items-center gap-1">
-                  <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                  {displayRating(b).toFixed(1)}
-                </span>
-              </td>
-              <td className="px-3 py-2 text-right">
-                <button
-                  onClick={() => setEditing(b.id)}
-                  className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-elevated"
-                >
-                  <Pencil className="h-3 w-3" /> Edit
-                </button>
-              </td>
-            </tr>
+            <EditableRow key={b.id} book={b} isEditing={editing === b.id} onEdit={() => setEditing(b.id)} onClose={() => setEditing(null)} />
           ))}
         </tbody>
       </table>
     </div>
+  );
+}
+
+function EditableRow({ book, isEditing, onEdit, onClose }: { book: any; isEditing: boolean; onEdit: () => void; onClose: () => void }) {
+  const update = useUpdateBook();
+  const del = useDeleteBook();
+  const [draft, setDraft] = useState({
+    shelf_code: book.shelf_code ?? "",
+    title: book.title ?? "",
+    title_ml: book.title_ml ?? "",
+    author: book.author ?? "",
+    genre: book.genre ?? "",
+    rent_price: String(book.rent_price ?? 10),
+  });
+
+  useEffect(() => {
+    if (isEditing) {
+      setDraft({
+        shelf_code: book.shelf_code ?? "",
+        title: book.title ?? "",
+        title_ml: book.title_ml ?? "",
+        author: book.author ?? "",
+        genre: book.genre ?? "",
+        rent_price: String(book.rent_price ?? 10),
+      });
+    }
+  }, [isEditing, book]);
+
+  const save = () => {
+    update.mutate(
+      {
+        id: book.id,
+        patch: {
+          shelf_code: draft.shelf_code.trim() || null,
+          title: draft.title.trim() || book.title,
+          title_ml: draft.title_ml.trim() || null,
+          author: draft.author.trim() || book.author,
+          genre: draft.genre.trim() || book.genre,
+          rent_price: Number(draft.rent_price) > 0 ? Number(draft.rent_price) : Number(book.rent_price),
+        },
+      },
+      { onSuccess: onClose },
+    );
+  };
+
+  const cellCls = "w-full rounded border border-primary/40 bg-background/80 px-2 py-1 text-xs outline-none focus:border-primary";
+
+  if (isEditing) {
+    return (
+      <tr className="border-t border-border/40 bg-primary/5">
+        <td className="px-2 py-1.5"><input value={draft.shelf_code} onChange={(e) => setDraft({ ...draft, shelf_code: e.target.value })} className={cellCls} /></td>
+        <td className="px-2 py-1.5"><input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} className={cellCls} /></td>
+        <td className="px-2 py-1.5"><input value={draft.title_ml} onChange={(e) => setDraft({ ...draft, title_ml: e.target.value })} className={`${cellCls} font-mal`} /></td>
+        <td className="px-2 py-1.5"><input value={draft.author} onChange={(e) => setDraft({ ...draft, author: e.target.value })} className={cellCls} /></td>
+        <td className="px-2 py-1.5"><input value={draft.genre} onChange={(e) => setDraft({ ...draft, genre: e.target.value })} className={cellCls} /></td>
+        <td className="px-2 py-1.5"><input type="number" value={draft.rent_price} onChange={(e) => setDraft({ ...draft, rent_price: e.target.value })} className={cellCls} /></td>
+        <td className="px-2 py-1.5 text-xs">{displayRating(book).toFixed(1)}</td>
+        <td className="px-2 py-1.5 text-right">
+          <div className="flex justify-end gap-1">
+            <button onClick={save} disabled={update.isPending} className="cursor-pointer rounded bg-primary px-2 py-1 text-[11px] font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50">
+              <Save className="h-3 w-3" />
+            </button>
+            <button onClick={onClose} className="cursor-pointer rounded border border-border px-2 py-1 text-[11px] hover:bg-surface-elevated">
+              <X className="h-3 w-3" />
+            </button>
+            <button
+              onClick={() => { if (confirm(`Delete "${book.title}"?`)) del.mutate(book.id, { onSuccess: onClose }); }}
+              className="cursor-pointer rounded border border-rose-500/40 px-2 py-1 text-[11px] text-rose-300 hover:bg-rose-500/10"
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
+  return (
+    <tr className="border-t border-border/40 hover:bg-surface/40" onDoubleClick={onEdit}>
+      <td className="px-2 py-2 text-xs font-bold text-primary">{book.shelf_code ?? "—"}</td>
+      <td className="px-2 py-2">
+        <Link to="/books/$id" params={{ id: book.id }} className="cursor-pointer font-medium hover:text-primary">{book.title}</Link>
+      </td>
+      <td className="px-2 py-2 font-mal text-xs text-accent">{book.title_ml ?? "—"}</td>
+      <td className="px-2 py-2 text-xs text-foreground/80">{book.author}</td>
+      <td className="px-2 py-2 text-xs text-muted-foreground">{book.genre}</td>
+      <td className="px-2 py-2 text-xs">₹{Number(book.rent_price ?? 10).toFixed(0)}</td>
+      <td className="px-2 py-2 text-xs">
+        <span className="inline-flex items-center gap-1">
+          <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+          {displayRating(book).toFixed(1)}
+        </span>
+      </td>
+      <td className="px-2 py-2 text-right">
+        <button onClick={onEdit} className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-elevated">
+          <Pencil className="h-3 w-3" /> Edit
+        </button>
+      </td>
+    </tr>
   );
 }
 
