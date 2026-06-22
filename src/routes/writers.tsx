@@ -68,7 +68,7 @@ export function WritersPage() {
         </div>
         <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface/60 px-3 py-2.5 text-sm">
           <ArrowDownUp className="h-3.5 w-3.5 text-muted-foreground" />
-          <select value={sort} onChange={(e) => setSort(e.target.value as WriterSort)} className="cursor-pointer bg-transparent text-sm outline-none">
+          <select aria-label="Sort writers by" value={sort} onChange={(e) => setSort(e.target.value as WriterSort)} className="cursor-pointer bg-transparent text-sm outline-none">
             <option value="popular" className="bg-background">Most titles</option>
             <option value="az" className="bg-background">Name A–Z</option>
           </select>

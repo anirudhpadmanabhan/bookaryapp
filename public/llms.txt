@@ -1,0 +1,16 @@
+# Bookary
+
+> A Malayalam-first community library catalog — browse books by rack code, genre and writer, rent titles, join waitlists, keep a reading diary, and review what you've read.
+
+## Pages
+
+- [Home](/): Featured books, recent additions, and what the community is reading.
+- [Search](/search): Search the full catalog by title, author, genre, or shelf code.
+- [Genres](/genres): Browse by genre (നോവൽ, കഥ, കവിത, and more).
+- [Writers](/writers): Browse books by author.
+- [Loved](/loved): Most-loved books across the community.
+- [Diary](/diary): Public reading diary entries and reviews.
+
+## Optional
+
+- [Sitemap](/sitemap.xml): Machine-readable list of indexable URLs.

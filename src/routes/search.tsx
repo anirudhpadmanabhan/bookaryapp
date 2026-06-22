@@ -108,6 +108,7 @@ function SearchPage() {
         <SearchIcon className="h-5 w-5 text-muted-foreground" />
         <input
           autoFocus
+          aria-label="Search the catalog"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Try 'Basheer', 'നോവൽ', 'Aadujeevitham', or a shelf number…"

@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /auth
+Disallow: /profile
+Disallow: /tracking
+
+Sitemap: https://bookary-boost-engine.lovable.app/sitemap.xml
