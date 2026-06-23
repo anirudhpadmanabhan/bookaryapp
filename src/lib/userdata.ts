@@ -481,10 +481,8 @@ export function useTopUpWallet() {
   return useMutation({
     mutationFn: async (amount: number) => {
       if (!user) throw new Error("Sign in");
-      const { data: prof, error } = await supabase.from("profiles").select("wallet_balance").eq("id", user.id).single();
+      const { error } = await supabase.rpc("top_up_wallet" as any, { _amount: amount });
       if (error) throw error;
-      const { error: uErr } = await supabase.from("profiles").update({ wallet_balance: Number(prof.wallet_balance) + amount }).eq("id", user.id);
-      if (uErr) throw uErr;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["profile"] });
