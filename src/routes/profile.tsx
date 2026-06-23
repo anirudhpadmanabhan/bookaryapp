@@ -56,12 +56,16 @@ function ProfilePage() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user, loading } = useSession();
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth", search: { redirect: pathname } }); }, [user, loading, navigate, pathname]);
-  // Fire 5-day due-date reminders once per page mount (idempotent server-side)
+  // On mount: sweep expired reservations, then enqueue any due-bucket reminders.
   useEffect(() => {
     if (!user) return;
-    supabase.rpc("enqueue_my_due_reminders" as any).then(() => {
-      // notifications list refresh handled by realtime / next refetch
-    });
+    (async () => {
+      await supabase.rpc("expire_stale_reservations" as any);
+      await supabase.rpc("enqueue_my_due_reminders" as any);
+      qc.invalidateQueries({ queryKey: ["rentals"] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
   const { data: profile } = useProfile();
   const { data: rentals = [] } = useRentals();
