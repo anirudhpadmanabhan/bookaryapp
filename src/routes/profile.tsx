@@ -29,6 +29,13 @@ function ProfilePage() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user, loading } = useSession();
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth", search: { redirect: pathname } }); }, [user, loading, navigate, pathname]);
+  // Fire 5-day due-date reminders once per page mount (idempotent server-side)
+  useEffect(() => {
+    if (!user) return;
+    supabase.rpc("enqueue_my_due_reminders" as any).then(() => {
+      // notifications list refresh handled by realtime / next refetch
+    });
+  }, [user]);
   const { data: profile } = useProfile();
   const { data: rentals = [] } = useRentals();
   const { data: favorites = [] } = useFavorites();
