@@ -70,6 +70,7 @@ function AdminPage() {
   }
 
   const tabs: { id: Tab; label: string; icon: any; adminOnly?: boolean }[] = [
+    { id: "overview", label: "Overview", icon: LayoutDashboard },
     { id: "books", label: "Books", icon: LibIcon },
     { id: "rentals", label: "Rentals", icon: Package },
     { id: "waitlist", label: "Waitlist", icon: Clock },
