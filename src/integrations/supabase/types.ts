@@ -18,6 +18,9 @@ export type Database = {
         Row: {
           author: string | null
           created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
           id: string
           note: string | null
           status: string
@@ -27,6 +30,9 @@ export type Database = {
         Insert: {
           author?: string | null
           created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
           id?: string
           note?: string | null
           status?: string
@@ -36,6 +42,9 @@ export type Database = {
         Update: {
           author?: string | null
           created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
           id?: string
           note?: string | null
           status?: string
@@ -335,6 +344,7 @@ export type Database = {
           book_id: string
           delivery_address: string | null
           due_at: string
+          fine_amount: number
           id: string
           price_paid: number
           rented_at: string
@@ -346,6 +356,7 @@ export type Database = {
           book_id: string
           delivery_address?: string | null
           due_at?: string
+          fine_amount?: number
           id?: string
           price_paid: number
           rented_at?: string
@@ -357,6 +368,7 @@ export type Database = {
           book_id?: string
           delivery_address?: string | null
           due_at?: string
+          fine_amount?: number
           id?: string
           price_paid?: number
           rented_at?: string
@@ -640,6 +652,24 @@ export type Database = {
         }
         Returns: boolean
       }
+      librarian_decide_suggestion: {
+        Args: { _decision: string; _id: string; _note?: string }
+        Returns: Json
+      }
+      librarian_mark_returned: { Args: { _rental_id: string }; Returns: Json }
+      library_members: {
+        Args: { _library_id: string }
+        Returns: {
+          display_name: string
+          email: string
+          last_rental: string
+          phone: string
+          rental_count: number
+          user_id: string
+        }[]
+      }
+      reading_insights: { Args: { _user_id: string }; Returns: Json }
+      set_my_phone: { Args: { _phone: string }; Returns: undefined }
       staff_user_summary: { Args: { _user_id: string }; Returns: Json }
     }
     Enums: {

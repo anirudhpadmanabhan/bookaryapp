@@ -255,11 +255,12 @@ function BookPage() {
           price={rentPrice}
           balance={Number(profile.wallet_balance)}
           defaultAddress={(profile as any).address ?? ""}
+          defaultPhone={(profile as any).phone ?? ""}
           title={book.title}
           onClose={() => setShowRent(false)}
-          onConfirm={(addr) => {
+          onConfirm={(addr, phone) => {
             rent.mutate(
-              { bookId: book.id, price: rentPrice, address: addr },
+              { bookId: book.id, price: rentPrice, address: addr, phone },
               {
                 onSuccess: () => {
                   setShowRent(false);
@@ -374,12 +375,13 @@ function useGeolocateAddress(setAddress: (a: string) => void) {
 }
 
 function RentModal({
-  price, balance, defaultAddress, title, onClose, onConfirm, pending,
+  price, balance, defaultAddress, defaultPhone, title, onClose, onConfirm, pending,
 }: {
-  price: number; balance: number; defaultAddress: string; title: string;
-  onClose: () => void; onConfirm: (addr: string) => void; pending: boolean;
+  price: number; balance: number; defaultAddress: string; defaultPhone: string; title: string;
+  onClose: () => void; onConfirm: (addr: string, phone: string) => void; pending: boolean;
 }) {
   const [address, setAddress] = useState(defaultAddress);
+  const [phone, setPhone] = useState(defaultPhone);
   const { detect, busy } = useGeolocateAddress(setAddress);
   const insufficient = balance < price;
   return (
@@ -430,14 +432,27 @@ function RentModal({
         />
         <p className="mt-1 text-[11px] text-muted-foreground">Saved to your profile so future rentals pre-fill.</p>
 
+        <div className="mt-3">
+          <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Mobile number (private)</label>
+          <input
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="98xxxxxxxx"
+            inputMode="tel"
+            className="w-full rounded-xl border border-border bg-background/60 px-3 py-2.5 text-sm outline-none focus:border-primary"
+          />
+          <p className="mt-1 text-[11px] text-muted-foreground">For courier updates. Saved to your profile — never shown publicly.</p>
+        </div>
+
         <div className="mt-4 rounded-xl border border-border/60 bg-surface/40 px-3 py-2.5 text-xs text-muted-foreground">
-          Return window: <span className="font-medium text-foreground">20 days</span> at flat ₹10. After day 20 the book's listed rent applies per cycle as a late fee.
+          Return window: <span className="font-medium text-foreground">20 days</span> at flat ₹10. After day 20 a <span className="font-medium text-rose-300">₹1/day late fine</span> is auto-deducted from your wallet on return.
         </div>
 
         <div className="mt-5 flex gap-2">
           <button onClick={onClose} className="flex-1 cursor-pointer rounded-xl border border-border px-4 py-2.5 text-sm hover:bg-surface-elevated">Cancel</button>
           <button
-            onClick={() => onConfirm(address)}
+            onClick={() => onConfirm(address, phone)}
             disabled={pending || insufficient || !address.trim()}
             className="flex-1 cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >

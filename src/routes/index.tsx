@@ -9,7 +9,7 @@ import { BooksGrid, type ViewMode } from "@/components/BooksGrid";
 import { BookCard } from "@/components/BookCard";
 import { colorAt } from "@/lib/books";
 import { SortBar } from "@/components/SortBar";
-import { ArrowRight, Library, PenLine, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowRight, Library, PenLine, Sparkles, ChevronDown, ChevronUp, Languages as LangIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
 export const Route = createFileRoute("/")({
@@ -33,6 +33,16 @@ function HomePage() {
   const [view, setView] = useState<ViewMode>("tile");
   const [genresOpen, setGenresOpen] = useState(false);
   const [writersOpen, setWritersOpen] = useState(false);
+  const [langsOpen, setLangsOpen] = useState(false);
+
+  const languages = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const b of books) {
+      const l = (b.language ?? "Unknown").trim() || "Unknown";
+      map.set(l, (map.get(l) ?? 0) + 1);
+    }
+    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
+  }, [books]);
 
   const sorted = useMemo(() => sortBooks(books, sort, direction), [books, sort, direction]);
   const shown = sorted.slice(0, HOME_LIMIT);
@@ -166,6 +176,38 @@ function HomePage() {
             ))}
             <Link to="/writers" className="cursor-pointer rounded-full bg-accent/15 px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/25">
               All writers ›
+            </Link>
+          </div>
+        )}
+      </section>
+
+      {/* Languages — minimized strip */}
+      <section className="mb-8">
+        <button
+          type="button"
+          onClick={() => setLangsOpen((o) => !o)}
+          className="flex w-full cursor-pointer items-center justify-between rounded-xl bg-surface/40 px-4 py-3 text-sm hover:bg-surface/60"
+        >
+          <span className="flex items-center gap-2 font-semibold">
+            <LangIcon className="h-4 w-4 text-primary" /> Browse by Language
+            <span className="text-xs font-normal text-muted-foreground">({languages.length})</span>
+          </span>
+          {langsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </button>
+        {langsOpen && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {languages.slice(0, 30).map(([name, count]) => (
+              <Link
+                key={name}
+                to="/languages/$slug"
+                params={{ slug: slugify(name) }}
+                className="cursor-pointer rounded-full border border-border bg-surface/60 px-3 py-1.5 text-xs hover:border-primary/60 hover:text-primary"
+              >
+                {name} <span className="text-muted-foreground">· {count}</span>
+              </Link>
+            ))}
+            <Link to="/languages" className="cursor-pointer rounded-full bg-primary/15 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/25">
+              All languages ›
             </Link>
           </div>
         )}

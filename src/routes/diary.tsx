@@ -62,17 +62,7 @@ function DiaryPage() {
         })}
       </div>
 
-      {view === "posters" && (
-        <>
-          <PostersView entries={entries as any[]} />
-          {entries.length > 0 && (
-            <div className="mt-8 space-y-4">
-              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">All entries</div>
-              {(entries as any[]).map((e) => <DiaryItem key={e.id} entry={e} />)}
-            </div>
-          )}
-        </>
-      )}
+      {view === "posters" && <PostersView entries={entries as any[]} />}
       {view === "timeline" && <TimelineView entries={entries as any[]} thisYearCount={thisYear.length} year={year} />}
       {view === "reviews" && <ReviewsView entries={entries as any[]} />}
     </AppLayout>

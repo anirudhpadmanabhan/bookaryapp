@@ -110,9 +110,9 @@ export function useRentBook() {
   const qc = useQueryClient();
   const { user } = useSession();
   return useMutation({
-    mutationFn: async ({ bookId, price, address }: { bookId: string; price: number; address?: string }) => {
+    mutationFn: async ({ bookId, price, address, phone }: { bookId: string; price: number; address?: string; phone?: string }) => {
       if (!user) throw new Error("Sign in to rent");
-      const { data: prof, error: pErr } = await supabase.from("profiles").select("wallet_balance, address").eq("id", user.id).maybeSingle();
+      const { data: prof, error: pErr } = await supabase.from("profiles").select("wallet_balance, address, phone").eq("id", user.id).maybeSingle();
       if (pErr) throw pErr;
       if (!prof) throw new Error("Add your profile details before renting");
       const { data: existing, error: activeErr } = await supabase
@@ -138,6 +138,8 @@ export function useRentBook() {
       if (rErr) throw rErr;
       const updates: any = { wallet_balance: balance - price };
       if (address && address.trim() && address.trim() !== (prof.address ?? "")) updates.address = address.trim();
+      const cleanPhone = phone?.trim();
+      if (cleanPhone && cleanPhone !== ((prof as any).phone ?? "")) updates.phone = cleanPhone;
       const { error: uErr } = await supabase.from("profiles").update(updates).eq("id", user.id);
       if (uErr) throw uErr;
     },

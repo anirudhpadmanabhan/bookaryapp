@@ -3,7 +3,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePublicProfile } from "@/lib/userdata";
-import { UserRound, Tag, Star, MessageSquare, Quote, Calendar } from "lucide-react";
+import { UserRound, Tag, Star, MessageSquare, Quote, Calendar, BookOpen, Flame, Heart, NotebookPen } from "lucide-react";
 
 export const Route = createFileRoute("/u/$id")({
   ssr: false,
@@ -26,6 +26,15 @@ function PublicProfilePage() {
         .limit(50);
       if (error) throw error;
       return data ?? [];
+    },
+  });
+
+  const { data: insights } = useQuery({
+    queryKey: ["reading-insights", id],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("reading_insights" as any, { _user_id: id });
+      if (error) throw error;
+      return data as { read: number; reading: number; want: number; favorite_genre: string | null; streak: number };
     },
   });
 
@@ -62,6 +71,25 @@ function PublicProfilePage() {
           {avgRating !== null && <div className="text-xs">avg {avgRating.toFixed(1)} / 5</div>}
         </div>
       </div>
+
+      {insights && (
+        <section className="mb-8">
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            <BookOpen className="h-4 w-4 text-accent" /> Reading insights
+          </h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <InsightStat icon={Flame} label="Day streak" value={insights.streak} tint="rose" />
+            <InsightStat icon={BookOpen} label="Read" value={insights.read} tint="emerald" />
+            <InsightStat icon={NotebookPen} label="Reading" value={insights.reading} tint="primary" />
+            <InsightStat icon={Heart} label="Want" value={insights.want} tint="amber" />
+            <div className="rounded-2xl border border-border bg-surface/40 p-3">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Favorite genre</div>
+              <div className="mt-1 truncate text-sm font-semibold">{insights.favorite_genre ?? "—"}</div>
+            </div>
+          </div>
+        </section>
+      )}
+
 
       <section>
         <h2 className="mb-4 flex items-center gap-2 text-lg font-bold">
@@ -107,5 +135,20 @@ function PublicProfilePage() {
         )}
       </section>
     </AppLayout>
+  );
+}
+
+function InsightStat({ icon: Icon, label, value, tint }: { icon: any; label: string; value: number; tint: "rose" | "emerald" | "primary" | "amber" }) {
+  const tintCls: Record<string, string> = {
+    rose: "border-rose-400/30 bg-rose-500/10 text-rose-300",
+    emerald: "border-emerald-400/30 bg-emerald-500/10 text-emerald-300",
+    primary: "border-primary/30 bg-primary/10 text-primary",
+    amber: "border-amber-400/30 bg-amber-500/10 text-amber-300",
+  };
+  return (
+    <div className={`rounded-2xl border p-3 ${tintCls[tint]}`}>
+      <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider opacity-80"><Icon className="h-3 w-3" /> {label}</div>
+      <div className="mt-1 text-xl font-bold">{value}</div>
+    </div>
   );
 }
