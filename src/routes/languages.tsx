@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
 import { fetchBooks, colorAt, slugify } from "@/lib/books";
@@ -15,10 +15,10 @@ export const Route = createFileRoute("/languages")({
       { name: "description", content: "Browse books in the Cherukad library by language — Malayalam, English, Hindi and more." },
     ],
   }),
-  component: LanguagesPage,
+  component: () => <Outlet />,
 });
 
-function LanguagesPage() {
+export function LanguagesPage() {
   const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<Sort>("popular");

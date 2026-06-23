@@ -23,11 +23,11 @@ import {
   Shield, Library as LibIcon, Package, Clock, Lightbulb,
   Search as SearchIcon, Trash2, CheckCircle2, Plus, Pencil, X, Save,
   Upload, Grid3x3, List as ListIcon, Building2, Users, Mail, Star, Activity,
-  FileText, FileDown, ArrowUpDown, ArrowUp, ArrowDown,
+  FileText, FileDown, ArrowUpDown, ArrowUp, ArrowDown, LayoutDashboard,
 } from "lucide-react";
 import { exportCsv, exportPdf } from "@/lib/pdf-export";
 
-type Tab = "books" | "rentals" | "waitlist" | "suggestions" | "libraries" | "roles" | "users" | "activity";
+type Tab = "overview" | "books" | "rentals" | "waitlist" | "suggestions" | "libraries" | "roles" | "users" | "activity";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -42,7 +42,7 @@ function AdminPage() {
   const { data: roles = [], isLoading: rolesLoading } = useMyRoles();
   const isStaff = useIsStaff();
   const isAdmin = useIsAdmin();
-  const [tab, setTab] = useState<Tab>("books");
+  const [tab, setTab] = useState<Tab>("overview");
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth", search: { redirect: pathname } });
@@ -70,6 +70,7 @@ function AdminPage() {
   }
 
   const tabs: { id: Tab; label: string; icon: any; adminOnly?: boolean }[] = [
+    { id: "overview", label: "Overview", icon: LayoutDashboard },
     { id: "books", label: "Books", icon: LibIcon },
     { id: "rentals", label: "Rentals", icon: Package },
     { id: "waitlist", label: "Waitlist", icon: Clock },
@@ -113,6 +114,7 @@ function AdminPage() {
         })}
       </div>
 
+      {tab === "overview" && <OverviewTab />}
       {tab === "books" && <BooksTab />}
       {tab === "rentals" && <RentalsTab />}
       {tab === "waitlist" && <WaitlistTab />}
@@ -125,6 +127,134 @@ function AdminPage() {
     </AppLayout>
   );
 }
+
+// ===== OVERVIEW =====
+function OverviewTab() {
+  const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
+  const { data: rentals = [] } = useAllRentals();
+  const { data: waitlist = [] } = useAllWaitlist();
+  const { data: libs = [] } = useAdminLibraries();
+
+  const rows = useMemo(() => {
+    const all = libs.map((l) => ({ id: l.id, name: l.name }));
+    all.push({ id: "__unassigned", name: "Unassigned" });
+
+    const bookLib = new Map<string, string>();
+    for (const b of books as any[]) bookLib.set(b.id, b.library_id || "__unassigned");
+
+    return all.map((lib) => {
+      const libBooks = (books as any[]).filter((b) => (b.library_id || "__unassigned") === lib.id);
+      const libRentals = (rentals as any[]).filter((r) => bookLib.get(r.book_id) === lib.id);
+      const active = libRentals.filter((r) => !r.returned_at);
+      const returned = libRentals.filter((r) => r.returned_at);
+      const overdue = active.filter((r) => r.due_at && new Date(r.due_at) < new Date());
+      const wait = (waitlist as any[]).filter((w) => bookLib.get(w.book_id) === lib.id);
+      const revenue = libRentals.reduce((s, r) => s + Number(r.price_paid || 0), 0);
+      return {
+        id: lib.id,
+        name: lib.name,
+        books: libBooks.length,
+        active: active.length,
+        overdue: overdue.length,
+        returned: returned.length,
+        waitlist: wait.length,
+        revenue,
+      };
+    }).filter((r) => r.books || r.active || r.returned || r.waitlist);
+  }, [books, rentals, waitlist, libs]);
+
+  const totals = useMemo(() => rows.reduce((a, r) => ({
+    books: a.books + r.books, active: a.active + r.active, overdue: a.overdue + r.overdue,
+    returned: a.returned + r.returned, waitlist: a.waitlist + r.waitlist, revenue: a.revenue + r.revenue,
+  }), { books: 0, active: 0, overdue: 0, returned: 0, waitlist: 0, revenue: 0 }), [rows]);
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <Stat label="Books" value={totals.books} />
+        <Stat label="Active rentals" value={totals.active} />
+        <Stat label="Overdue" value={totals.overdue} />
+        <Stat label="Returned" value={totals.returned} />
+        <Stat label="Waitlisted" value={totals.waitlist} />
+        <Stat label="Revenue (₹)" value={totals.revenue} />
+      </div>
+
+      <div>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Per-library breakdown</h2>
+        {rows.length === 0 ? (
+          <p className="glass-card rounded-2xl p-6 text-center text-sm text-muted-foreground">No activity yet.</p>
+        ) : (
+          <>
+            {/* Cards on mobile */}
+            <div className="grid gap-3 sm:hidden">
+              {rows.map((r) => (
+                <div key={r.id} className="glass-card rounded-2xl p-4">
+                  <div className="mb-3 flex items-center gap-2 font-semibold">
+                    <Building2 className="h-4 w-4 text-primary" /> {r.name}
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <Mini label="Books" value={r.books} />
+                    <Mini label="Active" value={r.active} tone="emerald" />
+                    <Mini label="Overdue" value={r.overdue} tone="rose" />
+                    <Mini label="Returned" value={r.returned} />
+                    <Mini label="Waitlist" value={r.waitlist} tone="amber" />
+                    <Mini label="₹" value={r.revenue} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Table on tablet+ */}
+            <div className="glass-card hidden overflow-x-auto rounded-2xl sm:block">
+              <table className="w-full text-sm">
+                <thead className="bg-surface/60 text-xs uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-2.5 text-left">Library</th>
+                    <th className="px-3 py-2.5 text-right">Books</th>
+                    <th className="px-3 py-2.5 text-right">Active</th>
+                    <th className="px-3 py-2.5 text-right">Overdue</th>
+                    <th className="px-3 py-2.5 text-right">Returned</th>
+                    <th className="px-3 py-2.5 text-right">Waitlist</th>
+                    <th className="px-3 py-2.5 text-right">Revenue (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.id} className="border-t border-border/40">
+                      <td className="px-3 py-2.5 font-medium">{r.name}</td>
+                      <td className="px-3 py-2.5 text-right">{r.books.toLocaleString()}</td>
+                      <td className="px-3 py-2.5 text-right">
+                        {r.active > 0 ? <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-300">{r.active}</span> : <span className="text-muted-foreground">0</span>}
+                      </td>
+                      <td className="px-3 py-2.5 text-right">
+                        {r.overdue > 0 ? <span className="rounded-full bg-rose-500/15 px-2 py-0.5 text-xs font-semibold text-rose-300">{r.overdue}</span> : <span className="text-muted-foreground">0</span>}
+                      </td>
+                      <td className="px-3 py-2.5 text-right text-muted-foreground">{r.returned}</td>
+                      <td className="px-3 py-2.5 text-right">
+                        {r.waitlist > 0 ? <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-300">{r.waitlist}</span> : <span className="text-muted-foreground">0</span>}
+                      </td>
+                      <td className="px-3 py-2.5 text-right font-medium">{r.revenue.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Mini({ label, value, tone }: { label: string; value: number; tone?: "emerald" | "rose" | "amber" }) {
+  const cls = tone === "emerald" ? "text-emerald-300" : tone === "rose" ? "text-rose-300" : tone === "amber" ? "text-amber-300" : "text-foreground";
+  return (
+    <div className="rounded-lg bg-surface/40 px-2 py-1.5">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className={`text-sm font-semibold ${cls}`}>{Number(value).toLocaleString()}</div>
+    </div>
+  );
+}
+
 
 // ===== BOOKS =====
 type BooksView = "grid" | "table";

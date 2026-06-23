@@ -83,7 +83,7 @@ function HomePage() {
           <p className="mt-4 text-base text-foreground/80 md:text-lg">
             Uploaded catalogue: {books.length.toLocaleString()} books · {genres.length} genres · {writers.length} writers.
           </p>
-          <div className="-mx-1 mt-6 flex gap-3 overflow-x-auto px-1 pb-2 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
+          <div className="scrollbar-thin -mx-1 mt-6 flex gap-3 overflow-x-auto px-1 pb-2">
             <Link to="/search" className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90">
               Browse the catalog <ArrowRight className="h-4 w-4" />
             </Link>
