@@ -347,9 +347,11 @@ export type Database = {
           due_at: string
           fine_amount: number
           id: string
+          last_reminder_days: number | null
           price_paid: number
           reminder_sent_at: string | null
           rented_at: string
+          reserved_until: string | null
           returned_at: string | null
           tracking_status: string
           user_id: string
@@ -361,9 +363,11 @@ export type Database = {
           due_at?: string
           fine_amount?: number
           id?: string
+          last_reminder_days?: number | null
           price_paid: number
           reminder_sent_at?: string | null
           rented_at?: string
+          reserved_until?: string | null
           returned_at?: string | null
           tracking_status?: string
           user_id: string
@@ -375,9 +379,11 @@ export type Database = {
           due_at?: string
           fine_amount?: number
           id?: string
+          last_reminder_days?: number | null
           price_paid?: number
           reminder_sent_at?: string | null
           rented_at?: string
+          reserved_until?: string | null
           returned_at?: string | null
           tracking_status?: string
           user_id?: string
@@ -643,7 +649,10 @@ export type Database = {
         }
         Returns: Json
       }
+      claim_reservation: { Args: { _rental_id: string }; Returns: Json }
+      decline_reservation: { Args: { _rental_id: string }; Returns: Json }
       enqueue_my_due_reminders: { Args: never; Returns: number }
+      expire_stale_reservations: { Args: never; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -683,6 +692,7 @@ export type Database = {
       set_my_phone: { Args: { _phone: string }; Returns: undefined }
       staff_user_summary: { Args: { _user_id: string }; Returns: Json }
       top_up_wallet: { Args: { _amount: number }; Returns: number }
+      waitlist_position: { Args: { _book_id: string }; Returns: number }
     }
     Enums: {
       app_role: "admin" | "librarian" | "reader"

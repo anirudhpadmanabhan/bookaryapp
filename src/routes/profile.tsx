@@ -4,7 +4,7 @@ import { useSession } from "@/lib/auth";
 import {
   useProfile, useRentals, useTopUpWallet, useSuggestions, useSuggestBook,
   useReadingInsights, useFavorites, useDueSoonRentals, useUpdateProfile,
-  useWaitlist, useLeaveWaitlist,
+  useWaitlist, useLeaveWaitlist, useClaimReservation, useDeclineReservation,
 } from "@/lib/userdata";
 import {
   Wallet, BookOpen, CheckCircle2, Lightbulb, Clock, Flame, Heart, NotebookPen,
@@ -56,12 +56,16 @@ function ProfilePage() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user, loading } = useSession();
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth", search: { redirect: pathname } }); }, [user, loading, navigate, pathname]);
-  // Fire 5-day due-date reminders once per page mount (idempotent server-side)
+  // On mount: sweep expired reservations, then enqueue any due-bucket reminders.
   useEffect(() => {
     if (!user) return;
-    supabase.rpc("enqueue_my_due_reminders" as any).then(() => {
-      // notifications list refresh handled by realtime / next refetch
-    });
+    (async () => {
+      await supabase.rpc("expire_stale_reservations" as any);
+      await supabase.rpc("enqueue_my_due_reminders" as any);
+      qc.invalidateQueries({ queryKey: ["rentals"] });
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
   const { data: profile } = useProfile();
   const { data: rentals = [] } = useRentals();
@@ -115,9 +119,12 @@ function ProfilePage() {
     toast.success("Details saved");
   };
 
-  const active = (rentals as any[]).filter((r) => !r.returned_at);
+  const reservations = (rentals as any[]).filter((r) => r.tracking_status === "reserved" && !r.returned_at);
+  const active = (rentals as any[]).filter((r) => !r.returned_at && r.tracking_status !== "reserved");
   const past = (rentals as any[]).filter((r) => r.returned_at);
   const totalSpent = (rentals as any[]).reduce((s, r) => s + Number(r.price_paid ?? 0), 0);
+  const claim = useClaimReservation();
+  const decline = useDeclineReservation();
 
   const returnBook = async (rentalId: string) => {
     const { error } = await supabase.from("rentals").update({ returned_at: new Date().toISOString(), tracking_status: "returned" } as any).eq("id", rentalId);
@@ -371,6 +378,40 @@ function ProfilePage() {
           </div>
         )}
       </Section>
+
+      {/* Reservations (24h window) */}
+      {reservations.length > 0 && (
+        <Section id="reservations" title={`Reserved for you (${reservations.length})`} icon={BellRing} defaultOpen>
+          <div className="space-y-2">
+            {reservations.map((r: any) => {
+              const exp = r.reserved_until ? new Date(r.reserved_until) : null;
+              const hoursLeft = exp ? Math.max(0, Math.round((exp.getTime() - Date.now()) / 3600000)) : null;
+              return (
+                <div key={r.id} className="glass-card flex flex-col gap-3 rounded-xl p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <Link to="/books/$id" params={{ id: r.book_id }} className="text-sm font-semibold hover:underline">{r.books?.title ?? "Your reserved book"}</Link>
+                    <div className="text-xs text-amber-300">
+                      {hoursLeft !== null ? `Claim within ${hoursLeft}h` : "Claim within 24h"} or it passes to the next reader. ₹10 will be charged on claim.
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => claim.mutate(r.id)}
+                      disabled={claim.isPending}
+                      className="cursor-pointer rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-emerald-950 hover:opacity-90 disabled:opacity-60"
+                    >Claim · ₹10</button>
+                    <button
+                      onClick={() => decline.mutate(r.id)}
+                      disabled={decline.isPending}
+                      className="cursor-pointer rounded-lg border border-rose-500/40 px-3 py-1.5 text-xs text-rose-300 hover:bg-rose-500/10 disabled:opacity-60"
+                    >Decline</button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Section>
+      )}
 
       {/* Waiting list */}
       {waitlist.length > 0 && (
