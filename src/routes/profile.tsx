@@ -257,7 +257,7 @@ function ProfilePage() {
       )}
 
       {dueSoon.length > 0 && (
-        <section className="mb-10">
+        <section id="due" className="mb-10 scroll-mt-20 border-t border-border/40 pt-6">
           <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><AlertTriangle className="h-4 w-4 text-amber-300" /> Due within 20 days</h2>
           <ul className="space-y-2">
             {dueSoon.map((r) => (
