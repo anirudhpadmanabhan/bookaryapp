@@ -4,7 +4,7 @@ import { useSession } from "@/lib/auth";
 import {
   useProfile, useRentals, useTopUpWallet, useSuggestions, useSuggestBook,
   useReadingInsights, useFavorites, useDueSoonRentals, useUpdateProfile,
-  useWaitlist, useLeaveWaitlist,
+  useWaitlist, useLeaveWaitlist, useClaimReservation, useDeclineReservation,
 } from "@/lib/userdata";
 import {
   Wallet, BookOpen, CheckCircle2, Lightbulb, Clock, Flame, Heart, NotebookPen,
