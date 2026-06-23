@@ -267,11 +267,13 @@ function BooksTable({ books, editing, setEditing }: { books: any[]; editing: str
           <tr>
             <th className="px-2 py-2.5 text-left w-20">Rack</th>
             <th className="px-2 py-2.5 text-left">Title</th>
-            <th className="px-2 py-2.5 text-left font-mal">Title (ml)</th>
+            <th className="px-2 py-2.5 text-left font-mal">Title (ML)</th>
             <th className="px-2 py-2.5 text-left">Author</th>
             <th className="px-2 py-2.5 text-left">Genre</th>
-            <th className="px-2 py-2.5 text-left w-24">Price ₹</th>
-            <th className="px-2 py-2.5 text-left w-20">★</th>
+            <th className="px-2 py-2.5 text-left w-20">Rs.</th>
+            <th className="px-2 py-2.5 text-left w-24">Language</th>
+            <th className="px-2 py-2.5 text-left w-16">Rating</th>
+            <th className="px-2 py-2.5 text-left">Publisher</th>
             <th className="px-2 py-2.5 w-32"></th>
           </tr>
         </thead>
