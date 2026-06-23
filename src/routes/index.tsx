@@ -2,14 +2,14 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
 import {
-  fetchBooks, fetchNewArrivals, genreEnglish, genreMalayalam,
+  fetchBooks, fetchPopularBooks, genreEnglish, genreMalayalam,
   sortBooks, type BookSort, type SortDirection, slugify,
 } from "@/lib/books";
 import { BooksGrid, type ViewMode } from "@/components/BooksGrid";
 import { BookCard } from "@/components/BookCard";
 import { colorAt } from "@/lib/books";
 import { SortBar } from "@/components/SortBar";
-import { ArrowRight, Library, PenLine, Sparkles, ChevronDown, ChevronUp, Languages as LangIcon } from "lucide-react";
+import { ArrowRight, Library, PenLine, Sparkles, ChevronDown, ChevronUp, Languages as LangIcon, Flame } from "lucide-react";
 import { useMemo, useState } from "react";
 
 export const Route = createFileRoute("/")({
