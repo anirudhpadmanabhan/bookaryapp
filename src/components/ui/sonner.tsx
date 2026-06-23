@@ -6,6 +6,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
       className="toaster group"
+      // Auto-dismiss after 3.5s so popups don't linger
+      duration={3500}
+      closeButton
       toastOptions={{
         classNames: {
           toast:
