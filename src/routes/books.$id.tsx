@@ -255,11 +255,12 @@ function BookPage() {
           price={rentPrice}
           balance={Number(profile.wallet_balance)}
           defaultAddress={(profile as any).address ?? ""}
+          defaultPhone={(profile as any).phone ?? ""}
           title={book.title}
           onClose={() => setShowRent(false)}
-          onConfirm={(addr) => {
+          onConfirm={(addr, phone) => {
             rent.mutate(
-              { bookId: book.id, price: rentPrice, address: addr },
+              { bookId: book.id, price: rentPrice, address: addr, phone },
               {
                 onSuccess: () => {
                   setShowRent(false);
