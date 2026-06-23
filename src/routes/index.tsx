@@ -93,6 +93,9 @@ function HomePage() {
             <Link to="/writers" className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface/50 px-5 py-3 text-sm font-semibold hover:bg-surface">
               <PenLine className="h-4 w-4" /> Explore writers
             </Link>
+            <Link to="/languages" className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface/50 px-5 py-3 text-sm font-semibold hover:bg-surface">
+              <LangIcon className="h-4 w-4" /> Explore languages
+            </Link>
           </div>
         </div>
       </section>
