@@ -3,10 +3,10 @@ import { AppLayout } from "@/components/AppLayout";
 import { useSession } from "@/lib/auth";
 import {
   useIsStaff, useIsAdmin, useMyRoles, useAllRentals, useUpdateRentalStatus, useMarkReturned,
-  useAllWaitlist, useRemoveWaitlistEntry, useAllSuggestions,
+  useAllWaitlist, useRemoveWaitlistEntry, useAllSuggestions, useDecideSuggestion,
   useUpdateBook, useDeleteBook, useCreateBook,
   useAdminLibraries, useCreateLibrary, useUpdateLibrary, useDeleteLibrary,
-  useStaffRoles, useSetUserRole,
+  useStaffRoles, useSetUserRole, useLibraryMembers,
   useStaffUserSummary,
   useBulkImportBooks, useLibraryBookCounts, type BookImportRow, type ImportMode,
   useAdminUsers, useTransactionLog,
@@ -23,7 +23,9 @@ import {
   Shield, Library as LibIcon, Package, Clock, Lightbulb,
   Search as SearchIcon, Trash2, CheckCircle2, Plus, Pencil, X, Save,
   Upload, Grid3x3, List as ListIcon, Building2, Users, Mail, Star, Activity,
+  FileText, FileDown, ArrowUpDown, ArrowUp, ArrowDown,
 } from "lucide-react";
+import { exportCsv, exportPdf } from "@/lib/pdf-export";
 
 type Tab = "books" | "rentals" | "waitlist" | "suggestions" | "libraries" | "roles" | "users" | "activity";
 
@@ -85,9 +87,9 @@ function AdminPage() {
           <Shield className="h-5 w-5 text-white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold">Library admin</h1>
+          <h1 className="text-2xl font-bold">{isAdmin ? "Admin" : "Library Admin"} dashboard</h1>
           <p className="text-xs text-muted-foreground">
-            Role: <span className="font-semibold text-accent">{roles.join(" · ") || "staff"}</span>
+            Role: <span className="font-semibold text-accent">{roles.map((r) => r === "admin" ? "Admin" : r === "librarian" ? "Library Admin" : r).join(" · ") || "staff"}</span>
           </p>
         </div>
       </div>
@@ -268,7 +270,7 @@ function BooksTable({ books, editing, setEditing }: { books: any[]; editing: str
             <th className="px-2 py-2.5 text-left font-mal">Title (ml)</th>
             <th className="px-2 py-2.5 text-left">Author</th>
             <th className="px-2 py-2.5 text-left">Genre</th>
-            <th className="px-2 py-2.5 text-left w-24">Rent ₹</th>
+            <th className="px-2 py-2.5 text-left w-24">Price ₹</th>
             <th className="px-2 py-2.5 text-left w-20">★</th>
             <th className="px-2 py-2.5 w-32"></th>
           </tr>
@@ -702,87 +704,160 @@ function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; 
 }
 
 // ===== RENTALS =====
+type RentalSort = "rented_at" | "due_at" | "returned_at" | "member" | "book" | "price_paid" | "fine_amount" | "tracking_status";
 function RentalsTab() {
   const { data: rentals = [], isLoading } = useAllRentals();
   const update = useUpdateRentalStatus();
   const markReturned = useMarkReturned();
   const [filter, setFilter] = useState<"active" | "returned" | "all">("active");
   const [viewingUser, setViewingUser] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<RentalSort>("rented_at");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
-  const shown = (rentals as any[]).filter((r) => {
-    if (filter === "active") return !r.returned_at;
-    if (filter === "returned") return !!r.returned_at;
-    return true;
-  });
+  const shown = useMemo(() => {
+    const filtered = (rentals as any[]).filter((r) => {
+      if (filter === "active") return !r.returned_at;
+      if (filter === "returned") return !!r.returned_at;
+      return true;
+    });
+    const dir = sortDir === "asc" ? 1 : -1;
+    const get = (r: any): any => {
+      if (sortKey === "member") return r.member_name ?? "";
+      if (sortKey === "book") return r.books?.title ?? "";
+      if (sortKey === "fine_amount") return Number(r.fine_amount ?? 0);
+      if (sortKey === "price_paid") return Number(r.price_paid ?? 0);
+      if (sortKey === "tracking_status") return r.tracking_status ?? "";
+      const v = r[sortKey]; return v ? new Date(v).getTime() : 0;
+    };
+    return [...filtered].sort((a, b) => {
+      const va = get(a), vb = get(b);
+      if (typeof va === "number" && typeof vb === "number") return (va - vb) * dir;
+      return String(va).localeCompare(String(vb)) * dir;
+    });
+  }, [rentals, filter, sortKey, sortDir]);
+
+  const exportColumns = [
+    { header: "Member", get: (r: any) => r.member_name ?? r.user_id },
+    { header: "Phone", get: (r: any) => r.member_phone ?? "" },
+    { header: "Book", get: (r: any) => r.books?.title ?? "" },
+    { header: "Author", get: (r: any) => r.books?.author ?? "" },
+    { header: "Rack", get: (r: any) => r.books?.shelf_code ?? "" },
+    { header: "Rented", get: (r: any) => new Date(r.rented_at).toLocaleString() },
+    { header: "Due", get: (r: any) => new Date(r.due_at).toLocaleString() },
+    { header: "Returned", get: (r: any) => r.returned_at ? new Date(r.returned_at).toLocaleString() : "" },
+    { header: "Price ₹", get: (r: any) => Number(r.price_paid ?? 0).toFixed(0) },
+    { header: "Fine ₹", get: (r: any) => Number(r.fine_amount ?? 0).toFixed(0) },
+    { header: "Status", get: (r: any) => r.tracking_status ?? "" },
+  ];
 
   const STATUSES = ["confirmed", "packed", "shipped", "out_for_delivery", "delivered"];
 
+  const SortableTh = ({ k, children, className = "" }: { k: RentalSort; children: any; className?: string }) => {
+    const Icon = sortKey !== k ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
+    return (
+      <th className={`px-2 py-2.5 text-left ${className}`}>
+        <button onClick={() => { if (sortKey === k) setSortDir((d) => d === "asc" ? "desc" : "asc"); else { setSortKey(k); setSortDir("desc"); } }}
+          className="inline-flex cursor-pointer items-center gap-1 hover:text-foreground">
+          {children} <Icon className="h-3 w-3" />
+        </button>
+      </th>
+    );
+  };
+
   return (
     <div>
-      <div className="mb-3 flex gap-1.5 rounded-lg border border-border bg-surface/40 p-1">
-        {(["active", "returned", "all"] as const).map((f) => (
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex gap-1.5 rounded-lg border border-border bg-surface/40 p-1">
+          {(["active", "returned", "all"] as const).map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => setFilter(f)}
+              className={`cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium ${filter === f ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2">
           <button
-            key={f}
-            type="button"
-            onClick={() => setFilter(f)}
-            className={`cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium ${filter === f ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-          >
-            {f.charAt(0).toUpperCase() + f.slice(1)}
-          </button>
-        ))}
+            onClick={() => exportCsv({ filename: `rentals-${Date.now()}.csv`, columns: exportColumns, rows: shown })}
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-surface/50 px-2.5 py-1.5 text-xs hover:bg-surface-elevated"
+          ><FileDown className="h-3.5 w-3.5" /> CSV</button>
+          <button
+            onClick={() => exportPdf({ filename: `rentals-${Date.now()}.pdf`, title: "Rentals", subtitle: `Filter: ${filter} · ${shown.length} rows`, columns: exportColumns, rows: shown })}
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-surface/50 px-2.5 py-1.5 text-xs hover:bg-surface-elevated"
+          ><FileText className="h-3.5 w-3.5" /> PDF</button>
+        </div>
       </div>
 
       {isLoading ? (
-        <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-20 animate-pulse rounded-xl bg-surface/60" />)}</div>
+        <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-12 animate-pulse rounded-xl bg-surface/60" />)}</div>
       ) : shown.length === 0 ? (
         <p className="glass-card rounded-2xl p-8 text-center text-sm text-muted-foreground">No rentals to show.</p>
       ) : (
-        <div className="space-y-2">
-          {shown.map((r: any) => (
-            <div key={r.id} className="glass-card rounded-xl p-3">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <Link to="/books/$id" params={{ id: r.books?.id ?? "" }} className="cursor-pointer text-sm font-semibold hover:text-primary">
-                    {r.books?.title ?? "Book"}
-                  </Link>
-                  <p className="text-xs text-muted-foreground">
-                    by {r.books?.author ?? "—"} · Rack {r.books?.shelf_code ?? "—"}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Rented {new Date(r.rented_at).toLocaleDateString()} · Due {new Date(r.due_at).toLocaleDateString()}
-                    {r.returned_at && ` · Returned ${new Date(r.returned_at).toLocaleDateString()}`}
-                  </p>
-                  {r.delivery_address && <p className="mt-1 line-clamp-2 text-xs text-foreground/70">📍 {r.delivery_address}</p>}
-                  <button onClick={() => setViewingUser(r.user_id)} className="mt-1 cursor-pointer text-[11px] text-primary hover:underline">View reader dashboard →</button>
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  {!r.returned_at ? (
-                    <>
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 z-10 bg-surface text-xs uppercase tracking-wider text-muted-foreground">
+              <tr>
+                <SortableTh k="member">Member</SortableTh>
+                <SortableTh k="book">Book</SortableTh>
+                <SortableTh k="rented_at">Rented</SortableTh>
+                <SortableTh k="due_at">Due</SortableTh>
+                <SortableTh k="returned_at">Returned</SortableTh>
+                <SortableTh k="price_paid">Price ₹</SortableTh>
+                <SortableTh k="fine_amount">Fine ₹</SortableTh>
+                <SortableTh k="tracking_status">Status</SortableTh>
+                <th className="px-2 py-2.5 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map((r: any) => (
+                <tr key={r.id} className="border-t border-border/40 hover:bg-surface/40">
+                  <td className="px-2 py-2">
+                    <button onClick={() => setViewingUser(r.user_id)} className="cursor-pointer text-left font-semibold hover:text-primary">
+                      {r.member_name ?? "—"}
+                    </button>
+                    {r.member_phone && <div className="text-[10px] text-muted-foreground">📞 {r.member_phone}</div>}
+                  </td>
+                  <td className="px-2 py-2">
+                    <Link to="/books/$id" params={{ id: r.books?.id ?? "" }} className="cursor-pointer font-medium hover:text-primary">{r.books?.title ?? "Book"}</Link>
+                    <div className="text-[10px] text-muted-foreground">by {r.books?.author ?? "—"} · Rack {r.books?.shelf_code ?? "—"}</div>
+                  </td>
+                  <td className="whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">{new Date(r.rented_at).toLocaleDateString()}</td>
+                  <td className="whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">{new Date(r.due_at).toLocaleDateString()}</td>
+                  <td className="whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">{r.returned_at ? new Date(r.returned_at).toLocaleDateString() : "—"}</td>
+                  <td className="px-2 py-2 text-xs">₹{Number(r.price_paid ?? 0).toFixed(0)}</td>
+                  <td className="px-2 py-2 text-xs">{Number(r.fine_amount ?? 0) > 0 ? <span className="rounded-full bg-rose-500/15 px-2 py-0.5 text-rose-300">₹{Number(r.fine_amount).toFixed(0)}</span> : <span className="text-muted-foreground">—</span>}</td>
+                  <td className="px-2 py-2">
+                    {!r.returned_at ? (
                       <select
                         value={r.tracking_status ?? "confirmed"}
                         onChange={(e) => update.mutate({ id: r.id, status: e.target.value })}
-                        className="cursor-pointer rounded-lg border border-border bg-surface px-2 py-1 text-xs"
+                        className="cursor-pointer rounded-md border border-border bg-surface px-1.5 py-0.5 text-[11px]"
                       >
-                        {STATUSES.map((s) => (
-                          <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
-                        ))}
+                        {STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
                       </select>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/15 px-2 py-0.5 text-[11px] text-emerald-300">
+                        <CheckCircle2 className="h-3 w-3" /> returned
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-2 py-2 text-right">
+                    {!r.returned_at && (
                       <button
-                        onClick={() => { if (confirm("Mark as returned? Next waitlist reader will be auto-assigned.")) markReturned.mutate(r.id); }}
-                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-emerald-950 hover:opacity-90"
+                        onClick={() => { if (confirm(`Mark "${r.books?.title}" as returned? Late fine (₹1/day after 20d) is auto-deducted.`)) markReturned.mutate(r.id); }}
+                        className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-emerald-500 px-2 py-1 text-[11px] font-semibold text-emerald-950 hover:opacity-90"
                       >
-                        <CheckCircle2 className="h-3.5 w-3.5" /> Mark returned
+                        <CheckCircle2 className="h-3 w-3" /> Return
                       </button>
-                    </>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs font-medium text-emerald-300">
-                      <CheckCircle2 className="h-3.5 w-3.5" /> Returned
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -829,10 +904,18 @@ function WaitlistTab() {
 // ===== SUGGESTIONS =====
 function SuggestionsTab() {
   const { data: list = [], isLoading } = useAllSuggestions();
+  const decide = useDecideSuggestion();
   const [viewingUser, setViewingUser] = useState<string | null>(null);
 
   if (isLoading) return <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-16 animate-pulse rounded-xl bg-surface/60" />)}</div>;
   if (list.length === 0) return <p className="glass-card rounded-2xl p-8 text-center text-sm text-muted-foreground">No suggestions yet.</p>;
+
+  const STATUS: Record<string, string> = {
+    pending: "bg-amber-500/15 text-amber-300",
+    approved: "bg-emerald-500/15 text-emerald-300",
+    rejected: "bg-rose-500/15 text-rose-300",
+    available: "bg-primary/15 text-primary",
+  };
 
   return (
     <div className="space-y-2">
@@ -840,11 +923,43 @@ function SuggestionsTab() {
         <div key={s.id} className="glass-card rounded-xl p-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h3 className="text-sm font-semibold">{s.title}</h3>
-            <span className="text-xs text-muted-foreground">{new Date(s.created_at).toLocaleDateString()}</span>
+            <div className="flex items-center gap-2">
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${STATUS[s.status ?? "pending"] ?? STATUS.pending}`}>
+                {s.status ?? "pending"}
+              </span>
+              <span className="text-xs text-muted-foreground">{new Date(s.created_at).toLocaleDateString()}</span>
+            </div>
           </div>
           {s.author && <p className="text-xs text-muted-foreground">by {s.author}</p>}
           {s.note && <p className="mt-1 text-sm text-foreground/80">{s.note}</p>}
-          <button onClick={() => setViewingUser(s.user_id)} className="mt-1 cursor-pointer text-[11px] text-primary hover:underline">View reader →</button>
+          {s.decision_note && (
+            <p className="mt-1 rounded-md bg-surface/60 px-2 py-1 text-xs text-muted-foreground">Librarian note: {s.decision_note}</p>
+          )}
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <button onClick={() => setViewingUser(s.user_id)} className="cursor-pointer text-[11px] text-primary hover:underline">View reader →</button>
+            {(s.status ?? "pending") === "pending" && (
+              <>
+                <button
+                  onClick={() => decide.mutate({ id: s.id, decision: "approved" })}
+                  className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-emerald-500/40 px-2.5 py-1 text-xs text-emerald-300 hover:bg-emerald-500/10"
+                >
+                  <CheckCircle2 className="h-3 w-3" /> Approve
+                </button>
+                <button
+                  onClick={() => decide.mutate({ id: s.id, decision: "available" })}
+                  className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-primary/40 px-2.5 py-1 text-xs text-primary hover:bg-primary/10"
+                >
+                  <LibIcon className="h-3 w-3" /> Mark available
+                </button>
+                <button
+                  onClick={() => { if (confirm("Reject this suggestion?")) decide.mutate({ id: s.id, decision: "rejected" }); }}
+                  className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-rose-500/40 px-2.5 py-1 text-xs text-rose-300 hover:bg-rose-500/10"
+                >
+                  <X className="h-3 w-3" /> Reject
+                </button>
+              </>
+            )}
+          </div>
         </div>
       ))}
       {viewingUser && <UserDashboardModal userId={viewingUser} onClose={() => setViewingUser(null)} />}
@@ -962,7 +1077,7 @@ function StaffRolesTab() {
           <Mail className="h-4 w-4 text-accent" /> Grant staff access by email
         </div>
         <p className="mb-3 text-xs text-muted-foreground">
-          The user must have signed in at least once. Admins can manage libraries and staff roles; librarians can manage books, rentals, waitlist, and reader dashboards.
+          The user must have signed in at least once. <span className="font-semibold text-foreground">Admins</span> manage every library and grant staff. <span className="font-semibold text-foreground">Library Admins</span> manage one library's books, rentals, waitlist, and reader dashboards. Only Admins can grant either role.
         </p>
         <div className="flex flex-wrap gap-2">
           <input
@@ -977,7 +1092,7 @@ function StaffRolesTab() {
             onChange={(e) => setRoleValue(e.target.value as "admin" | "librarian")}
             className="rounded-lg border border-border bg-background/50 px-3 py-2 text-sm"
           >
-            <option value="librarian">Librarian</option>
+            <option value="librarian">Library Admin</option>
             <option value="admin">Admin</option>
           </select>
           <button
@@ -997,16 +1112,26 @@ function StaffRolesTab() {
         <p className="glass-card rounded-2xl p-8 text-center text-sm text-muted-foreground">No staff roles granted yet.</p>
       ) : (
         <div className="space-y-2">
-          {list.map((l) => (
+          {list.map((l) => {
+            const labelFor = (r: string) => (r === "admin" ? "Admin" : "Library Admin");
+            return (
             <div key={l.user_id} className="glass-card flex flex-wrap items-center justify-between gap-3 rounded-xl p-3">
               <div className="min-w-0">
                 <div className="text-sm font-semibold">{l.display_name ?? l.email}</div>
                 <div className="text-xs text-muted-foreground">{l.email}</div>
                 <div className="mt-1 flex flex-wrap gap-1.5">
                   {l.roles.map((r) => (
-                    <span key={r} className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">{r}</span>
+                    <span key={r} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${r === "admin" ? "bg-amber-500/20 text-amber-300" : "bg-primary/15 text-primary"}`}>{labelFor(r)}</span>
                   ))}
                 </div>
+                {l.libraries.length > 0 && (
+                  <div className="mt-1 flex flex-wrap gap-1 text-[11px] text-muted-foreground">
+                    Library access:{" "}
+                    {l.libraries.map((lib, i) => (
+                      <span key={(lib.id ?? "all") + i} className="rounded bg-surface px-1.5 py-0.5">{lib.name ?? "—"}</span>
+                    ))}
+                  </div>
+                )}
                 <div className="mt-1 text-[11px] text-muted-foreground/70">First granted {new Date(l.granted_at).toLocaleDateString()}</div>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -1017,18 +1142,19 @@ function StaffRolesTab() {
                       key={r}
                       onClick={() => {
                         if (!enabled) return setRole.mutate({ email: l.email, role: r, enabled: true });
-                        if (confirm(`Revoke ${r} access for ${l.email}?`)) setRole.mutate({ email: l.email, role: r, enabled: false });
+                        if (confirm(`Revoke ${labelFor(r)} access for ${l.email}?`)) setRole.mutate({ email: l.email, role: r, enabled: false });
                       }}
                       className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs ${enabled ? "border-rose-500/40 text-rose-300 hover:bg-rose-500/10" : "border-border hover:bg-surface-elevated"}`}
                     >
                       {enabled ? <Trash2 className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
-                      {enabled ? `Revoke ${r}` : `Grant ${r}`}
+                      {enabled ? `Revoke ${labelFor(r)}` : `Grant ${labelFor(r)}`}
                     </button>
                   );
                 })}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -1223,6 +1349,8 @@ const ACTION_STYLE: Record<string, { label: string; cls: string }> = {
   rental_created: { label: "Rented", cls: "bg-emerald-500/15 text-emerald-300" },
   rental_returned: { label: "Returned", cls: "bg-blue-500/15 text-blue-300" },
   rental_status: { label: "Tracking", cls: "bg-slate-500/15 text-slate-300" },
+  fine_charged: { label: "Fine", cls: "bg-rose-500/15 text-rose-300" },
+  suggestion_decided: { label: "Suggestion", cls: "bg-accent/15 text-accent" },
   waitlist_joined: { label: "Waitlisted", cls: "bg-amber-500/15 text-amber-300" },
   waitlist_cancelled: { label: "Wait cancel", cls: "bg-rose-500/15 text-rose-300" },
   waitlist_assigned: { label: "Wait → rented", cls: "bg-violet-500/15 text-violet-300" },
@@ -1236,25 +1364,48 @@ const ACTION_STYLE: Record<string, { label: string; cls: string }> = {
 function ActivityLogTab() {
   const { data: log = [], isLoading } = useTransactionLog(300);
   const [filter, setFilter] = useState<string>("all");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const ACTIONS = ["all", ...Object.keys(ACTION_STYLE)];
-  const shown = filter === "all" ? log : log.filter((l) => l.action === filter);
+  const filtered = filter === "all" ? log : log.filter((l) => l.action === filter);
+  const shown = [...filtered].sort((a, b) => (new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) * (sortDir === "asc" ? 1 : -1));
+
+  const amount = (row: any) => {
+    if (row.action === "fine_charged") return `-₹${row.metadata?.fine ?? 0}`;
+    if (row.action === "rental_created") return `₹${row.metadata?.price_paid ?? ""}`;
+    return "";
+  };
+
+  const exportColumns = [
+    { header: "When", get: (r: any) => new Date(r.created_at).toLocaleString() },
+    { header: "Action", get: (r: any) => ACTION_STYLE[r.action]?.label ?? r.action },
+    { header: "User", get: (r: any) => r.subject_user_name ?? r.actor_name ?? "system" },
+    { header: "Book", get: (r: any) => r.book_title ?? "" },
+    { header: "Amount", get: (r: any) => amount(r) },
+    { header: "Details", get: (r: any) => r.metadata ? Object.entries(r.metadata).map(([k, v]) => `${k}: ${v}`).join("; ") : "" },
+  ];
 
   if (isLoading) return <div className="space-y-2">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-12 animate-pulse rounded-xl bg-surface/60" />)}</div>;
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap gap-1.5 rounded-xl border border-border bg-surface/40 p-1.5">
-        {ACTIONS.map((a) => (
-          <button
-            key={a}
-            type="button"
-            onClick={() => setFilter(a)}
-            className={`cursor-pointer rounded-md px-2.5 py-1 text-[11px] font-medium ${filter === a ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-          >
-            {a === "all" ? "All" : ACTION_STYLE[a]?.label ?? a}
-          </button>
-        ))}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-1.5 rounded-xl border border-border bg-surface/40 p-1.5">
+          {ACTIONS.map((a) => (
+            <button
+              key={a}
+              type="button"
+              onClick={() => setFilter(a)}
+              className={`cursor-pointer rounded-md px-2.5 py-1 text-[11px] font-medium ${filter === a ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              {a === "all" ? "All" : ACTION_STYLE[a]?.label ?? a}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => exportCsv({ filename: `activity-${Date.now()}.csv`, columns: exportColumns, rows: shown })} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-surface/50 px-2.5 py-1.5 text-xs hover:bg-surface-elevated"><FileDown className="h-3.5 w-3.5" /> CSV</button>
+          <button onClick={() => exportPdf({ filename: `activity-${Date.now()}.pdf`, title: "Activity log", subtitle: `${shown.length} rows · filter: ${filter}`, columns: exportColumns, rows: shown })} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-surface/50 px-2.5 py-1.5 text-xs hover:bg-surface-elevated"><FileText className="h-3.5 w-3.5" /> PDF</button>
+        </div>
       </div>
 
       {shown.length === 0 ? (
@@ -1264,24 +1415,30 @@ function ActivityLogTab() {
           <table className="w-full text-sm">
             <thead className="sticky top-0 z-10 bg-surface text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
-                <th className="px-3 py-2.5 text-left">When</th>
+                <th className="px-3 py-2.5 text-left">
+                  <button onClick={() => setSortDir((d) => d === "asc" ? "desc" : "asc")} className="inline-flex cursor-pointer items-center gap-1 hover:text-foreground">
+                    When {sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                  </button>
+                </th>
                 <th className="px-3 py-2.5 text-left">Action</th>
-                <th className="px-3 py-2.5 text-left">Actor</th>
-                <th className="px-3 py-2.5 text-left">Subject</th>
+                <th className="px-3 py-2.5 text-left">User</th>
                 <th className="px-3 py-2.5 text-left">Book</th>
-                <th className="px-3 py-2.5 text-left">Notes</th>
+                <th className="px-3 py-2.5 text-left">Amount</th>
+                <th className="px-3 py-2.5 text-left">Details</th>
               </tr>
             </thead>
             <tbody>
               {shown.map((row) => {
                 const style = ACTION_STYLE[row.action] ?? { label: row.action, cls: "bg-surface text-muted-foreground" };
                 const dt = new Date(row.created_at);
+                const amt = amount(row);
                 return (
                   <tr key={row.id} className="border-t border-border/40 hover:bg-surface/40">
-                    <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">{dt.toLocaleDateString()} <span className="text-foreground/60">{dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span></td>
+                    <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
+                      {dt.toLocaleDateString()} <span className="text-foreground/60">{dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                    </td>
                     <td className="px-3 py-2"><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${style.cls}`}>{style.label}</span></td>
-                    <td className="px-3 py-2 text-xs">{row.actor_name ?? "system"}</td>
-                    <td className="px-3 py-2 text-xs">{row.subject_user_name ?? "—"}</td>
+                    <td className="px-3 py-2 text-xs font-medium">{row.subject_user_name ?? row.actor_name ?? "system"}</td>
                     <td className="px-3 py-2 text-xs">
                       {row.book_id ? (
                         <Link to="/books/$id" params={{ id: row.book_id }} className="cursor-pointer hover:text-primary">{row.book_title ?? "Book"}</Link>
@@ -1289,9 +1446,10 @@ function ActivityLogTab() {
                         <span className="text-muted-foreground">—</span>
                       )}
                     </td>
+                    <td className={`px-3 py-2 text-xs font-semibold ${amt.startsWith("-") ? "text-rose-300" : "text-foreground/80"}`}>{amt || <span className="text-muted-foreground">—</span>}</td>
                     <td className="px-3 py-2 text-[11px] text-muted-foreground">
                       {row.metadata && Object.keys(row.metadata).length > 0
-                        ? Object.entries(row.metadata).map(([k, v]) => `${k}: ${String(v)}`).join(" · ")
+                        ? Object.entries(row.metadata).filter(([k]) => k !== "fine" && k !== "price_paid").map(([k, v]) => `${k}: ${String(v)}`).join(" · ")
                         : ""}
                     </td>
                   </tr>

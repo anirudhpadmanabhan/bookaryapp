@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
-import { fetchBooks, colorAt } from "@/lib/books";
+import { fetchBooks, colorAt, slugify } from "@/lib/books";
 import { useMemo, useState } from "react";
 import { Languages as LangIcon, Search as SearchIcon, ArrowDownUp } from "lucide-react";
 
@@ -78,8 +78,8 @@ function LanguagesPage() {
         {filtered.map(([name, count], i) => (
           <Link
             key={name}
-            to="/search"
-            search={{ q: name }}
+            to="/languages/$slug"
+            params={{ slug: slugify(name) }}
             className={`cover cover-${colorAt(i)} aspect-[4/3] flex flex-col justify-between !p-4 cursor-pointer transition-transform hover:scale-[1.02]`}
           >
             <LangIcon className="h-5 w-5 text-white/70" />

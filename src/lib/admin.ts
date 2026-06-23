@@ -125,11 +125,23 @@ export function useAllRentals() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rentals")
-        .select("*, books(id, title, author, shelf_code)")
+        .select("*, books(id, title, author, shelf_code, library_id)")
         .order("rented_at", { ascending: false })
-        .limit(200);
+        .limit(500);
       if (error) throw error;
-      return data ?? [];
+      const rows = (data ?? []) as any[];
+      const userIds = [...new Set(rows.map((r) => r.user_id))];
+      if (userIds.length) {
+        const { data: profs } = await supabase.from("profiles").select("id, display_name, phone").in("id", userIds);
+        const map = new Map<string, { display_name: string; phone: string | null }>();
+        for (const p of (profs ?? []) as any[]) map.set(p.id, { display_name: p.display_name, phone: p.phone });
+        for (const r of rows) {
+          const p = map.get(r.user_id);
+          r.member_name = p?.display_name ?? null;
+          r.member_phone = p?.phone ?? null;
+        }
+      }
+      return rows;
     },
   });
 }
@@ -157,19 +169,50 @@ export function useMarkReturned() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from("rentals")
-        .update({ returned_at: new Date().toISOString(), tracking_status: "returned" } as any)
-        .eq("id", id);
+      const { data, error } = await supabase.rpc("librarian_mark_returned" as any, { _rental_id: id });
       if (error) throw error;
+      return data as { ok: boolean; fine?: number; days_over?: number; error?: string };
     },
-    onSuccess: () => {
+    onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["admin-rentals"] });
       qc.invalidateQueries({ queryKey: ["rentals"] });
       qc.invalidateQueries({ queryKey: ["admin-waitlist"] });
-      toast.success("Marked returned — next waitlist reader auto-assigned");
+      qc.invalidateQueries({ queryKey: ["admin-users"] });
+      if (res?.fine && res.fine > 0) {
+        toast.success(`Returned · ₹${res.fine} fine charged (${res.days_over}d late)`);
+      } else {
+        toast.success("Marked returned — next waitlist reader auto-assigned");
+      }
     },
     onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useDecideSuggestion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, decision, note }: { id: string; decision: "approved" | "rejected" | "available"; note?: string }) => {
+      const { error } = await supabase.rpc("librarian_decide_suggestion" as any, { _id: id, _decision: decision, _note: note ?? null });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-suggestions"] });
+      qc.invalidateQueries({ queryKey: ["suggestions"] });
+      toast.success("Suggestion updated — reader notified");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useLibraryMembers(libraryId: string | null | undefined) {
+  return useQuery({
+    enabled: !!libraryId,
+    queryKey: ["library-members", libraryId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("library_members" as any, { _library_id: libraryId });
+      if (error) throw error;
+      return (data ?? []) as Array<{ user_id: string; display_name: string; email: string; phone: string | null; rental_count: number; last_rental: string | null }>;
+    },
   });
 }
 
@@ -326,11 +369,13 @@ export function useLibraryBookCounts() {
 }
 
 // ===== STAFF ROLE MANAGEMENT =====
+
 export type StaffRoleRow = {
   user_id: string;
   email: string;
   display_name: string | null;
   roles: AppRole[];
+  libraries: Array<{ id: string | null; name: string | null }>;
   granted_at: string;
 };
 
@@ -341,7 +386,20 @@ export function useStaffRoles() {
     queryFn: async () => {
       const { data, error } = await supabase.rpc("admin_list_staff_roles" as any);
       if (error) throw error;
-      return (data ?? []) as StaffRoleRow[];
+      const map = new Map<string, StaffRoleRow>();
+      for (const r of (data ?? []) as any[]) {
+        const cur = map.get(r.user_id) ?? {
+          user_id: r.user_id, email: r.email, display_name: r.display_name,
+          roles: [] as AppRole[], libraries: [] as Array<{ id: string | null; name: string | null }>,
+          granted_at: r.granted_at,
+        };
+        if (!cur.roles.includes(r.role as AppRole)) cur.roles.push(r.role as AppRole);
+        if (r.library_id && !cur.libraries.some((l) => l.id === r.library_id)) {
+          cur.libraries.push({ id: r.library_id, name: r.library_name });
+        }
+        map.set(r.user_id, cur);
+      }
+      return Array.from(map.values());
     },
   });
 }
