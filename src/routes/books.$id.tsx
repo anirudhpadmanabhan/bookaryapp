@@ -146,7 +146,7 @@ function BookPage() {
       <div className="grid gap-8 md:grid-cols-[280px_1fr]">
         <div className="max-w-[280px]">
           {book.cover_url ? (
-            <img src={book.cover_url} alt={`Cover for ${book.title}`} className="w-full rounded-xl shadow-lg" />
+            <img src={book.cover_url} alt={`Cover for ${book.title}`} loading="lazy" decoding="async" className="w-full rounded-xl shadow-lg" />
           ) : (
             <BookCover book={book} />
           )}
