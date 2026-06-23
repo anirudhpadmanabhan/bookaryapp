@@ -371,7 +371,7 @@ function ProfilePage() {
       )}
 
       {/* Suggest */}
-      <section className="mb-10">
+      <section id="suggest" className="mb-10 scroll-mt-20 border-t border-border/40 pt-6">
         <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><Lightbulb className="h-4 w-4 text-amber-300" /> Suggest a book to the library</h2>
         <form onSubmit={submitSuggestion} className="glass-card grid gap-3 rounded-2xl p-5 sm:grid-cols-2">
           <input value={sTitle} onChange={(e) => setSTitle(e.target.value)} placeholder="Book title *" className="rounded-xl border border-border bg-background/50 px-4 py-2.5 text-sm outline-none focus:border-primary" />
