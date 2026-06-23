@@ -42,7 +42,7 @@ function AdminPage() {
   const { data: roles = [], isLoading: rolesLoading } = useMyRoles();
   const isStaff = useIsStaff();
   const isAdmin = useIsAdmin();
-  const [tab, setTab] = useState<Tab>("books");
+  const [tab, setTab] = useState<Tab>("overview");
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth", search: { redirect: pathname } });
