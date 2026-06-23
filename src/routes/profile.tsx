@@ -347,7 +347,7 @@ function ProfilePage() {
 
       {/* Waiting list */}
       {waitlist.length > 0 && (
-        <section className="mb-10">
+        <section id="waitlist" className="mb-10 scroll-mt-20 border-t border-border/40 pt-6">
           <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><Clock className="h-4 w-4 text-amber-300" /> Your waiting list ({waitlist.length})</h2>
           <div className="space-y-2">
             {(waitlist as any[]).map((w) => (
