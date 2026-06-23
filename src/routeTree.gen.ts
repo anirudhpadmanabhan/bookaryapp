@@ -22,6 +22,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WritersIndexRouteImport } from './routes/writers.index'
+import { Route as LanguagesIndexRouteImport } from './routes/languages.index'
 import { Route as GenresIndexRouteImport } from './routes/genres.index'
 import { Route as WritersSlugRouteImport } from './routes/writers.$slug'
 import { Route as UIdRouteImport } from './routes/u.$id'
@@ -94,6 +95,11 @@ const WritersIndexRoute = WritersIndexRouteImport.update({
   path: '/',
   getParentRoute: () => WritersRoute,
 } as any)
+const LanguagesIndexRoute = LanguagesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => LanguagesRoute,
+} as any)
 const GenresIndexRoute = GenresIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -144,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/u/$id': typeof UIdRoute
   '/writers/$slug': typeof WritersSlugRoute
   '/genres/': typeof GenresIndexRoute
+  '/languages/': typeof LanguagesIndexRoute
   '/writers/': typeof WritersIndexRoute
 }
 export interface FileRoutesByTo {
@@ -151,7 +158,6 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/diary': typeof DiaryRoute
-  '/languages': typeof LanguagesRouteWithChildren
   '/loved': typeof LovedRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
@@ -163,6 +169,7 @@ export interface FileRoutesByTo {
   '/u/$id': typeof UIdRoute
   '/writers/$slug': typeof WritersSlugRoute
   '/genres': typeof GenresIndexRoute
+  '/languages': typeof LanguagesIndexRoute
   '/writers': typeof WritersIndexRoute
 }
 export interface FileRoutesById {
@@ -185,6 +192,7 @@ export interface FileRoutesById {
   '/u/$id': typeof UIdRoute
   '/writers/$slug': typeof WritersSlugRoute
   '/genres/': typeof GenresIndexRoute
+  '/languages/': typeof LanguagesIndexRoute
   '/writers/': typeof WritersIndexRoute
 }
 export interface FileRouteTypes {
@@ -208,6 +216,7 @@ export interface FileRouteTypes {
     | '/u/$id'
     | '/writers/$slug'
     | '/genres/'
+    | '/languages/'
     | '/writers/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -215,7 +224,6 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/diary'
-    | '/languages'
     | '/loved'
     | '/profile'
     | '/search'
@@ -227,6 +235,7 @@ export interface FileRouteTypes {
     | '/u/$id'
     | '/writers/$slug'
     | '/genres'
+    | '/languages'
     | '/writers'
   id:
     | '__root__'
@@ -248,6 +257,7 @@ export interface FileRouteTypes {
     | '/u/$id'
     | '/writers/$slug'
     | '/genres/'
+    | '/languages/'
     | '/writers/'
   fileRoutesById: FileRoutesById
 }
@@ -361,6 +371,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WritersIndexRouteImport
       parentRoute: typeof WritersRoute
     }
+    '/languages/': {
+      id: '/languages/'
+      path: '/'
+      fullPath: '/languages/'
+      preLoaderRoute: typeof LanguagesIndexRouteImport
+      parentRoute: typeof LanguagesRoute
+    }
     '/genres/': {
       id: '/genres/'
       path: '/'
@@ -421,10 +438,12 @@ const GenresRouteWithChildren =
 
 interface LanguagesRouteChildren {
   LanguagesSlugRoute: typeof LanguagesSlugRoute
+  LanguagesIndexRoute: typeof LanguagesIndexRoute
 }
 
 const LanguagesRouteChildren: LanguagesRouteChildren = {
   LanguagesSlugRoute: LanguagesSlugRoute,
+  LanguagesIndexRoute: LanguagesIndexRoute,
 }
 
 const LanguagesRouteWithChildren = LanguagesRoute._addFileChildren(
