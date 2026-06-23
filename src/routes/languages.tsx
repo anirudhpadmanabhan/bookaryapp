@@ -80,7 +80,7 @@ function LanguagesPage() {
             key={name}
             to="/languages/$slug"
             params={{ slug: slugify(name) }}
-            className={`cover cover-${colorAt(i)} aspect-[4/3] flex flex-col justify-between !p-4 cursor-pointer transition-transform hover:scale-[1.02]`}
+            className={`cover cover-${colorAt(i)} aspect-[4/3] flex flex-col items-center justify-center text-center gap-2 !p-4 cursor-pointer transition-transform hover:scale-[1.02]`}
           >
             <LangIcon className="h-5 w-5 text-white/70" />
             <div>
