@@ -6,8 +6,8 @@ import {
 } from "@/lib/books";
 import { BooksGrid, type ViewMode } from "@/components/BooksGrid";
 import { SortBar } from "@/components/SortBar";
-import { Search as SearchIcon, ChevronLeft, ChevronRight, Lightbulb } from "lucide-react";
-import { useState, useMemo, useEffect } from "react";
+import { Search as SearchIcon, Lightbulb } from "lucide-react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { z } from "zod";
 import { useSession } from "@/lib/auth";
 import { useSuggestBook } from "@/lib/userdata";
@@ -22,12 +22,12 @@ export const Route = createFileRoute("/search")({
   component: SearchPage,
 });
 
-const PAGE_SIZE = 30;
+const PAGE_SIZE = 60;
 
 function SearchPage() {
   const { q: initialQ } = Route.useSearch();
   const [q, setQ] = useState(initialQ ?? "");
-  const [page, setPage] = useState(1);
+  const [visible, setVisible] = useState(PAGE_SIZE);
   const [sort, setSort] = useState<BookSort>("newest");
   const [direction, setDirection] = useState<SortDirection>("desc");
   const [view, setView] = useState<ViewMode>("tile");
@@ -36,10 +36,10 @@ function SearchPage() {
   const suggest = useSuggestBook();
   const [suggestAuthor, setSuggestAuthor] = useState("");
   const [suggestNote, setSuggestNote] = useState("");
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const trimmed = q.trim();
 
-  // Live suggestions while typing (top 8 matches)
   const liveSuggestions = useMemo(() => {
     if (!trimmed || trimmed.length < 2) return [];
     const ql = trimmed.toLowerCase();
@@ -65,30 +65,23 @@ function SearchPage() {
     return sortBooks(base, sort, direction);
   }, [books, trimmed, sort, direction]);
 
-  useEffect(() => { setPage(1); }, [q, sort, direction]);
+  useEffect(() => { setVisible(PAGE_SIZE); }, [q, sort, direction]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const start = (currentPage - 1) * PAGE_SIZE;
-  const pageItems = filtered.slice(start, start + PAGE_SIZE);
+  const pageItems = filtered.slice(0, visible);
+  const hasMore = visible < filtered.length;
 
-  const goTo = (p: number) => {
-    setPage(p);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const pageNumbers = useMemo(() => {
-    const pages: (number | "…")[] = [];
-    const set = new Set<number>([1, totalPages, currentPage, currentPage - 1, currentPage + 1]);
-    const sortedSet = [...set].filter((n) => n >= 1 && n <= totalPages).sort((a, b) => a - b);
-    let prev = 0;
-    for (const n of sortedSet) {
-      if (n - prev > 1) pages.push("…");
-      pages.push(n);
-      prev = n;
-    }
-    return pages;
-  }, [currentPage, totalPages]);
+  useEffect(() => {
+    if (!hasMore) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        setVisible((v) => v + PAGE_SIZE);
+      }
+    }, { rootMargin: "600px 0px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasMore, filtered.length]);
 
   const submitSuggestion = (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,6 +92,7 @@ function SearchPage() {
       { onSuccess: () => { setSuggestAuthor(""); setSuggestNote(""); } },
     );
   };
+
 
   return (
     <AppLayout>
@@ -189,41 +183,15 @@ function SearchPage() {
         <BooksGrid books={pageItems} view={view} />
       )}
 
-      {totalPages > 1 && (
-        <nav className="mt-8 flex flex-wrap items-center justify-center gap-2" aria-label="Pagination">
-          <button
-            onClick={() => goTo(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="flex cursor-pointer items-center gap-1 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <ChevronLeft className="h-4 w-4" /> Prev
-          </button>
-          {pageNumbers.map((p, i) =>
-            p === "…" ? (
-              <span key={`e${i}`} className="px-2 text-sm text-muted-foreground">…</span>
-            ) : (
-              <button
-                key={p}
-                onClick={() => goTo(p)}
-                aria-current={p === currentPage ? "page" : undefined}
-                className={`min-w-10 cursor-pointer rounded-lg px-3 py-2 text-sm font-medium ${
-                  p === currentPage
-                    ? "bg-primary text-primary-foreground"
-                    : "border border-border bg-card hover:bg-muted"
-                }`}
-              >
-                {p}
-              </button>
-            )
-          )}
-          <button
-            onClick={() => goTo(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="flex cursor-pointer items-center gap-1 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Next <ChevronRight className="h-4 w-4" />
-          </button>
-        </nav>
+      {filtered.length > 0 && (
+        <>
+          <div ref={sentinelRef} className="h-10" />
+          <p className="mt-2 text-center text-xs text-muted-foreground">
+            {hasMore
+              ? `Showing ${pageItems.length} of ${filtered.length.toLocaleString()} — scroll for more`
+              : `All ${filtered.length.toLocaleString()} results shown`}
+          </p>
+        </>
       )}
     </AppLayout>
   );
