@@ -3,7 +3,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePublicProfile } from "@/lib/userdata";
-import { UserRound, Tag, Star, MessageSquare, Quote, Calendar, BookOpen, Flame, Heart, NotebookPen } from "lucide-react";
+import { Tag, Star, Quote, Calendar, BookOpen, Flame, Heart, NotebookPen } from "lucide-react";
 
 export const Route = createFileRoute("/u/$id")({
   ssr: false,
