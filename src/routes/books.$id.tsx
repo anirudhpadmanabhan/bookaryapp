@@ -33,6 +33,7 @@ function BookPage() {
   const { data: rentals } = useRentals();
   const { data: reviews = [] } = useReviews(id);
   const { data: myWaitlist = [] } = useWaitlist();
+  const { data: waitlistPos } = useWaitlistPosition(id);
   const [otherRental, setOtherRental] = useState<{ due_at: string } | null>(null);
 
   const rent = useRentBook();
