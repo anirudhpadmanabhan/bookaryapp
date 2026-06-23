@@ -379,12 +379,14 @@ function EditableRow({ book, isEditing, onEdit, onClose }: { book: any; isEditin
       <td className="px-2 py-2 text-xs text-foreground/80">{book.author}</td>
       <td className="px-2 py-2 text-xs text-muted-foreground">{book.genre}</td>
       <td className="px-2 py-2 text-xs">₹{Number(book.rent_price ?? 10).toFixed(0)}</td>
+      <td className="px-2 py-2 text-xs text-muted-foreground">{book.language ?? "—"}</td>
       <td className="px-2 py-2 text-xs">
         <span className="inline-flex items-center gap-1">
           <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
           {displayRating(book).toFixed(1)}
         </span>
       </td>
+      <td className="px-2 py-2 text-xs text-muted-foreground">{book.publisher ?? "—"}</td>
       <td className="px-2 py-2 text-right">
         <button onClick={onEdit} className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-elevated">
           <Pencil className="h-3 w-3" /> Edit
