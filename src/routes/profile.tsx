@@ -234,8 +234,8 @@ function ProfilePage() {
 
       {showUPI && <UPIModal onClose={() => setShowUPI(false)} onSuccess={(amt) => { topUp.mutate(amt); setShowUPI(false); }} />}
 
-      {/* In-page nav: quick jump between profile sections */}
-      <nav className="glass-card mb-8 flex flex-wrap items-center gap-1 rounded-2xl p-1.5 text-xs">
+      {/* In-page nav: hidden on mobile (sections are collapsible accordions there) */}
+      <nav className="glass-card mb-8 hidden flex-wrap items-center gap-1 rounded-2xl p-1.5 text-xs md:flex">
         {[
           { id: "insights", label: "Insights", icon: Trophy },
           { id: "due", label: "Due soon", icon: AlertTriangle },
@@ -253,8 +253,7 @@ function ProfilePage() {
 
       {/* Insights */}
       {insights && (
-        <section id="insights" className="mb-10 scroll-mt-20 border-t border-border/40 pt-6">
-          <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><Trophy className="h-4 w-4 text-amber-300" /> Reading insights</h2>
+        <Section id="insights" title="Reading insights" icon={Trophy} defaultOpen>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Stat icon={Flame} tint="rose"    label="Day streak"     value={insights.streak} sub={insights.streak === 0 ? "Log today to start" : `${insights.streak} day${insights.streak === 1 ? "" : "s"} in a row`} />
             <Stat icon={BookMarked} tint="primary" label="Books read"      value={insights.booksRead} sub={`${insights.activeRentals} active right now`} />
@@ -280,39 +279,40 @@ function ProfilePage() {
               )}
             </div>
           )}
-        </section>
+        </Section>
       )}
 
       {dueSoon.length > 0 && (
-        <section id="due" className="mb-10 scroll-mt-20 border-t border-border/40 pt-6">
-          <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><AlertTriangle className="h-4 w-4 text-amber-300" /> Due within 20 days</h2>
-          <ul className="space-y-2">
+        <Section id="due" title={`Due within 20 days (${dueSoon.length})`} icon={AlertTriangle}>
+          {/* Compact grid — keeps the list dense and avoids vertical sprawl */}
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {dueSoon.map((r) => (
-              <li key={r.id} className={`flex items-center justify-between rounded-xl border px-4 py-3 text-sm ${r.overdue ? "border-rose-500/40 bg-rose-500/10" : "border-amber-400/30 bg-amber-500/10"}`}>
-                <span><span className="font-semibold">{r.books?.title}</span> <span className="text-muted-foreground">· due {new Date(r.due_at).toLocaleDateString()}</span></span>
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${r.overdue ? "bg-rose-500/20 text-rose-300" : "bg-amber-500/20 text-amber-300"}`}>
-                  {r.overdue ? `${Math.abs(r.daysLeft)}d overdue` : `${r.daysLeft}d left`}
+              <div key={r.id} className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs ${r.overdue ? "border-rose-500/40 bg-rose-500/10" : "border-amber-400/30 bg-amber-500/10"}`}>
+                <div className="min-w-0">
+                  <div className="truncate font-semibold">{r.books?.title}</div>
+                  <div className="truncate text-[11px] text-muted-foreground">due {new Date(r.due_at).toLocaleDateString()}</div>
+                </div>
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${r.overdue ? "bg-rose-500/20 text-rose-300" : "bg-amber-500/20 text-amber-300"}`}>
+                  {r.overdue ? `${Math.abs(r.daysLeft)}d late` : `${r.daysLeft}d`}
                 </span>
-              </li>
+              </div>
             ))}
-          </ul>
-        </section>
+          </div>
+        </Section>
       )}
 
       {/* Ledger */}
-      <section id="ledger" className="mb-10 scroll-mt-20 border-t border-border/40 pt-6">
-        <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><Wallet className="h-4 w-4 text-emerald-400" /> Ledger</h2>
+      <Section id="ledger" title="Wallet & ledger" icon={Wallet}>
         <div className="glass-card grid grid-cols-2 gap-4 rounded-2xl p-5 sm:grid-cols-4">
           <Stat icon={Wallet} tint="emerald" label="Balance" value={`₹${Number(profile.wallet_balance).toFixed(0)}`} sub="Available to rent" />
           <Stat icon={Coins} tint="amber"   label="Total spent" value={`₹${totalSpent.toFixed(0)}`} sub={`${rentals.length} rental${rentals.length === 1 ? "" : "s"}`} />
           <Stat icon={BookOpen} tint="primary" label="Active rentals" value={active.length} sub="Out right now" />
           <Stat icon={CheckCircle2} tint="emerald" label="Returned" value={past.length} sub="Completed" />
         </div>
-      </section>
+      </Section>
 
       {/* Active rentals + Tracking */}
-      <section id="rentals" className="mb-10 scroll-mt-20 border-t border-border/40 pt-6">
-        <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><BookOpen className="h-4 w-4 text-primary" /> Active rentals & tracking ({active.length})</h2>
+      <Section id="rentals" title={`Active rentals & tracking (${active.length})`} icon={BookOpen}>
         {active.length === 0 ? (
           <div className="glass-card rounded-2xl p-6 text-sm text-muted-foreground">No active rentals.</div>
         ) : (
@@ -370,12 +370,11 @@ function ProfilePage() {
             })}
           </div>
         )}
-      </section>
+      </Section>
 
       {/* Waiting list */}
       {waitlist.length > 0 && (
-        <section id="waitlist" className="mb-10 scroll-mt-20 border-t border-border/40 pt-6">
-          <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><Clock className="h-4 w-4 text-amber-300" /> Your waiting list ({waitlist.length})</h2>
+        <Section id="waitlist" title={`Your waiting list (${waitlist.length})`} icon={Clock}>
           <div className="space-y-2">
             {(waitlist as any[]).map((w) => (
               <div key={w.id} className="glass-card flex items-center justify-between gap-3 rounded-xl p-3">
@@ -394,12 +393,11 @@ function ProfilePage() {
               </div>
             ))}
           </div>
-        </section>
+        </Section>
       )}
 
       {/* Suggest */}
-      <section id="suggest" className="mb-10 scroll-mt-20 border-t border-border/40 pt-6">
-        <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><Lightbulb className="h-4 w-4 text-amber-300" /> Suggest a book to the library</h2>
+      <Section id="suggest" title="Suggest a book to the library" icon={Lightbulb}>
         <form onSubmit={submitSuggestion} className="glass-card grid gap-3 rounded-2xl p-5 sm:grid-cols-2">
           <input value={sTitle} onChange={(e) => setSTitle(e.target.value)} placeholder="Book title *" className="rounded-xl border border-border bg-background/50 px-4 py-2.5 text-sm outline-none focus:border-primary" />
           <input value={sAuthor} onChange={(e) => setSAuthor(e.target.value)} placeholder="Author (optional)" className="rounded-xl border border-border bg-background/50 px-4 py-2.5 text-sm outline-none focus:border-primary" />
@@ -411,11 +409,10 @@ function ProfilePage() {
             </button>
           </div>
         </form>
-      </section>
+      </Section>
 
       {past.length > 0 && (
-        <section id="past" className="scroll-mt-20 border-t border-border/40 pt-6">
-          <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><CheckCircle2 className="h-4 w-4 text-emerald-400" /> Past rentals ({past.length})</h2>
+        <Section id="past" title={`Past rentals (${past.length})`} icon={CheckCircle2}>
           <div className="space-y-2">
             {past.map((r: any) => (
               <Link to="/books/$id" params={{ id: r.book_id }} key={r.id} className="flex items-center justify-between rounded-xl border border-border bg-surface/40 px-4 py-2.5 text-sm cursor-pointer hover:bg-surface-elevated">
@@ -432,11 +429,12 @@ function ProfilePage() {
               </Link>
             ))}
           </div>
-        </section>
+        </Section>
       )}
     </AppLayout>
   );
 }
+
 
 function UPIModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (amount: number) => void }) {
   const [upi, setUpi] = useState("");
