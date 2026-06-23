@@ -8,13 +8,40 @@ import {
 } from "@/lib/userdata";
 import {
   Wallet, BookOpen, CheckCircle2, Lightbulb, Clock, Flame, Heart, NotebookPen,
-  Trophy, BookMarked, AlertTriangle, BellRing, Pencil, X, Tag, Smartphone, Check,
+  Trophy, BookMarked, AlertTriangle, BellRing, Pencil, X, Tag, Smartphone, Check, ChevronDown,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { fetchBooks } from "@/lib/books";
+
+/**
+ * Profile page sections are heavy on mobile. Wrap each one in <Section>:
+ *  - desktop (md+): always-visible header + content (no collapse)
+ *  - mobile: <details> accordion, collapsed by default
+ */
+function Section({ id, title, icon: Icon, children, defaultOpen = false }: { id: string; title: string; icon: any; children: ReactNode; defaultOpen?: boolean }) {
+  const isMobile = useIsMobile();
+  if (isMobile) {
+    return (
+      <details id={id} open={defaultOpen} className="group mb-4 scroll-mt-20 rounded-2xl border border-border/40 bg-surface/30 [&[open]>summary>svg.chev]:rotate-180">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+          <span className="flex items-center gap-2 text-base font-bold"><Icon className="h-4 w-4 text-primary" /> {title}</span>
+          <ChevronDown className="chev h-4 w-4 transition-transform" />
+        </summary>
+        <div className="px-4 pb-4">{children}</div>
+      </details>
+    );
+  }
+  return (
+    <section id={id} className="mb-10 scroll-mt-20 border-t border-border/40 pt-6">
+      <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><Icon className="h-4 w-4 text-primary" /> {title}</h2>
+      {children}
+    </section>
+  );
+}
 
 const SUGGESTED_TAGS = ["Bookworm", "Critic", "Casual reader", "Reviewer", "Collector", "Student"];
 
