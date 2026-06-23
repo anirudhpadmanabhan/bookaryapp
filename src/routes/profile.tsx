@@ -119,9 +119,12 @@ function ProfilePage() {
     toast.success("Details saved");
   };
 
-  const active = (rentals as any[]).filter((r) => !r.returned_at);
+  const reservations = (rentals as any[]).filter((r) => r.tracking_status === "reserved" && !r.returned_at);
+  const active = (rentals as any[]).filter((r) => !r.returned_at && r.tracking_status !== "reserved");
   const past = (rentals as any[]).filter((r) => r.returned_at);
   const totalSpent = (rentals as any[]).reduce((s, r) => s + Number(r.price_paid ?? 0), 0);
+  const claim = useClaimReservation();
+  const decline = useDeclineReservation();
 
   const returnBook = async (rentalId: string) => {
     const { error } = await supabase.from("rentals").update({ returned_at: new Date().toISOString(), tracking_status: "returned" } as any).eq("id", rentalId);
