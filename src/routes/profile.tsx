@@ -387,7 +387,7 @@ function ProfilePage() {
       </section>
 
       {past.length > 0 && (
-        <section>
+        <section id="past" className="scroll-mt-20 border-t border-border/40 pt-6">
           <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><CheckCircle2 className="h-4 w-4 text-emerald-400" /> Past rentals ({past.length})</h2>
           <div className="space-y-2">
             {past.map((r: any) => (
