@@ -207,9 +207,26 @@ function ProfilePage() {
 
       {showUPI && <UPIModal onClose={() => setShowUPI(false)} onSuccess={(amt) => { topUp.mutate(amt); setShowUPI(false); }} />}
 
+      {/* In-page nav: quick jump between profile sections */}
+      <nav className="glass-card mb-8 flex flex-wrap items-center gap-1 rounded-2xl p-1.5 text-xs">
+        {[
+          { id: "insights", label: "Insights", icon: Trophy },
+          { id: "due", label: "Due soon", icon: AlertTriangle },
+          { id: "ledger", label: "Wallet & ledger", icon: Wallet },
+          { id: "rentals", label: "Active rentals", icon: BookOpen },
+          { id: "waitlist", label: "Waitlist", icon: Clock },
+          { id: "suggest", label: "Suggestions", icon: Lightbulb },
+          { id: "past", label: "History", icon: CheckCircle2 },
+        ].map((s) => (
+          <a key={s.id} href={`#${s.id}`} className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl px-3 py-2 font-medium text-muted-foreground hover:bg-surface-elevated hover:text-foreground">
+            <s.icon className="h-3.5 w-3.5" /> {s.label}
+          </a>
+        ))}
+      </nav>
+
       {/* Insights */}
       {insights && (
-        <section className="mb-10">
+        <section id="insights" className="mb-10 scroll-mt-20 border-t border-border/40 pt-6">
           <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><Trophy className="h-4 w-4 text-amber-300" /> Reading insights</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Stat icon={Flame} tint="rose"    label="Day streak"     value={insights.streak} sub={insights.streak === 0 ? "Log today to start" : `${insights.streak} day${insights.streak === 1 ? "" : "s"} in a row`} />
