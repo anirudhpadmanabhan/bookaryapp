@@ -114,6 +114,7 @@ function AdminPage() {
         })}
       </div>
 
+      {tab === "overview" && <OverviewTab />}
       {tab === "books" && <BooksTab />}
       {tab === "rentals" && <RentalsTab />}
       {tab === "waitlist" && <WaitlistTab />}
