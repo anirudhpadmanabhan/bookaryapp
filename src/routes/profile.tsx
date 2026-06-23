@@ -379,6 +379,40 @@ function ProfilePage() {
         )}
       </Section>
 
+      {/* Reservations (24h window) */}
+      {reservations.length > 0 && (
+        <Section id="reservations" title={`Reserved for you (${reservations.length})`} icon={BellRing} defaultOpen>
+          <div className="space-y-2">
+            {reservations.map((r: any) => {
+              const exp = r.reserved_until ? new Date(r.reserved_until) : null;
+              const hoursLeft = exp ? Math.max(0, Math.round((exp.getTime() - Date.now()) / 3600000)) : null;
+              return (
+                <div key={r.id} className="glass-card flex flex-col gap-3 rounded-xl p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <Link to="/books/$id" params={{ id: r.book_id }} className="text-sm font-semibold hover:underline">{r.books?.title ?? "Your reserved book"}</Link>
+                    <div className="text-xs text-amber-300">
+                      {hoursLeft !== null ? `Claim within ${hoursLeft}h` : "Claim within 24h"} or it passes to the next reader. ₹10 will be charged on claim.
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => claim.mutate(r.id)}
+                      disabled={claim.isPending}
+                      className="cursor-pointer rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-emerald-950 hover:opacity-90 disabled:opacity-60"
+                    >Claim · ₹10</button>
+                    <button
+                      onClick={() => decline.mutate(r.id)}
+                      disabled={decline.isPending}
+                      className="cursor-pointer rounded-lg border border-rose-500/40 px-3 py-1.5 text-xs text-rose-300 hover:bg-rose-500/10 disabled:opacity-60"
+                    >Decline</button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Section>
+      )}
+
       {/* Waiting list */}
       {waitlist.length > 0 && (
         <Section id="waitlist" title={`Your waiting list (${waitlist.length})`} icon={Clock}>
