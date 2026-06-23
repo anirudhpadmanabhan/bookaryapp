@@ -23,11 +23,11 @@ import {
   Shield, Library as LibIcon, Package, Clock, Lightbulb,
   Search as SearchIcon, Trash2, CheckCircle2, Plus, Pencil, X, Save,
   Upload, Grid3x3, List as ListIcon, Building2, Users, Mail, Star, Activity,
-  FileText, FileDown, ArrowUpDown, ArrowUp, ArrowDown,
+  FileText, FileDown, ArrowUpDown, ArrowUp, ArrowDown, LayoutDashboard,
 } from "lucide-react";
 import { exportCsv, exportPdf } from "@/lib/pdf-export";
 
-type Tab = "books" | "rentals" | "waitlist" | "suggestions" | "libraries" | "roles" | "users" | "activity";
+type Tab = "overview" | "books" | "rentals" | "waitlist" | "suggestions" | "libraries" | "roles" | "users" | "activity";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
