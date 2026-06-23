@@ -110,38 +110,14 @@ export function useRentBook() {
   const qc = useQueryClient();
   const { user } = useSession();
   return useMutation({
-    mutationFn: async ({ bookId, price, address, phone }: { bookId: string; price: number; address?: string; phone?: string }) => {
+    mutationFn: async ({ bookId, address, phone }: { bookId: string; price?: number; address?: string; phone?: string }) => {
       if (!user) throw new Error("Sign in to rent");
-      const { data: prof, error: pErr } = await supabase.from("profiles").select("wallet_balance, address, phone").eq("id", user.id).maybeSingle();
-      if (pErr) throw pErr;
-      if (!prof) throw new Error("Add your profile details before renting");
-      const { data: existing, error: activeErr } = await supabase
-        .from("rentals")
-        .select("id, user_id, due_at")
-        .eq("book_id", bookId)
-        .is("returned_at", null)
-        .maybeSingle();
-      if (activeErr) throw activeErr;
-      if (existing) {
-        if (existing.user_id === user.id) {
-          throw new Error(`You've already rented this — due ${new Date(existing.due_at).toLocaleDateString()}`);
-        }
-        throw new Error("This book is rented out — join the waiting list instead.");
-      }
-      const balance = Number(prof.wallet_balance);
-      if (balance < price) throw new Error(`Need ₹${price - balance} more in wallet`);
-      const deliveryAddress = (address ?? prof.address ?? "").trim() || null;
-      const { error: rErr } = await supabase.from("rentals").insert({
-        user_id: user.id, book_id: bookId, price_paid: price,
-        delivery_address: deliveryAddress, tracking_status: "confirmed",
-      } as any);
-      if (rErr) throw rErr;
-      const updates: any = { wallet_balance: balance - price };
-      if (address && address.trim() && address.trim() !== (prof.address ?? "")) updates.address = address.trim();
-      const cleanPhone = phone?.trim();
-      if (cleanPhone && cleanPhone !== ((prof as any).phone ?? "")) updates.phone = cleanPhone;
-      const { error: uErr } = await supabase.from("profiles").update(updates).eq("id", user.id);
-      if (uErr) throw uErr;
+      const { error } = await supabase.rpc("rent_book" as any, {
+        _book_id: bookId,
+        _address: address ?? null,
+        _phone: phone ?? null,
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["rentals"] });
@@ -481,10 +457,8 @@ export function useTopUpWallet() {
   return useMutation({
     mutationFn: async (amount: number) => {
       if (!user) throw new Error("Sign in");
-      const { data: prof, error } = await supabase.from("profiles").select("wallet_balance").eq("id", user.id).single();
+      const { error } = await supabase.rpc("top_up_wallet" as any, { _amount: amount });
       if (error) throw error;
-      const { error: uErr } = await supabase.from("profiles").update({ wallet_balance: Number(prof.wallet_balance) + amount }).eq("id", user.id);
-      if (uErr) throw uErr;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["profile"] });

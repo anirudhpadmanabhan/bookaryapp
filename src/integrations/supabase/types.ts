@@ -676,8 +676,13 @@ export type Database = {
         }[]
       }
       reading_insights: { Args: { _user_id: string }; Returns: Json }
+      rent_book: {
+        Args: { _address?: string; _book_id: string; _phone?: string }
+        Returns: Json
+      }
       set_my_phone: { Args: { _phone: string }; Returns: undefined }
       staff_user_summary: { Args: { _user_id: string }; Returns: Json }
+      top_up_wallet: { Args: { _amount: number }; Returns: number }
     }
     Enums: {
       app_role: "admin" | "librarian" | "reader"
