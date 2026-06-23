@@ -267,11 +267,13 @@ function BooksTable({ books, editing, setEditing }: { books: any[]; editing: str
           <tr>
             <th className="px-2 py-2.5 text-left w-20">Rack</th>
             <th className="px-2 py-2.5 text-left">Title</th>
-            <th className="px-2 py-2.5 text-left font-mal">Title (ml)</th>
+            <th className="px-2 py-2.5 text-left font-mal">Title (ML)</th>
             <th className="px-2 py-2.5 text-left">Author</th>
             <th className="px-2 py-2.5 text-left">Genre</th>
-            <th className="px-2 py-2.5 text-left w-24">Price ₹</th>
-            <th className="px-2 py-2.5 text-left w-20">★</th>
+            <th className="px-2 py-2.5 text-left w-20">Rs.</th>
+            <th className="px-2 py-2.5 text-left w-24">Language</th>
+            <th className="px-2 py-2.5 text-left w-16">Rating</th>
+            <th className="px-2 py-2.5 text-left">Publisher</th>
             <th className="px-2 py-2.5 w-32"></th>
           </tr>
         </thead>
@@ -295,6 +297,8 @@ function EditableRow({ book, isEditing, onEdit, onClose }: { book: any; isEditin
     author: book.author ?? "",
     genre: book.genre ?? "",
     rent_price: String(book.rent_price ?? 10),
+    language: book.language ?? "",
+    publisher: book.publisher ?? "",
   });
 
   useEffect(() => {
@@ -306,6 +310,8 @@ function EditableRow({ book, isEditing, onEdit, onClose }: { book: any; isEditin
         author: book.author ?? "",
         genre: book.genre ?? "",
         rent_price: String(book.rent_price ?? 10),
+        language: book.language ?? "",
+        publisher: book.publisher ?? "",
       });
     }
   }, [isEditing, book]);
@@ -321,6 +327,8 @@ function EditableRow({ book, isEditing, onEdit, onClose }: { book: any; isEditin
           author: draft.author.trim() || book.author,
           genre: draft.genre.trim() || book.genre,
           rent_price: Number(draft.rent_price) > 0 ? Number(draft.rent_price) : Number(book.rent_price),
+          language: draft.language.trim() || null,
+          publisher: draft.publisher.trim() || null,
         },
       },
       { onSuccess: onClose },
@@ -338,7 +346,9 @@ function EditableRow({ book, isEditing, onEdit, onClose }: { book: any; isEditin
         <td className="px-2 py-1.5"><input value={draft.author} onChange={(e) => setDraft({ ...draft, author: e.target.value })} className={cellCls} /></td>
         <td className="px-2 py-1.5"><input value={draft.genre} onChange={(e) => setDraft({ ...draft, genre: e.target.value })} className={cellCls} /></td>
         <td className="px-2 py-1.5"><input type="number" value={draft.rent_price} onChange={(e) => setDraft({ ...draft, rent_price: e.target.value })} className={cellCls} /></td>
+        <td className="px-2 py-1.5"><input value={draft.language} onChange={(e) => setDraft({ ...draft, language: e.target.value })} className={cellCls} /></td>
         <td className="px-2 py-1.5 text-xs">{displayRating(book).toFixed(1)}</td>
+        <td className="px-2 py-1.5"><input value={draft.publisher} onChange={(e) => setDraft({ ...draft, publisher: e.target.value })} className={cellCls} /></td>
         <td className="px-2 py-1.5 text-right">
           <div className="flex justify-end gap-1">
             <button onClick={save} disabled={update.isPending} className="cursor-pointer rounded bg-primary px-2 py-1 text-[11px] font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50">
@@ -369,12 +379,14 @@ function EditableRow({ book, isEditing, onEdit, onClose }: { book: any; isEditin
       <td className="px-2 py-2 text-xs text-foreground/80">{book.author}</td>
       <td className="px-2 py-2 text-xs text-muted-foreground">{book.genre}</td>
       <td className="px-2 py-2 text-xs">₹{Number(book.rent_price ?? 10).toFixed(0)}</td>
+      <td className="px-2 py-2 text-xs text-muted-foreground">{book.language ?? "—"}</td>
       <td className="px-2 py-2 text-xs">
         <span className="inline-flex items-center gap-1">
           <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
           {displayRating(book).toFixed(1)}
         </span>
       </td>
+      <td className="px-2 py-2 text-xs text-muted-foreground">{book.publisher ?? "—"}</td>
       <td className="px-2 py-2 text-right">
         <button onClick={onEdit} className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-elevated">
           <Pencil className="h-3 w-3" /> Edit
@@ -917,8 +929,27 @@ function SuggestionsTab() {
     available: "bg-primary/15 text-primary",
   };
 
+  const exportColumns = [
+    { header: "Title", get: (r: any) => r.title ?? "" },
+    { header: "Author", get: (r: any) => r.author ?? "" },
+    { header: "Status", get: (r: any) => r.status ?? "pending" },
+    { header: "Note", get: (r: any) => r.note ?? "" },
+    { header: "Decision note", get: (r: any) => r.decision_note ?? "" },
+    { header: "Created", get: (r: any) => new Date(r.created_at).toLocaleString() },
+  ];
+
   return (
     <div className="space-y-2">
+      <div className="mb-2 flex justify-end gap-2">
+        <button
+          onClick={() => exportCsv({ filename: `suggestions-${Date.now()}.csv`, columns: exportColumns, rows: list as any[] })}
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-surface/50 px-2.5 py-1.5 text-xs hover:bg-surface-elevated"
+        ><FileDown className="h-3.5 w-3.5" /> CSV</button>
+        <button
+          onClick={() => exportPdf({ filename: `suggestions-${Date.now()}.pdf`, title: "Book suggestions", subtitle: `${(list as any[]).length} rows`, columns: exportColumns, rows: list as any[] })}
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-surface/50 px-2.5 py-1.5 text-xs hover:bg-surface-elevated"
+        ><FileText className="h-3.5 w-3.5" /> PDF</button>
+      </div>
       {(list as any[]).map((s) => (
         <div key={s.id} className="glass-card rounded-xl p-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">

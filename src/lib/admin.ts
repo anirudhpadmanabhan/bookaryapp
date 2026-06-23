@@ -51,6 +51,7 @@ export function useUpdateBook() {
         shelf_code: string | null;
         rent_price: number;
         publisher: string | null;
+        language: string | null;
       }>;
     }) => {
       const { error } = await supabase.from("books").update(patch as any).eq("id", id);

@@ -3,7 +3,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePublicProfile } from "@/lib/userdata";
-import { UserRound, Tag, Star, MessageSquare, Quote, Calendar, BookOpen, Flame, Heart, NotebookPen } from "lucide-react";
+import { Tag, Star, Quote, Calendar, BookOpen, Flame, Heart, NotebookPen } from "lucide-react";
 
 export const Route = createFileRoute("/u/$id")({
   ssr: false,
@@ -93,7 +93,7 @@ function PublicProfilePage() {
 
       <section>
         <h2 className="mb-4 flex items-center gap-2 text-lg font-bold">
-          <MessageSquare className="h-4 w-4 text-accent" /> Their reviews
+          <NotebookPen className="h-4 w-4 text-accent" /> Their diary
         </h2>
         {reviews.length === 0 ? (
           <div className="glass-card rounded-2xl p-8 text-center text-sm text-muted-foreground">

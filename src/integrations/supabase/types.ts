@@ -342,11 +342,13 @@ export type Database = {
       rentals: {
         Row: {
           book_id: string
+          delivered_notified_at: string | null
           delivery_address: string | null
           due_at: string
           fine_amount: number
           id: string
           price_paid: number
+          reminder_sent_at: string | null
           rented_at: string
           returned_at: string | null
           tracking_status: string
@@ -354,11 +356,13 @@ export type Database = {
         }
         Insert: {
           book_id: string
+          delivered_notified_at?: string | null
           delivery_address?: string | null
           due_at?: string
           fine_amount?: number
           id?: string
           price_paid: number
+          reminder_sent_at?: string | null
           rented_at?: string
           returned_at?: string | null
           tracking_status?: string
@@ -366,11 +370,13 @@ export type Database = {
         }
         Update: {
           book_id?: string
+          delivered_notified_at?: string | null
           delivery_address?: string | null
           due_at?: string
           fine_amount?: number
           id?: string
           price_paid?: number
+          reminder_sent_at?: string | null
           rented_at?: string
           returned_at?: string | null
           tracking_status?: string
@@ -637,6 +643,7 @@ export type Database = {
         }
         Returns: Json
       }
+      enqueue_my_due_reminders: { Args: never; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -4,7 +4,7 @@ import { useDiary, useEditDiaryFull, useDeleteDiary, useAddDiary, useProfile } f
 import { useSession } from "@/lib/auth";
 import { fetchBooks } from "@/lib/books";
 import { useQuery } from "@tanstack/react-query";
-import { NotebookPen, Pencil, Trash2, X, Check, Plus, Star, LayoutGrid, List as ListIcon, Quote, MessageSquare, Heart } from "lucide-react";
+import { NotebookPen, Pencil, Trash2, X, Check, Plus, Star, LayoutGrid, List as ListIcon, Quote, MessageSquare } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { BookCover } from "@/components/BookCover";
 
@@ -193,20 +193,43 @@ function TimelineView({ entries, thisYearCount, year }: { entries: any[]; thisYe
 }
 
 function ReviewsView({ entries }: { entries: any[] }) {
-  const reviews = entries.filter((e) => e.note && e.note.trim());
-  if (reviews.length === 0) {
-    return <div className="glass-card mt-2 rounded-2xl p-10 text-center text-muted-foreground">No written reviews yet — try the Notes view to add one.</div>;
+  const { user } = useSession();
+  const { data: bookReviews = [] } = useQuery({
+    enabled: !!user,
+    queryKey: ["my-reviews", user?.id],
+    queryFn: async () => {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data, error } = await supabase
+        .from("reviews")
+        .select("id, rating, body, favorite_quote, created_at, book_id, books(id, title, title_ml, author, cover_color)")
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  type Row = { kind: "diary" | "review"; id: string; created_at: string; rating: number | null; body: string; quote: string | null; book: any };
+  const rows: Row[] = [
+    ...entries
+      .filter((e) => (e.note && e.note.trim()) || e.rating)
+      .map((e) => ({ kind: "diary" as const, id: `d-${e.id}`, created_at: e.created_at, rating: e.rating ?? null, body: e.note ?? "", quote: null, book: e.books })),
+    ...(bookReviews as any[]).map((r) => ({ kind: "review" as const, id: `r-${r.id}`, created_at: r.created_at, rating: r.rating, body: r.body ?? "", quote: r.favorite_quote ?? null, book: r.books })),
+  ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  if (rows.length === 0) {
+    return <div className="glass-card mt-2 rounded-2xl p-10 text-center text-muted-foreground">No written reviews yet — add a note above or write one on a book page.</div>;
   }
   return (
     <div className="divide-y divide-border/40">
-      {reviews.map((e) => {
+      {rows.map((e) => {
         const d = new Date(e.created_at);
         return (
           <article key={e.id} className="flex gap-4 py-5 first:pt-0">
             <div className="w-20 shrink-0 sm:w-24">
-              {e.books ? (
-                <Link to="/books/$id" params={{ id: e.books.id }} className="block cursor-pointer">
-                  <BookCover book={e.books} className="!p-2 text-[10px]" />
+              {e.book ? (
+                <Link to="/books/$id" params={{ id: e.book.id }} className="block cursor-pointer">
+                  <BookCover book={e.book} className="!p-2 text-[10px]" />
                 </Link>
               ) : (
                 <div className="aspect-[2/3] w-full rounded-xl bg-surface" />
@@ -214,21 +237,27 @@ function ReviewsView({ entries }: { entries: any[] }) {
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-baseline gap-2">
-                {e.books ? (
-                  <Link to="/books/$id" params={{ id: e.books.id }} className="cursor-pointer text-lg font-bold hover:text-primary">{e.books.title}</Link>
+                {e.book ? (
+                  <Link to="/books/$id" params={{ id: e.book.id }} className="cursor-pointer text-lg font-bold hover:text-primary">{e.book.title}</Link>
                 ) : (
                   <span className="text-lg font-bold">Free entry</span>
                 )}
-                {e.books?.title_ml && <span className="font-mal text-sm text-muted-foreground">{e.books.title_ml}</span>}
+                {e.book?.title_ml && <span className="font-mal text-sm text-muted-foreground">{e.book.title_ml}</span>}
+                <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wider ${e.kind === "review" ? "bg-accent/15 text-accent" : "bg-primary/15 text-primary"}`}>
+                  {e.kind === "review" ? "Book review" : "Diary"}
+                </span>
               </div>
               <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                 {e.rating ? <StarRow value={e.rating} size="md" /> : null}
-                <span>Read {d.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })}</span>
+                <span>{d.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })}</span>
               </div>
-              <p className="mt-3 whitespace-pre-wrap text-sm text-foreground/85">{e.note}</p>
-              <div className="mt-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Heart className="h-3.5 w-3.5" /> 0 likes
-              </div>
+              {e.body && <p className="mt-3 whitespace-pre-wrap text-sm text-foreground/85">{e.body}</p>}
+              {e.quote && (
+                <blockquote className="mt-3 flex gap-2 rounded-lg border-l-2 border-accent bg-accent/5 px-3 py-2 text-sm italic text-foreground/85">
+                  <Quote className="h-3.5 w-3.5 shrink-0 text-accent" />
+                  <span>{e.quote}</span>
+                </blockquote>
+              )}
             </div>
           </article>
         );

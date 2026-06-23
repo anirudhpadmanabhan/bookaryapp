@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
-import { fetchBooks, sortBooks, unslug, type BookSort } from "@/lib/books";
+import { fetchBooks, sortBooks, unslug, slugify, type BookSort } from "@/lib/books";
 import { BooksGrid, type ViewMode } from "@/components/BooksGrid";
 import { SortBar } from "@/components/SortBar";
-import { ArrowLeft, Languages as LangIcon, BookOpen } from "lucide-react";
+import { ArrowLeft, Languages as LangIcon, BookOpen, Library, PenLine } from "lucide-react";
 import { useMemo, useState } from "react";
 
 export const Route = createFileRoute("/languages/$slug")({
@@ -30,7 +30,16 @@ function LanguagePage() {
     [books, target],
   );
   const sorted = useMemo(() => sortBooks(inLang, sort), [inLang, sort]);
-  const authors = [...new Set(inLang.map((b) => b.author))];
+  const authors = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const b of inLang) m.set(b.author, (m.get(b.author) ?? 0) + 1);
+    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
+  }, [inLang]);
+  const genres = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const b of inLang) m.set(b.genre, (m.get(b.genre) ?? 0) + 1);
+    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
+  }, [inLang]);
 
   return (
     <AppLayout>
@@ -55,6 +64,36 @@ function LanguagePage() {
           </div>
         </div>
       </div>
+
+      {genres.length > 0 && (
+        <section className="mb-6">
+          <h2 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <Library className="h-3.5 w-3.5 text-primary" /> Genres in {target} ({genres.length})
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {genres.slice(0, 24).map(([g, n]) => (
+              <Link key={g} to="/genres/$slug" params={{ slug: slugify(g) }} className="cursor-pointer rounded-full border border-border bg-surface/60 px-3 py-1.5 text-xs hover:border-primary/60 hover:text-primary">
+                {g} <span className="text-muted-foreground">· {n}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {authors.length > 0 && (
+        <section className="mb-6">
+          <h2 className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <PenLine className="h-3.5 w-3.5 text-accent" /> Writers in {target} ({authors.length})
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {authors.slice(0, 30).map(([a, n]) => (
+              <Link key={a} to="/writers/$slug" params={{ slug: slugify(a) }} className="cursor-pointer rounded-full border border-border bg-surface/60 px-3 py-1.5 text-xs hover:border-accent/60 hover:text-accent">
+                {a} <span className="text-muted-foreground">· {n}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       <SortBar count={inLang.length} sort={sort} onSortChange={setSort} view={view} onViewChange={setView} />
       {isLoading ? <p className="text-sm text-muted-foreground">Loading…</p> : <BooksGrid books={sorted} view={view} />}

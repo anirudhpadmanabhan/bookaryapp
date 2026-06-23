@@ -29,6 +29,13 @@ function ProfilePage() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user, loading } = useSession();
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth", search: { redirect: pathname } }); }, [user, loading, navigate, pathname]);
+  // Fire 5-day due-date reminders once per page mount (idempotent server-side)
+  useEffect(() => {
+    if (!user) return;
+    supabase.rpc("enqueue_my_due_reminders" as any).then(() => {
+      // notifications list refresh handled by realtime / next refetch
+    });
+  }, [user]);
   const { data: profile } = useProfile();
   const { data: rentals = [] } = useRentals();
   const { data: favorites = [] } = useFavorites();
@@ -200,9 +207,26 @@ function ProfilePage() {
 
       {showUPI && <UPIModal onClose={() => setShowUPI(false)} onSuccess={(amt) => { topUp.mutate(amt); setShowUPI(false); }} />}
 
+      {/* In-page nav: quick jump between profile sections */}
+      <nav className="glass-card mb-8 flex flex-wrap items-center gap-1 rounded-2xl p-1.5 text-xs">
+        {[
+          { id: "insights", label: "Insights", icon: Trophy },
+          { id: "due", label: "Due soon", icon: AlertTriangle },
+          { id: "ledger", label: "Wallet & ledger", icon: Wallet },
+          { id: "rentals", label: "Active rentals", icon: BookOpen },
+          { id: "waitlist", label: "Waitlist", icon: Clock },
+          { id: "suggest", label: "Suggestions", icon: Lightbulb },
+          { id: "past", label: "History", icon: CheckCircle2 },
+        ].map((s) => (
+          <a key={s.id} href={`#${s.id}`} className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl px-3 py-2 font-medium text-muted-foreground hover:bg-surface-elevated hover:text-foreground">
+            <s.icon className="h-3.5 w-3.5" /> {s.label}
+          </a>
+        ))}
+      </nav>
+
       {/* Insights */}
       {insights && (
-        <section className="mb-10">
+        <section id="insights" className="mb-10 scroll-mt-20 border-t border-border/40 pt-6">
           <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><Trophy className="h-4 w-4 text-amber-300" /> Reading insights</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Stat icon={Flame} tint="rose"    label="Day streak"     value={insights.streak} sub={insights.streak === 0 ? "Log today to start" : `${insights.streak} day${insights.streak === 1 ? "" : "s"} in a row`} />
@@ -233,7 +257,7 @@ function ProfilePage() {
       )}
 
       {dueSoon.length > 0 && (
-        <section className="mb-10">
+        <section id="due" className="mb-10 scroll-mt-20 border-t border-border/40 pt-6">
           <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><AlertTriangle className="h-4 w-4 text-amber-300" /> Due within 20 days</h2>
           <ul className="space-y-2">
             {dueSoon.map((r) => (
@@ -249,7 +273,7 @@ function ProfilePage() {
       )}
 
       {/* Ledger */}
-      <section className="mb-10">
+      <section id="ledger" className="mb-10 scroll-mt-20 border-t border-border/40 pt-6">
         <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><Wallet className="h-4 w-4 text-emerald-400" /> Ledger</h2>
         <div className="glass-card grid grid-cols-2 gap-4 rounded-2xl p-5 sm:grid-cols-4">
           <Stat icon={Wallet} tint="emerald" label="Balance" value={`₹${Number(profile.wallet_balance).toFixed(0)}`} sub="Available to rent" />
@@ -260,7 +284,7 @@ function ProfilePage() {
       </section>
 
       {/* Active rentals + Tracking */}
-      <section className="mb-10">
+      <section id="rentals" className="mb-10 scroll-mt-20 border-t border-border/40 pt-6">
         <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><BookOpen className="h-4 w-4 text-primary" /> Active rentals & tracking ({active.length})</h2>
         {active.length === 0 ? (
           <div className="glass-card rounded-2xl p-6 text-sm text-muted-foreground">No active rentals.</div>
@@ -323,7 +347,7 @@ function ProfilePage() {
 
       {/* Waiting list */}
       {waitlist.length > 0 && (
-        <section className="mb-10">
+        <section id="waitlist" className="mb-10 scroll-mt-20 border-t border-border/40 pt-6">
           <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><Clock className="h-4 w-4 text-amber-300" /> Your waiting list ({waitlist.length})</h2>
           <div className="space-y-2">
             {(waitlist as any[]).map((w) => (
@@ -347,7 +371,7 @@ function ProfilePage() {
       )}
 
       {/* Suggest */}
-      <section className="mb-10">
+      <section id="suggest" className="mb-10 scroll-mt-20 border-t border-border/40 pt-6">
         <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><Lightbulb className="h-4 w-4 text-amber-300" /> Suggest a book to the library</h2>
         <form onSubmit={submitSuggestion} className="glass-card grid gap-3 rounded-2xl p-5 sm:grid-cols-2">
           <input value={sTitle} onChange={(e) => setSTitle(e.target.value)} placeholder="Book title *" className="rounded-xl border border-border bg-background/50 px-4 py-2.5 text-sm outline-none focus:border-primary" />
@@ -363,7 +387,7 @@ function ProfilePage() {
       </section>
 
       {past.length > 0 && (
-        <section>
+        <section id="past" className="scroll-mt-20 border-t border-border/40 pt-6">
           <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><CheckCircle2 className="h-4 w-4 text-emerald-400" /> Past rentals ({past.length})</h2>
           <div className="space-y-2">
             {past.map((r: any) => (
