@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
-import { fetchBooks, sortBooks, unslug, type BookSort } from "@/lib/books";
+import { fetchBooks, sortBooks, unslug, slugify, type BookSort } from "@/lib/books";
 import { BooksGrid, type ViewMode } from "@/components/BooksGrid";
 import { SortBar } from "@/components/SortBar";
-import { ArrowLeft, Languages as LangIcon, BookOpen } from "lucide-react";
+import { ArrowLeft, Languages as LangIcon, BookOpen, Library, PenLine } from "lucide-react";
 import { useMemo, useState } from "react";
 
 export const Route = createFileRoute("/languages/$slug")({
