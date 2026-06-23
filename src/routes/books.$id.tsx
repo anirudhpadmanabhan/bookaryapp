@@ -102,13 +102,18 @@ function BookPage() {
     }
     if (otherRental) {
       return onWaitlist ? (
-        <button
-          type="button"
-          onClick={() => leaveWait.mutate(book.id)}
-          className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-amber-400/40 bg-amber-500/10 px-6 py-3 text-sm font-semibold text-amber-200 hover:bg-amber-500/20 ${className}`}
-        >
-          <Clock className="h-4 w-4" /> On waiting list — Cancel
-        </button>
+        <div className={`flex flex-col items-stretch gap-1.5 ${className}`}>
+          <button
+            type="button"
+            onClick={() => leaveWait.mutate(book.id)}
+            className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-amber-400/40 bg-amber-500/10 px-6 py-3 text-sm font-semibold text-amber-200 hover:bg-amber-500/20"
+          >
+            <Clock className="h-4 w-4" /> Cancel waitlist
+          </button>
+          {typeof waitlistPos === "number" && (
+            <span className="text-center text-[11px] text-amber-200/80">You're #{waitlistPos} in line</span>
+          )}
+        </div>
       ) : (
         <button
           type="button"
