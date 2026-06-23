@@ -8,7 +8,7 @@ import { NotebookPen, Pencil, Trash2, X, Check, Plus, Star, LayoutGrid, List as 
 import { useEffect, useMemo, useState } from "react";
 import { BookCover } from "@/components/BookCover";
 
-type DiaryView = "notes" | "posters" | "timeline" | "reviews";
+type DiaryView = "posters" | "timeline" | "reviews";
 
 export const Route = createFileRoute("/diary")({
   ssr: false,
@@ -22,13 +22,12 @@ function DiaryPage() {
   const { user, loading } = useSession();
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth", search: { redirect: pathname } }); }, [user, loading, navigate, pathname]);
   const { data: entries = [] } = useDiary();
-  const [view, setView] = useState<DiaryView>("notes");
+  const [view, setView] = useState<DiaryView>("posters");
 
   const year = new Date().getFullYear();
   const thisYear = (entries as any[]).filter((e) => new Date(e.created_at).getFullYear() === year);
 
   const VIEWS: { id: DiaryView; label: string; icon: any }[] = [
-    { id: "notes", label: "Notes", icon: MessageSquare },
     { id: "posters", label: "Posters", icon: LayoutGrid },
     { id: "timeline", label: "Timeline", icon: ListIcon },
     { id: "reviews", label: "Reviews", icon: Quote },
@@ -42,7 +41,10 @@ function DiaryPage() {
         <span className="text-sm text-muted-foreground">({entries.length})</span>
       </div>
 
-      <div className="mb-5 flex flex-wrap gap-1.5 rounded-xl border border-border bg-surface/40 p-1.5">
+      {/* Add-entry form is now always available above the view tabs */}
+      <NewEntryForm />
+
+      <div className="mb-5 mt-5 flex flex-wrap gap-1.5 rounded-xl border border-border bg-surface/40 p-1.5">
         {VIEWS.map((v) => {
           const active = view === v.id;
           return (
@@ -60,22 +62,17 @@ function DiaryPage() {
         })}
       </div>
 
-      {view === "notes" && (
+      {view === "posters" && (
         <>
-          <NewEntryForm />
-          {entries.length === 0 ? (
-            <div className="glass-card mt-6 rounded-2xl p-10 text-center text-muted-foreground">
-              No entries yet. Use the form above to log a thought, rating, or review.
-            </div>
-          ) : (
-            <div className="mt-6 space-y-4">
+          <PostersView entries={entries as any[]} />
+          {entries.length > 0 && (
+            <div className="mt-8 space-y-4">
+              <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">All entries</div>
               {(entries as any[]).map((e) => <DiaryItem key={e.id} entry={e} />)}
             </div>
           )}
         </>
       )}
-
-      {view === "posters" && <PostersView entries={entries as any[]} />}
       {view === "timeline" && <TimelineView entries={entries as any[]} thisYearCount={thisYear.length} year={year} />}
       {view === "reviews" && <ReviewsView entries={entries as any[]} />}
     </AppLayout>
@@ -236,7 +233,7 @@ function ReviewsView({ entries }: { entries: any[] }) {
               </div>
               <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                 {e.rating ? <StarRow value={e.rating} size="md" /> : null}
-                <span>Watched {d.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })}</span>
+                <span>Read {d.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })}</span>
               </div>
               <p className="mt-3 whitespace-pre-wrap text-sm text-foreground/85">{e.note}</p>
               <div className="mt-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground">

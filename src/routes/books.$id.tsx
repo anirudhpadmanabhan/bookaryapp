@@ -76,7 +76,9 @@ function BookPage() {
   const displayRating = avgRating ?? catalogRating(book);
   const enGenre = genreEnglish(book);
   const mlGenre = genreMalayalam(book);
-  const rentPrice = Number(book.rent_price) || 10;
+  // Flat ₹10 covers the first 20 days for every book. After 20 days the book's
+  // own rent_price applies as a late fee per cycle.
+  const rentPrice = 10;
 
   const requireSignIn = (msg: string) => {
     toast.error(msg);
@@ -429,7 +431,7 @@ function RentModal({
         <p className="mt-1 text-[11px] text-muted-foreground">Saved to your profile so future rentals pre-fill.</p>
 
         <div className="mt-4 rounded-xl border border-border/60 bg-surface/40 px-3 py-2.5 text-xs text-muted-foreground">
-          Return window: <span className="font-medium text-foreground">20 days</span> from confirmation. A reminder appears in the top-right bell when due within 20 days.
+          Return window: <span className="font-medium text-foreground">20 days</span> at flat ₹10. After day 20 the book's listed rent applies per cycle as a late fee.
         </div>
 
         <div className="mt-5 flex gap-2">

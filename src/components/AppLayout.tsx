@@ -1,7 +1,7 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   Home, Search, BookMarked, PenLine, Heart, UserRound,
-  Library, NotebookPen, Wallet, LogOut, Sparkles, Bell, X, Truck,
+  Library, NotebookPen, Wallet, LogOut, Sparkles, Bell, X, Truck, Languages as LangIcon,
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo, type ReactNode } from "react";
 import { useSession } from "@/lib/auth";
@@ -18,6 +18,7 @@ const navMain = [
   { to: "/search", label: "Search", icon: Search },
   { to: "/genres", label: "Genres", icon: Library },
   { to: "/writers", label: "Writers", icon: PenLine },
+  { to: "/languages", label: "Languages", icon: LangIcon },
 ];
 
 const navMine = [
@@ -26,12 +27,13 @@ const navMine = [
   { to: "/profile", label: "Profile", icon: UserRound },
 ];
 
+// Mobile bottom-nav: 5 essentials, fixed at the bottom of the viewport.
 const mobileNav = [
   { to: "/", label: "Home", icon: Home },
   { to: "/search", label: "Search", icon: Search },
   { to: "/genres", label: "Genres", icon: Library },
-  { to: "/diary", label: "Diary", icon: NotebookPen },
-  { to: "/loved", label: "Loved", icon: Heart },
+  { to: "/languages", label: "Langs", icon: LangIcon },
+  { to: "/profile", label: "Me", icon: UserRound },
 ];
 
 const TIPS: { title: string; body: string }[] = [
@@ -200,7 +202,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
               <>
                 <Link
                   to="/profile"
-                  className="hidden cursor-pointer items-center gap-2 rounded-full bg-emerald-500/15 px-3 py-1.5 text-sm text-emerald-400 transition hover:bg-emerald-500/25 sm:flex"
+                  className="flex cursor-pointer items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1.5 text-xs text-emerald-400 transition hover:bg-emerald-500/25 sm:px-3 sm:text-sm"
                   title="Manage wallet"
                 >
                   <Wallet className="h-3.5 w-3.5" />

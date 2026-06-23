@@ -15,6 +15,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LovedRouteImport } from './routes/loved'
+import { Route as LanguagesRouteImport } from './routes/languages'
 import { Route as GenresRouteImport } from './routes/genres'
 import { Route as DiaryRouteImport } from './routes/diary'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -55,6 +56,11 @@ const ProfileRoute = ProfileRouteImport.update({
 const LovedRoute = LovedRouteImport.update({
   id: '/loved',
   path: '/loved',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LanguagesRoute = LanguagesRouteImport.update({
+  id: '/languages',
+  path: '/languages',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GenresRoute = GenresRouteImport.update({
@@ -119,6 +125,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/diary': typeof DiaryRoute
   '/genres': typeof GenresRouteWithChildren
+  '/languages': typeof LanguagesRoute
   '/loved': typeof LovedRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
@@ -137,6 +144,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/diary': typeof DiaryRoute
+  '/languages': typeof LanguagesRoute
   '/loved': typeof LovedRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
@@ -156,6 +164,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/diary': typeof DiaryRoute
   '/genres': typeof GenresRouteWithChildren
+  '/languages': typeof LanguagesRoute
   '/loved': typeof LovedRoute
   '/profile': typeof ProfileRoute
   '/search': typeof SearchRoute
@@ -177,6 +186,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/diary'
     | '/genres'
+    | '/languages'
     | '/loved'
     | '/profile'
     | '/search'
@@ -195,6 +205,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/diary'
+    | '/languages'
     | '/loved'
     | '/profile'
     | '/search'
@@ -213,6 +224,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/diary'
     | '/genres'
+    | '/languages'
     | '/loved'
     | '/profile'
     | '/search'
@@ -233,6 +245,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   DiaryRoute: typeof DiaryRoute
   GenresRoute: typeof GenresRouteWithChildren
+  LanguagesRoute: typeof LanguagesRoute
   LovedRoute: typeof LovedRoute
   ProfileRoute: typeof ProfileRoute
   SearchRoute: typeof SearchRoute
@@ -285,6 +298,13 @@ declare module '@tanstack/react-router' {
       path: '/loved'
       fullPath: '/loved'
       preLoaderRoute: typeof LovedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/languages': {
+      id: '/languages'
+      path: '/languages'
+      fullPath: '/languages'
+      preLoaderRoute: typeof LanguagesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/genres': {
@@ -399,6 +419,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   DiaryRoute: DiaryRoute,
   GenresRoute: GenresRouteWithChildren,
+  LanguagesRoute: LanguagesRoute,
   LovedRoute: LovedRoute,
   ProfileRoute: ProfileRoute,
   SearchRoute: SearchRoute,
@@ -411,13 +432,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

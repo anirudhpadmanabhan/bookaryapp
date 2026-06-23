@@ -461,22 +461,33 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          library_id: string | null
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
+          library_id?: string | null
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
+          library_id?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_library_id_fkey"
+            columns: ["library_id"]
+            isOneToOne: false
+            referencedRelation: "libraries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       waitlist: {
         Row: {
@@ -563,6 +574,10 @@ export type Database = {
         Returns: undefined
       }
       admin_grant_librarian: { Args: { _email: string }; Returns: Json }
+      admin_grant_librarian_for_library: {
+        Args: { _email: string; _library_id: string }
+        Returns: Json
+      }
       admin_list_librarians: {
         Args: never
         Returns: {
@@ -578,7 +593,9 @@ export type Database = {
           display_name: string
           email: string
           granted_at: string
-          roles: Database["public"]["Enums"]["app_role"][]
+          library_id: string
+          library_name: string
+          role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }[]
       }
@@ -596,6 +613,10 @@ export type Database = {
         }[]
       }
       admin_revoke_librarian: { Args: { _email: string }; Returns: Json }
+      admin_revoke_librarian_for_library: {
+        Args: { _email: string; _library_id: string }
+        Returns: Json
+      }
       admin_set_user_role: {
         Args: {
           _email: string
@@ -606,6 +627,14 @@ export type Database = {
       }
       has_role: {
         Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      has_role_in_library: {
+        Args: {
+          _library_id: string
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
