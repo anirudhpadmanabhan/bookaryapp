@@ -180,6 +180,53 @@ export function useLeaveWaitlist() {
   });
 }
 
+// Position in the waitlist for a given book (1 = next).
+export function useWaitlistPosition(bookId: string | undefined) {
+  const { user } = useSession();
+  return useQuery({
+    enabled: !!user && !!bookId,
+    queryKey: ["waitlist-position", user?.id, bookId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("waitlist_position" as any, { _book_id: bookId });
+      if (error) throw error;
+      return (data as number | null) ?? null;
+    },
+  });
+}
+
+// Claim / decline a reserved rental offered after a return.
+export function useClaimReservation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (rentalId: string) => {
+      const { error } = await supabase.rpc("claim_reservation" as any, { _rental_id: rentalId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["rentals"] });
+      qc.invalidateQueries({ queryKey: ["profile"] });
+      toast.success("Claimed — ₹10 charged, rental confirmed.");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useDeclineReservation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (rentalId: string) => {
+      const { error } = await supabase.rpc("decline_reservation" as any, { _rental_id: rentalId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["rentals"] });
+      qc.invalidateQueries({ queryKey: ["waitlist"] });
+      toast.success("Reservation declined — offered to the next reader.");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
 // Notifications — rentals due within 20 days (and overdue).
 export function useDueSoonRentals() {
   const { data: rentals = [] } = useRentals();
