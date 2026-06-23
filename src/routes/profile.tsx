@@ -284,7 +284,7 @@ function ProfilePage() {
       </section>
 
       {/* Active rentals + Tracking */}
-      <section className="mb-10">
+      <section id="rentals" className="mb-10 scroll-mt-20 border-t border-border/40 pt-6">
         <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><BookOpen className="h-4 w-4 text-primary" /> Active rentals & tracking ({active.length})</h2>
         {active.length === 0 ? (
           <div className="glass-card rounded-2xl p-6 text-sm text-muted-foreground">No active rentals.</div>
