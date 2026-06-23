@@ -22,7 +22,7 @@ export const Route = createFileRoute("/search")({
   component: SearchPage,
 });
 
-const PAGE_SIZE = 30;
+const PAGE_SIZE = 60;
 
 function SearchPage() {
   const { q: initialQ } = Route.useSearch();
