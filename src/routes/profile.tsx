@@ -273,7 +273,7 @@ function ProfilePage() {
       )}
 
       {/* Ledger */}
-      <section className="mb-10">
+      <section id="ledger" className="mb-10 scroll-mt-20 border-t border-border/40 pt-6">
         <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><Wallet className="h-4 w-4 text-emerald-400" /> Ledger</h2>
         <div className="glass-card grid grid-cols-2 gap-4 rounded-2xl p-5 sm:grid-cols-4">
           <Stat icon={Wallet} tint="emerald" label="Balance" value={`₹${Number(profile.wallet_balance).toFixed(0)}`} sub="Available to rent" />
