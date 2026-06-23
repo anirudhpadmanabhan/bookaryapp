@@ -31,9 +31,9 @@ const navMine = [
 const mobileNav = [
   { to: "/", label: "Home", icon: Home },
   { to: "/search", label: "Search", icon: Search },
+  { to: "/diary", label: "Diary", icon: NotebookPen },
   { to: "/genres", label: "Genres", icon: Library },
-  { to: "/languages", label: "Langs", icon: LangIcon },
-  { to: "/profile", label: "Me", icon: UserRound },
+  { to: "/profile", label: "Profile", icon: UserRound },
 ];
 
 const TIPS: { title: string; body: string }[] = [
