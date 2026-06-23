@@ -4,7 +4,7 @@ import { useDiary, useEditDiaryFull, useDeleteDiary, useAddDiary, useProfile } f
 import { useSession } from "@/lib/auth";
 import { fetchBooks } from "@/lib/books";
 import { useQuery } from "@tanstack/react-query";
-import { NotebookPen, Pencil, Trash2, X, Check, Plus, Star, LayoutGrid, List as ListIcon, Quote, MessageSquare, Heart } from "lucide-react";
+import { NotebookPen, Pencil, Trash2, X, Check, Plus, Star, LayoutGrid, List as ListIcon, Quote, MessageSquare } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { BookCover } from "@/components/BookCover";
 
