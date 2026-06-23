@@ -7,11 +7,24 @@ export function BookCover({
   className,
   colorOverride,
 }: {
-  book: Pick<Book, "id" | "title" | "title_ml" | "author" | "author_ml" | "genre_ml" | "cover_color">;
+  book: Pick<Book, "id" | "title" | "title_ml" | "author" | "author_ml" | "genre_ml" | "cover_color"> & { cover_url?: string | null };
   className?: string;
   colorOverride?: string;
 }) {
   const color = colorOverride ?? colorForBook(book.id);
+  if (book.cover_url) {
+    return (
+      <div className={cn("cover relative overflow-hidden !p-0", `cover-${color}`, className)}>
+        <img
+          src={book.cover_url}
+          alt={`Cover for ${book.title}`}
+          loading="lazy"
+          decoding="async"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      </div>
+    );
+  }
   return (
     <div className={cn("cover", `cover-${color}`, className)}>
       <div className="relative z-10">
