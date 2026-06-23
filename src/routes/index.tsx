@@ -224,7 +224,7 @@ function HomePage() {
               <Library className="h-4 w-4 text-primary" />
               The full collection
             </div>
-            <h2 className="text-xl font-bold">All Books</h2>
+            <h2 className="text-xl font-bold">All Published Books</h2>
           </div>
           <Link to="/search" className="cursor-pointer text-sm font-medium text-primary hover:underline">
             See all {books.length.toLocaleString()} ›
