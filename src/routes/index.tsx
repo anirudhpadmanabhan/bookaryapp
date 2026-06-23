@@ -83,37 +83,37 @@ function HomePage() {
           <p className="mt-4 text-base text-foreground/80 md:text-lg">
             Uploaded catalogue: {books.length.toLocaleString()} books · {genres.length} genres · {writers.length} writers.
           </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link to="/search" className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90">
+          <div className="-mx-1 mt-6 flex gap-3 overflow-x-auto px-1 pb-2 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
+            <Link to="/search" className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90">
               Browse the catalog <ArrowRight className="h-4 w-4" />
             </Link>
-            <Link to="/genres" className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface/50 px-5 py-3 text-sm font-semibold hover:bg-surface">
+            <Link to="/genres" className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface/50 px-5 py-3 text-sm font-semibold hover:bg-surface">
               <Library className="h-4 w-4" /> Explore genres
             </Link>
-            <Link to="/writers" className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface/50 px-5 py-3 text-sm font-semibold hover:bg-surface">
+            <Link to="/writers" className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface/50 px-5 py-3 text-sm font-semibold hover:bg-surface">
               <PenLine className="h-4 w-4" /> Explore writers
             </Link>
-            <Link to="/languages" className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface/50 px-5 py-3 text-sm font-semibold hover:bg-surface">
+            <Link to="/languages" className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface/50 px-5 py-3 text-sm font-semibold hover:bg-surface">
               <LangIcon className="h-4 w-4" /> Explore languages
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Newly Arrived */}
-      {newArrivals.length > 0 && (
+      {/* Popular Must Read */}
+      {popular.length > 0 && (
         <section className="mb-10">
           <div className="mb-4 flex items-end justify-between gap-3">
             <div>
-              <div className="mb-1 flex items-center gap-2 text-xs uppercase tracking-wider text-accent">
-                <Sparkles className="h-4 w-4" /> Latest shelf entries
+              <div className="mb-1 flex items-center gap-2 text-xs uppercase tracking-wider text-amber-300">
+                <Flame className="h-4 w-4" /> Most rented all-time
               </div>
-              <h2 className="text-xl font-bold">New on the Shelf</h2>
+              <h2 className="text-xl font-bold">Popular Must Read Books</h2>
             </div>
-            <span className="text-xs text-muted-foreground">{newArrivals.length} highest shelf numbers</span>
+            <span className="hidden text-xs text-muted-foreground sm:inline">Currently available — out books rotate automatically</span>
           </div>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            {newArrivals.map((b, i) => (
+            {popular.map((b, i) => (
               <BookCard key={b.id} book={b} coverColor={colorAt(i)} />
             ))}
           </div>
