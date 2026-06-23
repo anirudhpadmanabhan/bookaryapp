@@ -10,7 +10,7 @@ import {
 import {
   useFavorites, useRentals, useRentBook, useToggleFavorite, useAddDiary,
   useReviews, useUpsertReview, useDeleteReview, useProfile,
-  useWaitlist, useJoinWaitlist, useLeaveWaitlist,
+  useWaitlist, useJoinWaitlist, useLeaveWaitlist, useWaitlistPosition,
 } from "@/lib/userdata";
 import { useSession } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
