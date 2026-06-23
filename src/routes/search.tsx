@@ -6,8 +6,8 @@ import {
 } from "@/lib/books";
 import { BooksGrid, type ViewMode } from "@/components/BooksGrid";
 import { SortBar } from "@/components/SortBar";
-import { Search as SearchIcon, ChevronLeft, ChevronRight, Lightbulb } from "lucide-react";
-import { useState, useMemo, useEffect } from "react";
+import { Search as SearchIcon, Lightbulb } from "lucide-react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { z } from "zod";
 import { useSession } from "@/lib/auth";
 import { useSuggestBook } from "@/lib/userdata";
