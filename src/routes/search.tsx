@@ -183,41 +183,15 @@ function SearchPage() {
         <BooksGrid books={pageItems} view={view} />
       )}
 
-      {totalPages > 1 && (
-        <nav className="mt-8 flex flex-wrap items-center justify-center gap-2" aria-label="Pagination">
-          <button
-            onClick={() => goTo(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="flex cursor-pointer items-center gap-1 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <ChevronLeft className="h-4 w-4" /> Prev
-          </button>
-          {pageNumbers.map((p, i) =>
-            p === "…" ? (
-              <span key={`e${i}`} className="px-2 text-sm text-muted-foreground">…</span>
-            ) : (
-              <button
-                key={p}
-                onClick={() => goTo(p)}
-                aria-current={p === currentPage ? "page" : undefined}
-                className={`min-w-10 cursor-pointer rounded-lg px-3 py-2 text-sm font-medium ${
-                  p === currentPage
-                    ? "bg-primary text-primary-foreground"
-                    : "border border-border bg-card hover:bg-muted"
-                }`}
-              >
-                {p}
-              </button>
-            )
-          )}
-          <button
-            onClick={() => goTo(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="flex cursor-pointer items-center gap-1 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Next <ChevronRight className="h-4 w-4" />
-          </button>
-        </nav>
+      {filtered.length > 0 && (
+        <>
+          <div ref={sentinelRef} className="h-10" />
+          <p className="mt-2 text-center text-xs text-muted-foreground">
+            {hasMore
+              ? `Showing ${pageItems.length} of ${filtered.length.toLocaleString()} — scroll for more`
+              : `All ${filtered.length.toLocaleString()} results shown`}
+          </p>
+        </>
       )}
     </AppLayout>
   );
