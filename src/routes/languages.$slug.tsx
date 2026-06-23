@@ -30,7 +30,16 @@ function LanguagePage() {
     [books, target],
   );
   const sorted = useMemo(() => sortBooks(inLang, sort), [inLang, sort]);
-  const authors = [...new Set(inLang.map((b) => b.author))];
+  const authors = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const b of inLang) m.set(b.author, (m.get(b.author) ?? 0) + 1);
+    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
+  }, [inLang]);
+  const genres = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const b of inLang) m.set(b.genre, (m.get(b.genre) ?? 0) + 1);
+    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
+  }, [inLang]);
 
   return (
     <AppLayout>
