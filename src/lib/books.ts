@@ -174,7 +174,6 @@ export async function fetchNewArrivals(limit = 6): Promise<Book[]> {
  */
 export async function fetchPopularBooks(limit = 6): Promise<Book[]> {
   const libraryId = getSelectedLibraryId();
-  // Pull rental rows (book_id + returned_at) to compute counts + availability client-side.
   const { data: rentals, error: rErr } = await supabase
     .from("rentals")
     .select("book_id, returned_at");
@@ -188,23 +187,38 @@ export async function fetchPopularBooks(limit = 6): Promise<Book[]> {
   }
 
   const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1]);
-  if (ranked.length === 0) {
-    // Fresh library: fall back to top-rated books so the rail is never empty.
-    let q = supabase.from("books").select("*").order("rating", { ascending: false }).limit(limit);
+  const wantedIds = ranked.map(([id]) => id).filter((id) => !out.has(id)).slice(0, limit * 2);
+
+  let popular: Book[] = [];
+  if (wantedIds.length > 0) {
+    let q = supabase.from("books").select("*").in("id", wantedIds);
     if (libraryId) q = q.eq("library_id", libraryId);
     const { data, error } = await q;
     if (error) throw error;
-    return (data ?? []) as Book[];
+    const byId = new Map((data ?? []).map((b: any) => [b.id, b as Book]));
+    popular = wantedIds.map((id) => byId.get(id)).filter(Boolean) as Book[];
   }
 
-  const ids = ranked.map(([id]) => id).filter((id) => !out.has(id)).slice(0, limit * 2);
-  if (ids.length === 0) return [];
-  let q = supabase.from("books").select("*").in("id", ids);
-  if (libraryId) q = q.eq("library_id", libraryId);
-  const { data, error } = await q;
-  if (error) throw error;
-  const byId = new Map((data ?? []).map((b: any) => [b.id, b as Book]));
-  return ids.map((id) => byId.get(id)).filter(Boolean).slice(0, limit) as Book[];
+  if (popular.length >= limit) return popular.slice(0, limit);
+
+  // Top up with latest books so the rail never goes empty.
+  const have = new Set(popular.map((b) => b.id));
+  let lq = supabase
+    .from("books")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(limit * 3);
+  if (libraryId) lq = lq.eq("library_id", libraryId);
+  const { data: latest, error: lErr } = await lq;
+  if (lErr) throw lErr;
+  for (const b of (latest ?? []) as Book[]) {
+    if (popular.length >= limit) break;
+    if (!have.has(b.id) && !out.has(b.id)) {
+      popular.push(b);
+      have.add(b.id);
+    }
+  }
+  return popular.slice(0, limit);
 }
 
 export function synopsisFor(book: Pick<Book, "description" | "title" | "title_ml" | "author" | "genre" | "genre_ml">): string {
