@@ -93,7 +93,7 @@ function PublicProfilePage() {
 
       <section>
         <h2 className="mb-4 flex items-center gap-2 text-lg font-bold">
-          <MessageSquare className="h-4 w-4 text-accent" /> Their reviews
+          <NotebookPen className="h-4 w-4 text-accent" /> Their diary
         </h2>
         {reviews.length === 0 ? (
           <div className="glass-card rounded-2xl p-8 text-center text-sm text-muted-foreground">
