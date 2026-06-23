@@ -72,6 +72,25 @@ function PublicProfilePage() {
         </div>
       </div>
 
+      {insights && (
+        <section className="mb-8">
+          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            <BookOpen className="h-4 w-4 text-accent" /> Reading insights
+          </h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <InsightStat icon={Flame} label="Day streak" value={insights.streak} tint="rose" />
+            <InsightStat icon={BookOpen} label="Read" value={insights.read} tint="emerald" />
+            <InsightStat icon={NotebookPen} label="Reading" value={insights.reading} tint="primary" />
+            <InsightStat icon={Heart} label="Want" value={insights.want} tint="amber" />
+            <div className="rounded-2xl border border-border bg-surface/40 p-3">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Favorite genre</div>
+              <div className="mt-1 truncate text-sm font-semibold">{insights.favorite_genre ?? "—"}</div>
+            </div>
+          </div>
+        </section>
+      )}
+
+
       <section>
         <h2 className="mb-4 flex items-center gap-2 text-lg font-bold">
           <MessageSquare className="h-4 w-4 text-accent" /> Their reviews
