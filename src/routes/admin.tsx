@@ -929,8 +929,27 @@ function SuggestionsTab() {
     available: "bg-primary/15 text-primary",
   };
 
+  const exportColumns = [
+    { header: "Title", get: (r: any) => r.title ?? "" },
+    { header: "Author", get: (r: any) => r.author ?? "" },
+    { header: "Status", get: (r: any) => r.status ?? "pending" },
+    { header: "Note", get: (r: any) => r.note ?? "" },
+    { header: "Decision note", get: (r: any) => r.decision_note ?? "" },
+    { header: "Created", get: (r: any) => new Date(r.created_at).toLocaleString() },
+  ];
+
   return (
     <div className="space-y-2">
+      <div className="mb-2 flex justify-end gap-2">
+        <button
+          onClick={() => exportCsv({ filename: `suggestions-${Date.now()}.csv`, columns: exportColumns, rows: list as any[] })}
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-surface/50 px-2.5 py-1.5 text-xs hover:bg-surface-elevated"
+        ><FileDown className="h-3.5 w-3.5" /> CSV</button>
+        <button
+          onClick={() => exportPdf({ filename: `suggestions-${Date.now()}.pdf`, title: "Book suggestions", subtitle: `${(list as any[]).length} rows`, columns: exportColumns, rows: list as any[] })}
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-surface/50 px-2.5 py-1.5 text-xs hover:bg-surface-elevated"
+        ><FileText className="h-3.5 w-3.5" /> PDF</button>
+      </div>
       {(list as any[]).map((s) => (
         <div key={s.id} className="glass-card rounded-xl p-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
