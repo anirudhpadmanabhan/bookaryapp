@@ -27,7 +27,7 @@ const HOME_LIMIT = 60;
 
 function HomePage() {
   const { data: books = [], isLoading } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
-  const { data: newArrivals = [] } = useQuery({ queryKey: ["new-arrivals"], queryFn: () => fetchNewArrivals(6) });
+  const { data: popular = [] } = useQuery({ queryKey: ["popular-books"], queryFn: () => fetchPopularBooks(6) });
   const [sort, setSort] = useState<BookSort>("newest");
   const [direction, setDirection] = useState<SortDirection>("desc");
   const [view, setView] = useState<ViewMode>("tile");
