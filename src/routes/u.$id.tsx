@@ -3,7 +3,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePublicProfile } from "@/lib/userdata";
-import { UserRound, Tag, Star, MessageSquare, Quote, Calendar } from "lucide-react";
+import { UserRound, Tag, Star, MessageSquare, Quote, Calendar, BookOpen, Flame, Heart, NotebookPen } from "lucide-react";
 
 export const Route = createFileRoute("/u/$id")({
   ssr: false,
@@ -26,6 +26,15 @@ function PublicProfilePage() {
         .limit(50);
       if (error) throw error;
       return data ?? [];
+    },
+  });
+
+  const { data: insights } = useQuery({
+    queryKey: ["reading-insights", id],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("reading_insights" as any, { _user_id: id });
+      if (error) throw error;
+      return data as { read: number; reading: number; want: number; favorite_genre: string | null; streak: number };
     },
   });
 
