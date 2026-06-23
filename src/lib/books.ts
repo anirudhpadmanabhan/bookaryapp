@@ -167,6 +167,46 @@ export async function fetchNewArrivals(limit = 6): Promise<Book[]> {
     .slice(0, limit);
 }
 
+/**
+ * "Popular Must Read Books" = books with the highest all-time rental counts.
+ * When a top book is currently rented out, it's skipped so the next must-read
+ * surfaces automatically.
+ */
+export async function fetchPopularBooks(limit = 6): Promise<Book[]> {
+  const libraryId = getSelectedLibraryId();
+  // Pull rental rows (book_id + returned_at) to compute counts + availability client-side.
+  const { data: rentals, error: rErr } = await supabase
+    .from("rentals")
+    .select("book_id, returned_at");
+  if (rErr) throw rErr;
+
+  const counts = new Map<string, number>();
+  const out = new Set<string>();
+  for (const r of (rentals ?? []) as { book_id: string; returned_at: string | null }[]) {
+    counts.set(r.book_id, (counts.get(r.book_id) ?? 0) + 1);
+    if (!r.returned_at) out.add(r.book_id);
+  }
+
+  const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  if (ranked.length === 0) {
+    // Fresh library: fall back to top-rated books so the rail is never empty.
+    let q = supabase.from("books").select("*").order("rating", { ascending: false }).limit(limit);
+    if (libraryId) q = q.eq("library_id", libraryId);
+    const { data, error } = await q;
+    if (error) throw error;
+    return (data ?? []) as Book[];
+  }
+
+  const ids = ranked.map(([id]) => id).filter((id) => !out.has(id)).slice(0, limit * 2);
+  if (ids.length === 0) return [];
+  let q = supabase.from("books").select("*").in("id", ids);
+  if (libraryId) q = q.eq("library_id", libraryId);
+  const { data, error } = await q;
+  if (error) throw error;
+  const byId = new Map((data ?? []).map((b: any) => [b.id, b as Book]));
+  return ids.map((id) => byId.get(id)).filter(Boolean).slice(0, limit) as Book[];
+}
+
 export function synopsisFor(book: Pick<Book, "description" | "title" | "title_ml" | "author" | "genre" | "genre_ml">): string {
   if (book.description && book.description.trim().length > 0) return book.description;
   const ml = book.title_ml ? ` (${book.title_ml})` : "";
