@@ -346,7 +346,9 @@ function EditableRow({ book, isEditing, onEdit, onClose }: { book: any; isEditin
         <td className="px-2 py-1.5"><input value={draft.author} onChange={(e) => setDraft({ ...draft, author: e.target.value })} className={cellCls} /></td>
         <td className="px-2 py-1.5"><input value={draft.genre} onChange={(e) => setDraft({ ...draft, genre: e.target.value })} className={cellCls} /></td>
         <td className="px-2 py-1.5"><input type="number" value={draft.rent_price} onChange={(e) => setDraft({ ...draft, rent_price: e.target.value })} className={cellCls} /></td>
+        <td className="px-2 py-1.5"><input value={draft.language} onChange={(e) => setDraft({ ...draft, language: e.target.value })} className={cellCls} /></td>
         <td className="px-2 py-1.5 text-xs">{displayRating(book).toFixed(1)}</td>
+        <td className="px-2 py-1.5"><input value={draft.publisher} onChange={(e) => setDraft({ ...draft, publisher: e.target.value })} className={cellCls} /></td>
         <td className="px-2 py-1.5 text-right">
           <div className="flex justify-end gap-1">
             <button onClick={save} disabled={update.isPending} className="cursor-pointer rounded bg-primary px-2 py-1 text-[11px] font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50">
