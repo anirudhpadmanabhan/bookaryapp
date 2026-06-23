@@ -297,6 +297,8 @@ function EditableRow({ book, isEditing, onEdit, onClose }: { book: any; isEditin
     author: book.author ?? "",
     genre: book.genre ?? "",
     rent_price: String(book.rent_price ?? 10),
+    language: book.language ?? "",
+    publisher: book.publisher ?? "",
   });
 
   useEffect(() => {
@@ -308,6 +310,8 @@ function EditableRow({ book, isEditing, onEdit, onClose }: { book: any; isEditin
         author: book.author ?? "",
         genre: book.genre ?? "",
         rent_price: String(book.rent_price ?? 10),
+        language: book.language ?? "",
+        publisher: book.publisher ?? "",
       });
     }
   }, [isEditing, book]);
@@ -323,6 +327,8 @@ function EditableRow({ book, isEditing, onEdit, onClose }: { book: any; isEditin
           author: draft.author.trim() || book.author,
           genre: draft.genre.trim() || book.genre,
           rent_price: Number(draft.rent_price) > 0 ? Number(draft.rent_price) : Number(book.rent_price),
+          language: draft.language.trim() || null,
+          publisher: draft.publisher.trim() || null,
         },
       },
       { onSuccess: onClose },
