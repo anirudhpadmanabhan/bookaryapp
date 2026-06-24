@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
-import { fetchHomeData, fetchBooksPage, genreEnglish, genreMalayalam, type BookSort, type SortDirection, slugify } from "@/lib/books";
+import { fetchHomeData, fetchBooksPage, fetchGenreFacets, type BookSort, type SortDirection, slugify } from "@/lib/books";
 import { BooksGrid, type ViewMode } from "@/components/BooksGrid";
 import { BookCard } from "@/components/BookCard";
 import { colorAt } from "@/lib/books";
@@ -36,27 +36,14 @@ function HomePage() {
     staleTime: 5 * 60_000,
   });
   const popular = (data?.popular ?? []).slice(0, 5);
-  const rawGenres = data?.genres ?? [];
   const writers = data?.writers ?? [];
   const languages = data?.languages ?? [];
-
-  // Dedupe genres by their normalized English label so the count matches the /genres page.
-  const genres = useMemo(() => {
-    const map = new Map<string, { key: string; ml: string | null; en: string; count: number }>();
-    for (const info of rawGenres) {
-      const en = genreEnglish({ genre: info.key, genre_ml: info.ml ?? null });
-      const ml = genreMalayalam({ genre: info.key, genre_ml: info.ml ?? null });
-      const k = en.toLowerCase();
-      const cur = map.get(k);
-      if (cur) {
-        cur.count += info.count;
-        if (!cur.ml && ml) cur.ml = ml;
-      } else {
-        map.set(k, { key: info.key, ml, en, count: info.count });
-      }
-    }
-    return Array.from(map.values()).sort((a, b) => b.count - a.count);
-  }, [rawGenres]);
+  const { data: genreData } = useQuery({
+    queryKey: ["genre-facets"],
+    queryFn: fetchGenreFacets,
+    staleTime: 5 * 60_000,
+  });
+  const genres = genreData?.genres ?? [];
 
   const [sort, setSort] = useState<BookSort>("newest");
   const [direction, setDirection] = useState<SortDirection>("desc");
@@ -177,7 +164,7 @@ function HomePage() {
               <Link
                 key={info.en}
                 to="/genres/$slug"
-                params={{ slug: slugify(info.key) }}
+                params={{ slug: slugify(info.slugKey) }}
                 className="cursor-pointer rounded-full border border-border bg-surface/60 px-3 py-1.5 text-xs hover:border-primary/60 hover:text-primary"
               >
                 {info.en}{info.ml && info.ml !== info.en ? ` / ${info.ml}` : ""} <span className="text-muted-foreground">· {info.count}</span>
