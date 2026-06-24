@@ -252,7 +252,7 @@ function Modal({ title, onClose, wide, children }: { title: string; onClose: () 
   );
 }
 
-type EditorTab = "basics" | "content" | "schedule" | "display";
+type EditorTab = "basics" | "content" | "schedule" | "display" | "preview" | "insights";
 
 function AdEditor({ initial, editingId, onClose }: { initial: FormState; editingId?: string; onClose: () => void }) {
   const [form, setForm] = useState<FormState>(initial);
