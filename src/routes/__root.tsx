@@ -14,6 +14,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "sonner";
 import { LibraryProvider } from "@/lib/library";
+import { AdPopup } from "@/components/AdPopup";
 
 function NotFoundComponent() {
   return (
