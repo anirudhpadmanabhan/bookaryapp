@@ -143,6 +143,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     const onDown = (e: MouseEvent) => {
       if (bellRef.current && !bellRef.current.contains(e.target as Node)) setBellOpen(false);
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setSearchOpen(false);
     };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
@@ -205,26 +206,68 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </div>
 
           {pathname !== "/search" && (
-            <form
-              onSubmit={(e) => { e.preventDefault(); goSearch(searchValue); }}
-              className="hidden flex-1 max-w-md md:flex"
-            >
-              <div className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface/50 px-4 py-2.5 text-sm focus-within:border-primary/60">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <input
-                  value={searchValue}
-                  onChange={(e) => setSearchValue(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); goSearch(searchValue); } }}
-                  placeholder="Search titles, authors, genres, shelf codes…"
-                  className="w-full bg-transparent outline-none placeholder:text-muted-foreground"
-                />
-                {searchValue && (
-                  <button type="button" onClick={() => setSearchValue("")} className="cursor-pointer text-muted-foreground hover:text-foreground">
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
-              </div>
-            </form>
+            <div ref={searchRef} className="relative hidden flex-1 max-w-md md:block">
+              <form onSubmit={(e) => { e.preventDefault(); setSearchOpen(false); goSearch(searchValue); }}>
+                <div className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface/50 px-4 py-2.5 text-sm focus-within:border-primary/60">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <input
+                    value={searchValue}
+                    onChange={(e) => { setSearchValue(e.target.value); setSearchOpen(true); }}
+                    onFocus={() => setSearchOpen(true)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); setSearchOpen(false); goSearch(searchValue); } if (e.key === "Escape") setSearchOpen(false); }}
+                    placeholder="Search titles, authors, genres, shelf codes…"
+                    className="w-full bg-transparent outline-none placeholder:text-muted-foreground"
+                  />
+                  {searchValue && (
+                    <button type="button" onClick={() => { setSearchValue(""); setSearchOpen(false); }} className="cursor-pointer text-muted-foreground hover:text-foreground">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              </form>
+              {searchOpen && searchValue.trim().length >= 2 && (
+                <div className="absolute left-0 right-0 top-full z-40 mt-1 overflow-hidden rounded-2xl border border-border bg-popover shadow-2xl">
+                  {suggestions.length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-muted-foreground">No matches. Press Enter to search anyway.</div>
+                  ) : (
+                    <ul className="max-h-96 overflow-y-auto">
+                      {suggestions.map((b) => (
+                        <li key={b.id}>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              setSearchOpen(false);
+                              setSearchValue("");
+                              navigate({ to: "/books/$id", params: { id: b.id } });
+                            }}
+                            className="flex w-full cursor-pointer items-center gap-3 px-3 py-2 text-left hover:bg-surface-elevated"
+                          >
+                            <div className="grid h-9 w-7 shrink-0 place-items-center rounded bg-gradient-to-br from-primary/30 to-accent/20 text-[10px] font-bold text-primary">
+                              {b.shelf_code ?? "—"}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate text-sm font-medium">{b.title}</div>
+                              <div className="truncate text-xs text-muted-foreground">{b.author}{b.genre ? ` · ${b.genre}` : ""}</div>
+                            </div>
+                          </button>
+                        </li>
+                      ))}
+                      <li className="border-t border-border/40">
+                        <button
+                          type="button"
+                          onMouseDown={(e) => { e.preventDefault(); setSearchOpen(false); goSearch(searchValue); }}
+                          className="flex w-full cursor-pointer items-center justify-between px-3 py-2.5 text-left text-sm font-medium text-primary hover:bg-surface-elevated"
+                        >
+                          <span>See all results for "{searchValue.trim()}"</span>
+                          <Search className="h-3.5 w-3.5" />
+                        </button>
+                      </li>
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
           )}
 
           <div className="flex items-center gap-1.5 md:gap-3">
