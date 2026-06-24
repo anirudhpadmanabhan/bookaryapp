@@ -180,7 +180,9 @@ function sortColumn(sort: BookSort): { col: string; defaultAsc: boolean } {
     case "rating": return { col: "rating", defaultAsc: false };
     case "genre": return { col: "genre", defaultAsc: true };
     case "newest":
-    default: return { col: "created_at", defaultAsc: false };
+    default:
+      // "New on shelf" = highest numeric rack code first.
+      return { col: "shelf_no", defaultAsc: false };
   }
 }
 
