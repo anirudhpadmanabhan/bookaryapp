@@ -11,7 +11,8 @@ export function AdPopup() {
     if (!ad || ad.id === shownId) return;
     setOpen(true);
     setShownId(ad.id);
-    const seconds = Math.max(1, ad.auto_close_seconds || 3);
+    const seconds = Number(ad.auto_close_seconds ?? 0);
+    if (!Number.isFinite(seconds) || seconds <= 0) return; // 0 = stay open until dismissed
     const t = setTimeout(() => setOpen(false), seconds * 1000);
     return () => clearTimeout(t);
   }, [ad, shownId]);
