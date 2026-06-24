@@ -26,12 +26,10 @@ export const Route = createFileRoute("/")({
 });
 
 const HOME_LIMIT = 60;
-
-function HomePage() {
-const HOME_LIMIT = 60;
 const PAGE_SIZE = 30;
 
 function HomePage() {
+
   const { data, isLoading } = useQuery({
     queryKey: ["home-data"],
     queryFn: () => fetchHomeData(HOME_LIMIT, 5),
