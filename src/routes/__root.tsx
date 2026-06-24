@@ -131,7 +131,7 @@ function RootComponent() {
       dehydrateOptions: {
         shouldDehydrateQuery: (q) => {
           const k = String(q.queryKey?.[0] ?? "");
-          return k === "books" || k === "home" || k === "book";
+          return k === "books" || k === "home-data" || k === "books-page" || k === "book" || k === "book-availability";
         },
       },
     });

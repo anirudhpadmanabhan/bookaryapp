@@ -61,6 +61,8 @@ function SearchPage() {
     [books],
   );
 
+  const indexedById = useMemo(() => new Map(indexed.map((row) => [row.book.id, row])), [indexed]);
+
   type Ranked = { book: typeof books[number]; score: number; bucket: 0 | 1 | 2 };
   const rankIn = (hay: string, n: string): number => {
     if (!hay) return -1;
@@ -81,7 +83,7 @@ function SearchPage() {
 
   // Lookup used by the dropdown's grouped rendering — cheap because it uses the same index.
   const bucketFor = (b: typeof books[number], n: string): 0 | 1 | 2 | null => {
-    const row = indexed.find((r) => r.book.id === b.id);
+    const row = indexedById.get(b.id);
     if (!row) return null;
     return scoreIndexed(row, n)?.bucket ?? null;
   };

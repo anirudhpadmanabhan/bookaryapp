@@ -24,14 +24,17 @@ export function GenresPage() {
   const [sort, setSort] = useState<GenreSort>("popular");
 
   const genres = useMemo(() => {
-    const map = new Map<string, { count: number; ml: string | null; en: string }>();
+    const map = new Map<string, { count: number; ml: string | null; en: string; slugKey: string }>();
     for (const b of books) {
-      const cur = map.get(b.genre);
+      const en = genreEnglish(b);
+      const ml = genreMalayalam(b);
+      const key = en.toLowerCase();
+      const cur = map.get(key);
       if (cur) cur.count++;
-      else map.set(b.genre, { count: 1, ml: genreMalayalam(b), en: genreEnglish(b) });
+      else map.set(key, { count: 1, ml, en, slugKey: b.genre });
     }
     const arr = Array.from(map.entries());
-    if (sort === "az") arr.sort((a, b) => a[0].localeCompare(b[0]));
+    if (sort === "az") arr.sort((a, b) => a[1].en.localeCompare(b[1].en));
     else arr.sort((a, b) => b[1].count - a[1].count);
     return arr;
   }, [books, sort]);
@@ -69,7 +72,7 @@ export function GenresPage() {
           <Link
             key={genre}
             to="/genres/$slug"
-            params={{ slug: slugify(genre) }}
+            params={{ slug: slugify(info.slugKey) }}
             className={`cover cover-${colorAt(i)} aspect-[4/3] flex flex-col items-center justify-center text-center gap-2 !p-4 cursor-pointer transition-transform hover:scale-[1.02]`}
           >
             <BookOpen className="h-5 w-5 text-white/70" />

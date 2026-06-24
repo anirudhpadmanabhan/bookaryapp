@@ -173,6 +173,7 @@ export function useJoinWaitlist() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["waitlist"] });
+      qc.invalidateQueries({ queryKey: ["waitlist-position"] });
       toast.success("Added to the waiting list — you'll be assigned when it's returned.");
     },
     onError: (e: Error) => toast.error(e.message.includes("duplicate") ? "You're already on the waiting list." : e.message),
@@ -190,6 +191,7 @@ export function useLeaveWaitlist() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["waitlist"] });
+      qc.invalidateQueries({ queryKey: ["waitlist-position"] });
       toast.success("Removed from waiting list");
     },
     onError: (e: Error) => toast.error(e.message),

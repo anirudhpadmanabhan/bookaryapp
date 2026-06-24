@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
-import { fetchHomeData, fetchBooksPage, type BookSort, type SortDirection, slugify } from "@/lib/books";
+import { fetchHomeData, fetchBooksPage, genreEnglish, genreMalayalam, type BookSort, type SortDirection, slugify } from "@/lib/books";
 import { BooksGrid, type ViewMode } from "@/components/BooksGrid";
 import { BookCard } from "@/components/BookCard";
 import { colorAt } from "@/lib/books";
@@ -35,7 +35,7 @@ function HomePage() {
     queryFn: () => fetchHomeData(HOME_LIMIT, 5),
     staleTime: 5 * 60_000,
   });
-  const popular = data?.popular ?? [];
+  const popular = (data?.popular ?? []).slice(0, 5);
   const genres = data?.genres ?? [];
   const writers = data?.writers ?? [];
   const languages = data?.languages ?? [];
@@ -162,7 +162,11 @@ function HomePage() {
                 params={{ slug: slugify(info.key) }}
                 className="cursor-pointer rounded-full border border-border bg-surface/60 px-3 py-1.5 text-xs hover:border-primary/60 hover:text-primary"
               >
-                {info.key}{info.ml ? ` / ${info.ml}` : ""} <span className="text-muted-foreground">· {info.count}</span>
+                {(() => {
+                  const en = genreEnglish({ genre: info.key, genre_ml: info.ml ?? null });
+                  const ml = genreMalayalam({ genre: info.key, genre_ml: info.ml ?? null });
+                  return <>{en}{ml ? ` / ${ml}` : ""}</>;
+                })()} <span className="text-muted-foreground">· {info.count}</span>
               </Link>
             ))}
             <Link to="/genres" className="cursor-pointer rounded-full bg-primary/15 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/25">

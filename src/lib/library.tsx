@@ -59,6 +59,8 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     setSelectedIdState(id);
     window.localStorage.setItem(STORAGE_KEY, id);
     qc.invalidateQueries({ queryKey: ["books"] });
+    qc.invalidateQueries({ queryKey: ["home-data"] });
+    qc.invalidateQueries({ queryKey: ["books-page"] });
     qc.invalidateQueries({ queryKey: ["new-arrivals"] });
   };
 
