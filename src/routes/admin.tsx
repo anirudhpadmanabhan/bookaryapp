@@ -1302,9 +1302,27 @@ function LibrariesTab() {
 // ===== ROLE MANAGEMENT (admin) =====
 function StaffRolesTab() {
   const { data: list = [], isLoading } = useStaffRoles();
+  const { data: libraries = [] } = useAdminLibraries();
   const setRole = useSetUserRole();
+  const grantForLib = useGrantLibrarianForLibrary();
+  const revokeForLib = useRevokeLibrarianForLibrary();
   const [email, setEmail] = useState("");
   const [role, setRoleValue] = useState<"admin" | "librarian">("librarian");
+  const [libraryId, setLibraryId] = useState<string>("");
+
+  const submit = () => {
+    const cleanEmail = email.trim();
+    if (!cleanEmail) return;
+    if (role === "librarian") {
+      if (!libraryId) {
+        toast.error("Pick a library for the Library Admin");
+        return;
+      }
+      grantForLib.mutate({ email: cleanEmail, libraryId }, { onSuccess: () => { setEmail(""); } });
+    } else {
+      setRole.mutate({ email: cleanEmail, role: "admin", enabled: true }, { onSuccess: () => setEmail("") });
+    }
+  };
 
   return (
     <div>
@@ -1313,7 +1331,7 @@ function StaffRolesTab() {
           <Mail className="h-4 w-4 text-accent" /> Grant staff access by email
         </div>
         <p className="mb-3 text-xs text-muted-foreground">
-          The user must have signed in at least once. <span className="font-semibold text-foreground">Admins</span> manage every library and grant staff. <span className="font-semibold text-foreground">Library Admins</span> manage one library's books, rentals, waitlist, and reader dashboards. Only Admins can grant either role.
+          The user must have signed in at least once. <span className="font-semibold text-foreground">Admins</span> manage every library and grant staff. <span className="font-semibold text-foreground">Library Admins</span> are scoped to a single library — pick which one when granting access. Only Admins can grant either role.
         </p>
         <div className="flex flex-wrap gap-2">
           <input
@@ -1331,10 +1349,22 @@ function StaffRolesTab() {
             <option value="librarian">Library Admin</option>
             <option value="admin">Admin</option>
           </select>
+          {role === "librarian" && (
+            <select
+              value={libraryId}
+              onChange={(e) => setLibraryId(e.target.value)}
+              className="rounded-lg border border-border bg-background/50 px-3 py-2 text-sm"
+            >
+              <option value="">Select library…</option>
+              {libraries.map((l) => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+          )}
           <button
             type="button"
-            disabled={setRole.isPending || !email.trim()}
-            onClick={() => setRole.mutate({ email, role, enabled: true }, { onSuccess: () => setEmail("") })}
+            disabled={setRole.isPending || grantForLib.isPending || !email.trim() || (role === "librarian" && !libraryId)}
+            onClick={submit}
             className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
           >
             <Plus className="h-4 w-4" /> Grant
@@ -1350,49 +1380,136 @@ function StaffRolesTab() {
         <div className="space-y-2">
           {list.map((l) => {
             const labelFor = (r: string) => (r === "admin" ? "Admin" : "Library Admin");
+            const isLibrarian = l.roles.includes("librarian");
+            const isAdminRole = l.roles.includes("admin");
+            // Library scopes attached to this librarian (filtering nulls = global)
+            const scopedLibs = l.libraries.filter((lib) => lib.id);
+            // Libraries this user is NOT yet a librarian for — candidates to add
+            const remaining = libraries.filter((lib) => !scopedLibs.some((s) => s.id === lib.id));
             return (
-            <div key={l.user_id} className="glass-card flex flex-wrap items-center justify-between gap-3 rounded-xl p-3">
-              <div className="min-w-0">
-                <div className="text-sm font-semibold">{l.display_name ?? l.email}</div>
-                <div className="text-xs text-muted-foreground">{l.email}</div>
-                <div className="mt-1 flex flex-wrap gap-1.5">
-                  {l.roles.map((r) => (
-                    <span key={r} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${r === "admin" ? "bg-amber-500/20 text-amber-300" : "bg-primary/15 text-primary"}`}>{labelFor(r)}</span>
-                  ))}
+              <div key={l.user_id} className="glass-card flex flex-col gap-3 rounded-xl p-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold">{l.display_name ?? l.email}</div>
+                    <div className="text-xs text-muted-foreground">{l.email}</div>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {l.roles.map((r) => (
+                        <span key={r} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${r === "admin" ? "bg-amber-500/20 text-amber-300" : "bg-primary/15 text-primary"}`}>{labelFor(r)}</span>
+                      ))}
+                    </div>
+                    <div className="mt-1 text-[11px] text-muted-foreground/70">First granted {new Date(l.granted_at).toLocaleDateString()}</div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {isAdminRole && (
+                      <button
+                        onClick={() => {
+                          if (confirm(`Revoke Admin access for ${l.email}?`)) {
+                            setRole.mutate({ email: l.email, role: "admin", enabled: false });
+                          }
+                        }}
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-rose-500/40 px-2.5 py-1.5 text-xs text-rose-300 hover:bg-rose-500/10"
+                      >
+                        <Trash2 className="h-3 w-3" /> Revoke Admin
+                      </button>
+                    )}
+                    {!isAdminRole && (
+                      <button
+                        onClick={() => setRole.mutate({ email: l.email, role: "admin", enabled: true })}
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs hover:bg-surface-elevated"
+                      >
+                        <Plus className="h-3 w-3" /> Grant Admin
+                      </button>
+                    )}
+                  </div>
                 </div>
-                {l.libraries.length > 0 && (
-                  <div className="mt-1 flex flex-wrap gap-1 text-[11px] text-muted-foreground">
-                    Library access:{" "}
-                    {l.libraries.map((lib, i) => (
-                      <span key={(lib.id ?? "all") + i} className="rounded bg-surface px-1.5 py-0.5">{lib.name ?? "—"}</span>
-                    ))}
+
+                {isLibrarian && (
+                  <div className="rounded-lg border border-border/60 bg-surface/30 p-3">
+                    <div className="mb-2 text-xs font-semibold text-muted-foreground">Library Admin scopes</div>
+                    {scopedLibs.length === 0 ? (
+                      <p className="mb-2 text-xs text-amber-300">No library assigned — this librarian cannot access any library's tools.</p>
+                    ) : (
+                      <div className="mb-2 flex flex-wrap gap-1.5">
+                        {scopedLibs.map((lib) => (
+                          <span key={lib.id!} className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2 py-1 text-xs">
+                            {lib.name ?? "Library"}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (confirm(`Remove ${l.email} from ${lib.name ?? "this library"}?`)) {
+                                  revokeForLib.mutate({ email: l.email, libraryId: lib.id! });
+                                }
+                              }}
+                              className="cursor-pointer text-rose-300 hover:text-rose-200"
+                              aria-label="Remove from library"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {remaining.length > 0 && (
+                      <AddLibraryScope
+                        email={l.email}
+                        libraries={remaining.map((lib) => ({ id: lib.id, name: lib.name }))}
+                        onAdd={(libId) => grantForLib.mutate({ email: l.email, libraryId: libId })}
+                      />
+                    )}
                   </div>
                 )}
-                <div className="mt-1 text-[11px] text-muted-foreground/70">First granted {new Date(l.granted_at).toLocaleDateString()}</div>
+
+                {!isLibrarian && (
+                  <AddLibraryScope
+                    email={l.email}
+                    libraries={libraries.map((lib) => ({ id: lib.id, name: lib.name }))}
+                    onAdd={(libId) => grantForLib.mutate({ email: l.email, libraryId: libId })}
+                    label="Grant Library Admin for"
+                  />
+                )}
               </div>
-              <div className="flex flex-wrap gap-2">
-                {(["admin", "librarian"] as const).map((r) => {
-                  const enabled = l.roles.includes(r);
-                  return (
-                    <button
-                      key={r}
-                      onClick={() => {
-                        if (!enabled) return setRole.mutate({ email: l.email, role: r, enabled: true });
-                        if (confirm(`Revoke ${labelFor(r)} access for ${l.email}?`)) setRole.mutate({ email: l.email, role: r, enabled: false });
-                      }}
-                      className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs ${enabled ? "border-rose-500/40 text-rose-300 hover:bg-rose-500/10" : "border-border hover:bg-surface-elevated"}`}
-                    >
-                      {enabled ? <Trash2 className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
-                      {enabled ? `Revoke ${labelFor(r)}` : `Grant ${labelFor(r)}`}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
             );
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function AddLibraryScope({
+  email: _email,
+  libraries,
+  onAdd,
+  label = "Add another library",
+}: {
+  email: string;
+  libraries: { id: string; name: string }[];
+  onAdd: (libraryId: string) => void;
+  label?: string;
+}) {
+  const [pick, setPick] = useState("");
+  if (libraries.length === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-xs text-muted-foreground">{label}:</span>
+      <select
+        value={pick}
+        onChange={(e) => setPick(e.target.value)}
+        className="rounded-lg border border-border bg-background/50 px-2 py-1 text-xs"
+      >
+        <option value="">Select library…</option>
+        {libraries.map((l) => (
+          <option key={l.id} value={l.id}>{l.name}</option>
+        ))}
+      </select>
+      <button
+        type="button"
+        disabled={!pick}
+        onClick={() => { if (pick) { onAdd(pick); setPick(""); } }}
+        className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs hover:bg-surface-elevated disabled:opacity-50"
+      >
+        <Plus className="h-3 w-3" /> Add
+      </button>
     </div>
   );
 }
