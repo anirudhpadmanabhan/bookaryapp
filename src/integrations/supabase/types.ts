@@ -268,6 +268,7 @@ export type Database = {
       profiles: {
         Row: {
           address: string | null
+          avatar_url: string | null
           created_at: string
           display_name: string
           id: string
@@ -278,6 +279,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          avatar_url?: string | null
           created_at?: string
           display_name?: string
           id: string
@@ -288,6 +290,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          avatar_url?: string | null
           created_at?: string
           display_name?: string
           id?: string
@@ -690,6 +693,12 @@ export type Database = {
           phone: string
           rental_count: number
           user_id: string
+        }[]
+      }
+      my_librarian_library_ids: {
+        Args: { _user_id: string }
+        Returns: {
+          library_id: string
         }[]
       }
       reading_insights: { Args: { _user_id: string }; Returns: Json }
