@@ -473,6 +473,51 @@ export function useRevokeLibrarian() {
   return { ...setRole, mutate: (email: string, options?: any) => setRole.mutate({ email, role: "librarian", enabled: false }, options) };
 }
 
+export function useGrantLibrarianForLibrary() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ email, libraryId }: { email: string; libraryId: string }) => {
+      const { data, error } = await supabase.rpc("admin_grant_librarian_for_library" as any, {
+        _email: email.trim().toLowerCase(),
+        _library_id: libraryId,
+      });
+      if (error) throw error;
+      const res = data as { ok: boolean; error?: string; library_name?: string };
+      if (!res?.ok) throw new Error(res?.error || "Failed to grant access");
+      return res;
+    },
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["admin-staff-roles"] });
+      qc.invalidateQueries({ queryKey: ["admin-librarians"] });
+      qc.invalidateQueries({ queryKey: ["my-roles"] });
+      toast.success(`Library Admin access granted${res.library_name ? ` for ${res.library_name}` : ""}`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useRevokeLibrarianForLibrary() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ email, libraryId }: { email: string; libraryId: string }) => {
+      const { data, error } = await supabase.rpc("admin_revoke_librarian_for_library" as any, {
+        _email: email.trim().toLowerCase(),
+        _library_id: libraryId,
+      });
+      if (error) throw error;
+      const res = data as { ok: boolean; error?: string };
+      if (!res?.ok) throw new Error(res?.error || "Failed to revoke access");
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-staff-roles"] });
+      qc.invalidateQueries({ queryKey: ["admin-librarians"] });
+      qc.invalidateQueries({ queryKey: ["my-roles"] });
+      toast.success("Library access revoked");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
 // ===== STAFF USER DASHBOARD =====
 export function useStaffUserSummary(userId: string | undefined) {
   return useQuery({
