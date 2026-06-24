@@ -35,14 +35,7 @@ function HomePage() {
     queryFn: () => fetchHomeData(HOME_LIMIT, 5),
     staleTime: 5 * 60_000,
   });
-  // Full catalogue for paginated "All Published Books" section.
-  const { data: allBooks = [] } = useQuery({
-    queryKey: ["books"],
-    queryFn: fetchBooks,
-    staleTime: 5 * 60_000,
-  });
   const popular = data?.popular ?? [];
-  const total = data?.total ?? allBooks.length;
   const genres = data?.genres ?? [];
   const writers = data?.writers ?? [];
   const languages = data?.languages ?? [];
@@ -55,15 +48,23 @@ function HomePage() {
   const [writersOpen, setWritersOpen] = useState(false);
   const [langsOpen, setLangsOpen] = useState(false);
 
-  const sortedAll = useMemo(() => sortBooks(allBooks, sort, direction), [allBooks, sort, direction]);
-  const pageCount = Math.max(1, Math.ceil(sortedAll.length / PAGE_SIZE));
-  // Clamp page if sort/filter changes shrink the list.
+  // Server-paginated "All Published Books" — only fetches the current page.
+  const { data: pageData, isLoading: pageLoading, isFetching: pageFetching } = useQuery({
+    queryKey: ["books-page", { page, sort, direction, pageSize: PAGE_SIZE }],
+    queryFn: () => fetchBooksPage({ page, pageSize: PAGE_SIZE, sort, direction }),
+    staleTime: 5 * 60_000,
+    placeholderData: keepPreviousData,
+  });
+  const shown = pageData?.books ?? [];
+  const totalAll = pageData?.total ?? data?.total ?? 0;
+  const total = data?.total ?? totalAll;
+  const pageCount = Math.max(1, Math.ceil(totalAll / PAGE_SIZE));
+  // Clamp page if list shrinks.
   useEffect(() => { if (page > pageCount) setPage(1); }, [pageCount, page]);
   // Reset to page 1 whenever sort changes.
   useEffect(() => { setPage(1); }, [sort, direction]);
 
   const start = (page - 1) * PAGE_SIZE;
-  const shown = sortedAll.slice(start, start + PAGE_SIZE);
 
   // Build a compact page-number list with ellipses around the current page.
   const pageNumbers = useMemo(() => {
