@@ -43,7 +43,7 @@ export function AdPopup() {
           <X className="h-4 w-4" />
         </button>
         {safeUrl(ad.cta_url) ? (
-          <a href={safeUrl(ad.cta_url)!} target="_blank" rel="noopener noreferrer">
+          <a href={safeUrl(ad.cta_url)!} target="_blank" rel="noopener noreferrer" onClick={onClick}>
             <img src={ad.image_url} alt={ad.title || ad.name} className="block w-full" />
           </a>
         ) : (
@@ -58,6 +58,7 @@ export function AdPopup() {
                 href={safeUrl(ad.cta_url)!}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={onClick}
                 className="inline-flex cursor-pointer rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"
               >
                 {ad.cta_text}
