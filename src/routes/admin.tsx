@@ -23,11 +23,12 @@ import {
   Shield, Library as LibIcon, Package, Clock, Lightbulb,
   Search as SearchIcon, Trash2, CheckCircle2, Plus, Pencil, X, Save,
   Upload, Grid3x3, List as ListIcon, Building2, Users, Mail, Star, Activity,
-  FileText, FileDown, ArrowUpDown, ArrowUp, ArrowDown, LayoutDashboard,
+  FileText, FileDown, ArrowUpDown, ArrowUp, ArrowDown, LayoutDashboard, Megaphone,
 } from "lucide-react";
 import { exportCsv, exportPdf } from "@/lib/pdf-export";
+import { AdsTab } from "@/components/admin/AdsTab";
 
-type Tab = "overview" | "books" | "rentals" | "waitlist" | "suggestions" | "libraries" | "roles" | "users" | "activity";
+type Tab = "overview" | "books" | "rentals" | "waitlist" | "suggestions" | "ads" | "libraries" | "roles" | "users" | "activity";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -75,6 +76,7 @@ function AdminPage() {
     { id: "rentals", label: "Rentals", icon: Package },
     { id: "waitlist", label: "Waitlist", icon: Clock },
     { id: "suggestions", label: "Suggestions", icon: Lightbulb },
+    { id: "ads", label: "Ads", icon: Megaphone },
     { id: "libraries", label: "Libraries", icon: Building2, adminOnly: true },
     { id: "users", label: "Users", icon: Users, adminOnly: true },
     { id: "roles", label: "Roles", icon: Shield, adminOnly: true },
@@ -119,6 +121,7 @@ function AdminPage() {
       {tab === "rentals" && <RentalsTab />}
       {tab === "waitlist" && <WaitlistTab />}
       {tab === "suggestions" && <SuggestionsTab />}
+      {tab === "ads" && <AdsTab />}
       {tab === "libraries" && isAdmin && <LibrariesTab />}
       {tab === "users" && isAdmin && <UsersTab />}
       {tab === "roles" && isAdmin && <StaffRolesTab />}

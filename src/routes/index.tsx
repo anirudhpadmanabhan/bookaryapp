@@ -6,6 +6,7 @@ import { BooksGrid, type ViewMode } from "@/components/BooksGrid";
 import { BookCard } from "@/components/BookCard";
 import { colorAt } from "@/lib/books";
 import { SortBar } from "@/components/SortBar";
+import { AdBanner } from "@/components/AdBanner";
 import {
   Pagination, PaginationContent, PaginationItem, PaginationLink,
   PaginationPrevious, PaginationNext, PaginationEllipsis,
@@ -88,6 +89,7 @@ function HomePage() {
 
   return (
     <AppLayout>
+      <AdBanner position="top" />
       {/* Hero */}
       <section className="glass-card relative mb-8 overflow-hidden rounded-3xl p-6 md:p-10">
         <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-primary/30 blur-3xl" />
@@ -235,6 +237,8 @@ function HomePage() {
         )}
       </section>
 
+      <AdBanner position="middle" />
+
       {/* All Books */}
       <section>
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
@@ -332,6 +336,7 @@ function HomePage() {
         )}
 
       </section>
+      <AdBanner position="bottom" />
     </AppLayout>
   );
 }
