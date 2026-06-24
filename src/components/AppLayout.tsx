@@ -193,7 +193,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <div className="flex min-w-0 items-center gap-3">
             <Link to="/" className="flex cursor-pointer items-center gap-2.5">
               <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/30">
-                <BookMarked className="h-5 w-5 text-white" />
+                <BookMarked className="h-5 w-5 text-primary-foreground" />
               </div>
               <div className="leading-tight">
                 <div className="text-base font-bold tracking-tight">BOOKARY</div>
@@ -292,7 +292,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   >
                     <Bell className="h-4 w-4" />
                     {unreadCount > 0 && (
-                      <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
+                      <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
                         {unreadCount}
                       </span>
                     )}
@@ -432,7 +432,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
       </div>
 
       <div className="mx-auto flex max-w-[1400px] gap-6 px-4 py-6 md:px-6">
-        <aside className="sticky top-20 hidden h-fit w-60 shrink-0 flex-col gap-6 self-start md:flex">
+        <aside className="sticky top-20 hidden h-[calc(100vh-6rem)] w-60 shrink-0 flex-col gap-6 self-start overflow-y-auto pr-1 md:flex">
           <nav className="glass-card flex flex-col gap-1 rounded-2xl p-3">
             <div className="px-3 pb-1 pt-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Browse</div>
             {navMain.map((n) => {
