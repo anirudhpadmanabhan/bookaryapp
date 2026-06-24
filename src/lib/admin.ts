@@ -66,11 +66,17 @@ export function useUpdateBook() {
         title_ml: string | null;
         author: string;
         author_ml: string | null;
+        original_author: string | null;
         genre: string;
+        genre_ml: string | null;
         shelf_code: string | null;
         rent_price: number;
         publisher: string | null;
         language: string | null;
+        pages: number | null;
+        published_year: number | null;
+        description: string | null;
+        cover_url: string | null;
       }>;
     }) => {
       const { error } = await supabase.from("books").update(patch as any).eq("id", id);
@@ -111,9 +117,17 @@ export function useCreateBook() {
       genre: string;
       title_ml?: string;
       author_ml?: string;
+      original_author?: string;
+      genre_ml?: string;
       shelf_code?: string;
       publisher?: string;
       library_id?: string;
+      language?: string;
+      pages?: number | null;
+      published_year?: number | null;
+      rent_price?: number;
+      description?: string;
+      cover_url?: string;
     }) => {
       const { error } = await supabase.from("books").insert({
         title: book.title,
@@ -121,10 +135,17 @@ export function useCreateBook() {
         genre: book.genre,
         title_ml: book.title_ml || null,
         author_ml: book.author_ml || null,
+        original_author: book.original_author || null,
+        genre_ml: book.genre_ml || null,
         shelf_code: book.shelf_code || null,
         publisher: book.publisher || null,
         library_id: book.library_id || null,
-        rent_price: 10,
+        language: book.language || null,
+        pages: book.pages ?? null,
+        published_year: book.published_year ?? null,
+        description: book.description || null,
+        cover_url: book.cover_url || null,
+        rent_price: book.rent_price ?? 10,
       } as any);
       if (error) throw error;
     },

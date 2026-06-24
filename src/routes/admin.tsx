@@ -277,6 +277,11 @@ function Mini({ label, value, tone }: { label: string; value: number; tone?: "em
 // ===== BOOKS =====
 type BooksView = "grid" | "table";
 
+type BookSortKey =
+  | "shelf_code" | "title" | "title_ml" | "author" | "author_ml" | "original_author"
+  | "genre" | "genre_ml" | "language" | "publisher" | "rent_price" | "rating"
+  | "pages" | "published_year" | "created_at";
+
 function BooksTab() {
   const { data: books = [], isLoading } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
   const { data: libs = [] } = useAdminLibraries();
@@ -286,7 +291,9 @@ function BooksTab() {
   const [editing, setEditing] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [libFilter, setLibFilter] = useState<string>("all"); // "all" | lib.id | "__unassigned"
+  const [libFilter, setLibFilter] = useState<string>("all");
+  const [sortKey, setSortKey] = useState<BookSortKey>("shelf_code");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   const rackCompare = (a: string | null | undefined, b: string | null | undefined) => {
     if (!a && !b) return 0;
@@ -294,6 +301,12 @@ function BooksTab() {
     if (!b) return -1;
     return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: "base" });
   };
+
+  const libNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    libs.forEach((l) => m.set(l.id, l.name));
+    return m;
+  }, [libs]);
 
   const scopedBooks = useMemo(() => {
     if (scope === null) return books as any[];
@@ -313,13 +326,34 @@ function BooksTab() {
           b.title.toLowerCase().includes(needle) ||
           b.author.toLowerCase().includes(needle) ||
           (b.shelf_code ?? "").toLowerCase().includes(needle) ||
+          (b.publisher ?? "").toLowerCase().includes(needle) ||
+          (b.genre ?? "").toLowerCase().includes(needle) ||
+          (b.language ?? "").toLowerCase().includes(needle) ||
           (b.title_ml ?? "").includes(q) ||
-          (b.author_ml ?? "").includes(q),
+          (b.author_ml ?? "").includes(q) ||
+          (b.genre_ml ?? "").includes(q),
       );
     }
-    pool = [...pool].sort((a, b) => rackCompare(a.shelf_code, b.shelf_code));
-    return pool.slice(0, 500);
-  }, [scopedBooks, q, libFilter]);
+    const dir = sortDir === "asc" ? 1 : -1;
+    const numericKeys: BookSortKey[] = ["rent_price", "rating", "pages", "published_year"];
+    pool = [...pool].sort((a, b) => {
+      if (sortKey === "shelf_code") return rackCompare(a.shelf_code, b.shelf_code) * dir;
+      if (sortKey === "created_at") {
+        return (new Date(a.created_at ?? 0).getTime() - new Date(b.created_at ?? 0).getTime()) * dir;
+      }
+      if (numericKeys.includes(sortKey)) {
+        const av = Number(a[sortKey] ?? 0);
+        const bv = Number(b[sortKey] ?? 0);
+        return (av - bv) * dir;
+      }
+      const av = String(a[sortKey] ?? "").toLowerCase();
+      const bv = String(b[sortKey] ?? "").toLowerCase();
+      return av.localeCompare(bv) * dir;
+    });
+    return pool;
+  }, [scopedBooks, q, libFilter, sortKey, sortDir]);
+
+  const shown = filtered.slice(0, 500);
 
   const totalForScope = useMemo(() => {
     if (libFilter === "all") return scopedBooks.length;
@@ -327,6 +361,23 @@ function BooksTab() {
     return scopedBooks.filter((b) => b.library_id === libFilter).length;
   }, [scopedBooks, libFilter]);
 
+  const exportColumns = [
+    { header: "Rack", get: (b: any) => b.shelf_code ?? "" },
+    { header: "Title (EN)", get: (b: any) => b.title ?? "" },
+    { header: "Title (ML)", get: (b: any) => b.title_ml ?? "" },
+    { header: "Author (EN)", get: (b: any) => b.author ?? "" },
+    { header: "Author (ML)", get: (b: any) => b.author_ml ?? "" },
+    { header: "Original Author", get: (b: any) => b.original_author ?? "" },
+    { header: "Genre (EN)", get: (b: any) => b.genre ?? "" },
+    { header: "Genre (ML)", get: (b: any) => b.genre_ml ?? "" },
+    { header: "Language", get: (b: any) => b.language ?? "" },
+    { header: "Publisher", get: (b: any) => b.publisher ?? "" },
+    { header: "Year", get: (b: any) => b.published_year ?? "" },
+    { header: "Pages", get: (b: any) => b.pages ?? "" },
+    { header: "Price", get: (b: any) => Number(b.rent_price ?? 0) },
+    { header: "Rating", get: (b: any) => Number(displayRating(b).toFixed(2)) },
+    { header: "Library", get: (b: any) => (b.library_id ? libNameById.get(b.library_id) ?? "" : "") },
+  ];
 
   return (
     <div>
@@ -348,10 +399,37 @@ function BooksTab() {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search title / author / rack…"
+            placeholder="Search title / author / rack / publisher…"
             className="w-full bg-transparent text-sm outline-none"
           />
         </div>
+        <select
+          value={`${sortKey}:${sortDir}`}
+          onChange={(e) => {
+            const [k, d] = e.target.value.split(":") as [BookSortKey, "asc" | "desc"];
+            setSortKey(k); setSortDir(d);
+          }}
+          className="cursor-pointer rounded-xl border border-border bg-surface/50 px-3 py-2.5 text-sm"
+          title="Sort"
+        >
+          <option value="shelf_code:asc">Rack ↑</option>
+          <option value="shelf_code:desc">Rack ↓</option>
+          <option value="title:asc">Title A→Z</option>
+          <option value="title:desc">Title Z→A</option>
+          <option value="author:asc">Author A→Z</option>
+          <option value="author:desc">Author Z→A</option>
+          <option value="genre:asc">Genre A→Z</option>
+          <option value="genre:desc">Genre Z→A</option>
+          <option value="language:asc">Language A→Z</option>
+          <option value="publisher:asc">Publisher A→Z</option>
+          <option value="rent_price:desc">Price ↓</option>
+          <option value="rent_price:asc">Price ↑</option>
+          <option value="rating:desc">Rating ↓</option>
+          <option value="published_year:desc">Year ↓</option>
+          <option value="pages:desc">Pages ↓</option>
+          <option value="created_at:desc">Newest</option>
+          <option value="created_at:asc">Oldest</option>
+        </select>
         <div className="flex gap-1 rounded-xl border border-border bg-surface/40 p-1">
           <button
             type="button"
@@ -368,6 +446,22 @@ function BooksTab() {
             <Grid3x3 className="h-3.5 w-3.5" /> Grid
           </button>
         </div>
+        <button
+          type="button"
+          onClick={() => exportCsv({ filename: `books-${Date.now()}.csv`, columns: exportColumns, rows: filtered })}
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-border bg-surface/50 px-3 py-2.5 text-sm font-semibold hover:bg-surface-elevated"
+          title="Export filtered books to CSV"
+        >
+          <FileDown className="h-4 w-4" /> CSV
+        </button>
+        <button
+          type="button"
+          onClick={() => exportPdf({ filename: `books-${Date.now()}.pdf`, title: "Books", subtitle: `${filtered.length} rows${q ? ` · matching "${q}"` : ""}`, columns: exportColumns, rows: filtered })}
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-border bg-surface/50 px-3 py-2.5 text-sm font-semibold hover:bg-surface-elevated"
+          title="Export filtered books to PDF"
+        >
+          <FileText className="h-4 w-4" /> PDF
+        </button>
         <button
           type="button"
           onClick={() => setImporting(true)}
@@ -393,19 +487,19 @@ function BooksTab() {
       ) : (
         <>
           <p className="mb-2 text-xs text-muted-foreground">
-            Showing {filtered.length.toLocaleString()} of {totalForScope.toLocaleString()} books{q && ` matching "${q}"`} · sorted by rack code.
+            Showing {shown.length.toLocaleString()} of {filtered.length.toLocaleString()} matched · {totalForScope.toLocaleString()} total{q && ` · search "${q}"`} · sort: {sortKey} {sortDir === "asc" ? "↑" : "↓"}.
           </p>
           {view === "table" ? (
-            <BooksTable books={filtered} editing={editing} setEditing={setEditing} />
+            <BooksTable books={shown} editing={editing} setEditing={setEditing} sortKey={sortKey} sortDir={sortDir} setSort={(k) => { if (k === sortKey) setSortDir((d) => d === "asc" ? "desc" : "asc"); else { setSortKey(k); setSortDir("asc"); } }} libNameById={libNameById} />
           ) : (
-            <BooksGridAdmin books={filtered} setEditing={setEditing} />
+            <BooksGridAdmin books={shown} setEditing={setEditing} />
           )}
         </>
       )}
 
       {adding && <AddBookModal onClose={() => setAdding(false)} defaultLibraryId={libFilter !== "all" && libFilter !== "__unassigned" ? libFilter : undefined} />}
       {importing && <ImportBooksModal onClose={() => setImporting(false)} defaultLibraryId={libFilter !== "all" && libFilter !== "__unassigned" ? libFilter : undefined} />}
-      {editing && view === "grid" && (
+      {editing && (
         <EditBookModal
           book={books.find((b) => b.id === editing)!}
           onClose={() => setEditing(null)}
@@ -415,27 +509,44 @@ function BooksTab() {
   );
 }
 
-function BooksTable({ books, editing, setEditing }: { books: any[]; editing: string | null; setEditing: (id: string | null) => void }) {
+function SortableHeader({ label, k, sortKey, sortDir, setSort, className = "" }: { label: string; k: BookSortKey; sortKey: BookSortKey; sortDir: "asc" | "desc"; setSort: (k: BookSortKey) => void; className?: string }) {
+  const Icon = sortKey !== k ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
+  return (
+    <th className={`px-2 py-2.5 text-left ${className}`}>
+      <button onClick={() => setSort(k)} className="inline-flex cursor-pointer items-center gap-1 hover:text-foreground">
+        {label} <Icon className="h-3 w-3" />
+      </button>
+    </th>
+  );
+}
+
+function BooksTable({ books, editing, setEditing, sortKey, sortDir, setSort, libNameById }: { books: any[]; editing: string | null; setEditing: (id: string | null) => void; sortKey: BookSortKey; sortDir: "asc" | "desc"; setSort: (k: BookSortKey) => void; libNameById: Map<string, string> }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-border">
-      <table className="w-full text-sm">
-        <thead className="sticky top-0 z-10 bg-surface text-xs uppercase tracking-wider text-muted-foreground">
+      <table className="w-full text-xs">
+        <thead className="sticky top-0 z-10 bg-surface text-[11px] uppercase tracking-wider text-muted-foreground">
           <tr>
-            <th className="px-2 py-2.5 text-left w-20">Rack</th>
-            <th className="px-2 py-2.5 text-left">Title</th>
-            <th className="px-2 py-2.5 text-left font-mal">Title (ML)</th>
-            <th className="px-2 py-2.5 text-left">Author</th>
-            <th className="px-2 py-2.5 text-left">Genre</th>
-            <th className="px-2 py-2.5 text-left w-20">Rs.</th>
-            <th className="px-2 py-2.5 text-left w-24">Language</th>
-            <th className="px-2 py-2.5 text-left w-16">Rating</th>
-            <th className="px-2 py-2.5 text-left">Publisher</th>
-            <th className="px-2 py-2.5 w-32"></th>
+            <SortableHeader label="Rack" k="shelf_code" sortKey={sortKey} sortDir={sortDir} setSort={setSort} className="w-20" />
+            <SortableHeader label="Title" k="title" sortKey={sortKey} sortDir={sortDir} setSort={setSort} />
+            <SortableHeader label="Title (ML)" k="title_ml" sortKey={sortKey} sortDir={sortDir} setSort={setSort} />
+            <SortableHeader label="Author" k="author" sortKey={sortKey} sortDir={sortDir} setSort={setSort} />
+            <SortableHeader label="Author (ML)" k="author_ml" sortKey={sortKey} sortDir={sortDir} setSort={setSort} />
+            <SortableHeader label="Orig. Author" k="original_author" sortKey={sortKey} sortDir={sortDir} setSort={setSort} />
+            <SortableHeader label="Genre" k="genre" sortKey={sortKey} sortDir={sortDir} setSort={setSort} />
+            <SortableHeader label="Genre (ML)" k="genre_ml" sortKey={sortKey} sortDir={sortDir} setSort={setSort} />
+            <SortableHeader label="Lang" k="language" sortKey={sortKey} sortDir={sortDir} setSort={setSort} className="w-20" />
+            <SortableHeader label="Rs." k="rent_price" sortKey={sortKey} sortDir={sortDir} setSort={setSort} className="w-16" />
+            <SortableHeader label="Year" k="published_year" sortKey={sortKey} sortDir={sortDir} setSort={setSort} className="w-16" />
+            <SortableHeader label="Pages" k="pages" sortKey={sortKey} sortDir={sortDir} setSort={setSort} className="w-16" />
+            <SortableHeader label="Rating" k="rating" sortKey={sortKey} sortDir={sortDir} setSort={setSort} className="w-16" />
+            <SortableHeader label="Publisher" k="publisher" sortKey={sortKey} sortDir={sortDir} setSort={setSort} />
+            <th className="px-2 py-2.5 text-left">Library</th>
+            <th className="px-2 py-2.5 w-20"></th>
           </tr>
         </thead>
         <tbody>
           {books.map((b) => (
-            <EditableRow key={b.id} book={b} isEditing={editing === b.id} onEdit={() => setEditing(b.id)} onClose={() => setEditing(null)} />
+            <EditableRow key={b.id} book={b} isEditing={editing === b.id} onEdit={() => setEditing(b.id)} onClose={() => setEditing(null)} libName={b.library_id ? libNameById.get(b.library_id) : undefined} />
           ))}
         </tbody>
       </table>
@@ -443,84 +554,12 @@ function BooksTable({ books, editing, setEditing }: { books: any[]; editing: str
   );
 }
 
-function EditableRow({ book, isEditing, onEdit, onClose }: { book: any; isEditing: boolean; onEdit: () => void; onClose: () => void }) {
-  const update = useUpdateBook();
-  const del = useDeleteBook();
-  const [draft, setDraft] = useState({
-    shelf_code: book.shelf_code ?? "",
-    title: book.title ?? "",
-    title_ml: book.title_ml ?? "",
-    author: book.author ?? "",
-    genre: book.genre ?? "",
-    rent_price: String(book.rent_price ?? 10),
-    language: book.language ?? "",
-    publisher: book.publisher ?? "",
-  });
-
-  useEffect(() => {
-    if (isEditing) {
-      setDraft({
-        shelf_code: book.shelf_code ?? "",
-        title: book.title ?? "",
-        title_ml: book.title_ml ?? "",
-        author: book.author ?? "",
-        genre: book.genre ?? "",
-        rent_price: String(book.rent_price ?? 10),
-        language: book.language ?? "",
-        publisher: book.publisher ?? "",
-      });
-    }
-  }, [isEditing, book]);
-
-  const save = () => {
-    update.mutate(
-      {
-        id: book.id,
-        patch: {
-          shelf_code: draft.shelf_code.trim() || null,
-          title: draft.title.trim() || book.title,
-          title_ml: draft.title_ml.trim() || null,
-          author: draft.author.trim() || book.author,
-          genre: draft.genre.trim() || book.genre,
-          rent_price: Number(draft.rent_price) > 0 ? Number(draft.rent_price) : Number(book.rent_price),
-          language: draft.language.trim() || null,
-          publisher: draft.publisher.trim() || null,
-        },
-      },
-      { onSuccess: onClose },
-    );
-  };
-
-  const cellCls = "w-full rounded border border-primary/40 bg-background/80 px-2 py-1 text-xs outline-none focus:border-primary";
-
+function EditableRow({ book, isEditing, onEdit, onClose, libName }: { book: any; isEditing: boolean; onEdit: () => void; onClose: () => void; libName?: string }) {
   if (isEditing) {
+    // Use full modal for editing all fields
     return (
       <tr className="border-t border-border/40 bg-primary/5">
-        <td className="px-2 py-1.5"><input value={draft.shelf_code} onChange={(e) => setDraft({ ...draft, shelf_code: e.target.value })} className={cellCls} /></td>
-        <td className="px-2 py-1.5"><input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} className={cellCls} /></td>
-        <td className="px-2 py-1.5"><input value={draft.title_ml} onChange={(e) => setDraft({ ...draft, title_ml: e.target.value })} className={`${cellCls} font-mal`} /></td>
-        <td className="px-2 py-1.5"><input value={draft.author} onChange={(e) => setDraft({ ...draft, author: e.target.value })} className={cellCls} /></td>
-        <td className="px-2 py-1.5"><input value={draft.genre} onChange={(e) => setDraft({ ...draft, genre: e.target.value })} className={cellCls} /></td>
-        <td className="px-2 py-1.5"><input type="number" value={draft.rent_price} onChange={(e) => setDraft({ ...draft, rent_price: e.target.value })} className={cellCls} /></td>
-        <td className="px-2 py-1.5"><input value={draft.language} onChange={(e) => setDraft({ ...draft, language: e.target.value })} className={cellCls} /></td>
-        <td className="px-2 py-1.5 text-xs">{displayRating(book).toFixed(1)}</td>
-        <td className="px-2 py-1.5"><input value={draft.publisher} onChange={(e) => setDraft({ ...draft, publisher: e.target.value })} className={cellCls} /></td>
-        <td className="px-2 py-1.5 text-right">
-          <div className="flex justify-end gap-1">
-            <button onClick={save} disabled={update.isPending} className="cursor-pointer rounded bg-primary px-2 py-1 text-[11px] font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50">
-              <Save className="h-3 w-3" />
-            </button>
-            <button onClick={onClose} className="cursor-pointer rounded border border-border px-2 py-1 text-[11px] hover:bg-surface-elevated">
-              <X className="h-3 w-3" />
-            </button>
-            <button
-              onClick={() => { if (confirm(`Delete "${book.title}"?`)) del.mutate(book.id, { onSuccess: onClose }); }}
-              className="cursor-pointer rounded border border-rose-500/40 px-2 py-1 text-[11px] text-rose-300 hover:bg-rose-500/10"
-            >
-              <Trash2 className="h-3 w-3" />
-            </button>
-          </div>
-        </td>
+        <td colSpan={16} className="px-3 py-2 text-xs text-muted-foreground">Opening editor…</td>
       </tr>
     );
   }
@@ -531,18 +570,24 @@ function EditableRow({ book, isEditing, onEdit, onClose }: { book: any; isEditin
       <td className="px-2 py-2">
         <Link to="/books/$id" params={{ id: book.id }} className="cursor-pointer font-medium hover:text-primary">{book.title}</Link>
       </td>
-      <td className="px-2 py-2 font-mal text-xs text-accent">{book.title_ml ?? "—"}</td>
-      <td className="px-2 py-2 text-xs text-foreground/80">{book.author}</td>
-      <td className="px-2 py-2 text-xs text-muted-foreground">{book.genre}</td>
-      <td className="px-2 py-2 text-xs">₹{Number(book.rent_price ?? 10).toFixed(0)}</td>
-      <td className="px-2 py-2 text-xs text-muted-foreground">{book.language ?? "—"}</td>
-      <td className="px-2 py-2 text-xs">
+      <td className="px-2 py-2 font-mal text-accent">{book.title_ml ?? "—"}</td>
+      <td className="px-2 py-2 text-foreground/80">{book.author}</td>
+      <td className="px-2 py-2 font-mal text-foreground/70">{book.author_ml ?? "—"}</td>
+      <td className="px-2 py-2 text-muted-foreground">{book.original_author ?? "—"}</td>
+      <td className="px-2 py-2 text-muted-foreground">{book.genre}</td>
+      <td className="px-2 py-2 font-mal text-muted-foreground">{book.genre_ml ?? "—"}</td>
+      <td className="px-2 py-2 text-muted-foreground">{book.language ?? "—"}</td>
+      <td className="px-2 py-2">₹{Number(book.rent_price ?? 10).toFixed(0)}</td>
+      <td className="px-2 py-2 text-muted-foreground">{book.published_year ?? "—"}</td>
+      <td className="px-2 py-2 text-muted-foreground">{book.pages ?? "—"}</td>
+      <td className="px-2 py-2">
         <span className="inline-flex items-center gap-1">
           <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
           {displayRating(book).toFixed(1)}
         </span>
       </td>
-      <td className="px-2 py-2 text-xs text-muted-foreground">{book.publisher ?? "—"}</td>
+      <td className="px-2 py-2 text-muted-foreground">{book.publisher ?? "—"}</td>
+      <td className="px-2 py-2 text-[11px] text-muted-foreground/80">{libName ?? "—"}</td>
       <td className="px-2 py-2 text-right">
         <button onClick={onEdit} className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-elevated">
           <Pencil className="h-3 w-3" /> Edit
@@ -556,7 +601,7 @@ function BooksGridAdmin({ books, setEditing }: { books: any[]; setEditing: (id: 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
       {books.map((b) => (
-        <div key={b.id} className="glass-card flex flex-col gap-2 rounded-xl p-3">
+        <div key={b.id} className="glass-card flex flex-col gap-1.5 rounded-xl p-3">
           <div className="flex items-start justify-between gap-2">
             <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold text-primary">
               {b.shelf_code ?? "—"}
@@ -573,8 +618,20 @@ function BooksGridAdmin({ books, setEditing }: { books: any[]; setEditing: (id: 
             <div className="line-clamp-2 text-sm font-semibold hover:text-primary">{b.title}</div>
             {b.title_ml && <div className="line-clamp-1 font-mal text-xs text-accent">{b.title_ml}</div>}
           </Link>
-          <div className="line-clamp-1 text-[11px] text-muted-foreground">{b.author}</div>
-          <div className="line-clamp-1 text-[10px] uppercase tracking-wider text-muted-foreground/70">{b.genre}</div>
+          <div className="line-clamp-1 text-[11px] text-foreground/80">{b.author}</div>
+          {b.author_ml && <div className="line-clamp-1 font-mal text-[11px] text-foreground/60">{b.author_ml}</div>}
+          {b.original_author && <div className="line-clamp-1 text-[10px] text-muted-foreground">orig. {b.original_author}</div>}
+          <div className="line-clamp-1 text-[10px] uppercase tracking-wider text-muted-foreground/80">
+            {b.genre}{b.genre_ml ? <span className="font-mal normal-case"> · {b.genre_ml}</span> : null}
+          </div>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
+            <span>₹{Number(b.rent_price ?? 10).toFixed(0)}</span>
+            {b.language && <span>· {b.language}</span>}
+            {b.published_year && <span>· {b.published_year}</span>}
+            {b.pages && <span>· {b.pages}p</span>}
+            <span className="inline-flex items-center gap-0.5">· <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />{displayRating(b).toFixed(1)}</span>
+          </div>
+          {b.publisher && <div className="line-clamp-1 text-[10px] text-muted-foreground/70">{b.publisher}</div>}
         </div>
       ))}
     </div>
@@ -584,31 +641,73 @@ function BooksGridAdmin({ books, setEditing }: { books: any[]; setEditing: (id: 
 function EditBookModal({ book, onClose }: { book: any; onClose: () => void }) {
   const update = useUpdateBook();
   const del = useDeleteBook();
-  const [title, setTitle] = useState(book.title);
+  const [title, setTitle] = useState(book.title ?? "");
   const [titleMl, setTitleMl] = useState(book.title_ml ?? "");
-  const [author, setAuthor] = useState(book.author);
+  const [author, setAuthor] = useState(book.author ?? "");
   const [authorMl, setAuthorMl] = useState(book.author_ml ?? "");
-  const [genre, setGenre] = useState(book.genre);
+  const [originalAuthor, setOriginalAuthor] = useState(book.original_author ?? "");
+  const [genre, setGenre] = useState(book.genre ?? "");
+  const [genreMl, setGenreMl] = useState(book.genre_ml ?? "");
   const [shelf, setShelf] = useState(book.shelf_code ?? "");
   const [publisher, setPublisher] = useState(book.publisher ?? "");
+  const [language, setLanguage] = useState(book.language ?? "");
+  const [rentPrice, setRentPrice] = useState(String(book.rent_price ?? 10));
+  const [pages, setPages] = useState(book.pages != null ? String(book.pages) : "");
+  const [year, setYear] = useState(book.published_year != null ? String(book.published_year) : "");
+  const [coverUrl, setCoverUrl] = useState(book.cover_url ?? "");
+  const [description, setDescription] = useState(book.description ?? "");
+
+  const save = () => {
+    update.mutate(
+      {
+        id: book.id,
+        patch: {
+          title: title.trim() || book.title,
+          title_ml: titleMl.trim() || null,
+          author: author.trim() || book.author,
+          author_ml: authorMl.trim() || null,
+          original_author: originalAuthor.trim() || null,
+          genre: genre.trim() || book.genre,
+          genre_ml: genreMl.trim() || null,
+          shelf_code: shelf.trim() || null,
+          publisher: publisher.trim() || null,
+          language: language.trim() || null,
+          rent_price: Number(rentPrice) > 0 ? Number(rentPrice) : Number(book.rent_price ?? 10),
+          pages: pages.trim() ? Number(pages) : null,
+          published_year: year.trim() ? Number(year) : null,
+          cover_url: coverUrl.trim() || null,
+          description: description.trim() || null,
+        },
+      },
+      { onSuccess: onClose },
+    );
+  };
+
+  const fld = "w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm";
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="glass-card w-full max-w-lg rounded-2xl p-6">
+      <div onClick={(e) => e.stopPropagation()} className="glass-card max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl p-6">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold">Edit book</h2>
           <button onClick={onClose} className="cursor-pointer text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
         </div>
-        <div className="space-y-2">
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (English)" className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
-          <input value={titleMl} onChange={(e) => setTitleMl(e.target.value)} placeholder="Title (Malayalam)" className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm font-mal" />
-          <input value={author} onChange={(e) => setAuthor(e.target.value)} placeholder="Author (English)" className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
-          <input value={authorMl} onChange={(e) => setAuthorMl(e.target.value)} placeholder="Author (Malayalam)" className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm font-mal" />
-          <input value={genre} onChange={(e) => setGenre(e.target.value)} placeholder="Genre" className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
-          <div className="grid grid-cols-2 gap-2">
-            <input value={shelf} onChange={(e) => setShelf(e.target.value)} placeholder="Rack #" className="rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
-            <input value={publisher} onChange={(e) => setPublisher(e.target.value)} placeholder="Publisher" className="rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
-          </div>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <label className="text-xs"><span className="mb-1 block text-muted-foreground">Rack #</span><input value={shelf} onChange={(e) => setShelf(e.target.value)} className={fld} /></label>
+          <label className="text-xs"><span className="mb-1 block text-muted-foreground">Price (₹)</span><input type="number" value={rentPrice} onChange={(e) => setRentPrice(e.target.value)} className={fld} /></label>
+          <label className="text-xs"><span className="mb-1 block text-muted-foreground">Title (English)</span><input value={title} onChange={(e) => setTitle(e.target.value)} className={fld} /></label>
+          <label className="text-xs"><span className="mb-1 block text-muted-foreground">Title (Malayalam)</span><input value={titleMl} onChange={(e) => setTitleMl(e.target.value)} className={`${fld} font-mal`} /></label>
+          <label className="text-xs"><span className="mb-1 block text-muted-foreground">Author (English)</span><input value={author} onChange={(e) => setAuthor(e.target.value)} className={fld} /></label>
+          <label className="text-xs"><span className="mb-1 block text-muted-foreground">Author (Malayalam)</span><input value={authorMl} onChange={(e) => setAuthorMl(e.target.value)} className={`${fld} font-mal`} /></label>
+          <label className="text-xs sm:col-span-2"><span className="mb-1 block text-muted-foreground">Original Author</span><input value={originalAuthor} onChange={(e) => setOriginalAuthor(e.target.value)} className={fld} /></label>
+          <label className="text-xs"><span className="mb-1 block text-muted-foreground">Genre (English)</span><input value={genre} onChange={(e) => setGenre(e.target.value)} className={fld} /></label>
+          <label className="text-xs"><span className="mb-1 block text-muted-foreground">Genre (Malayalam)</span><input value={genreMl} onChange={(e) => setGenreMl(e.target.value)} className={`${fld} font-mal`} /></label>
+          <label className="text-xs"><span className="mb-1 block text-muted-foreground">Language</span><input value={language} onChange={(e) => setLanguage(e.target.value)} className={fld} /></label>
+          <label className="text-xs"><span className="mb-1 block text-muted-foreground">Publisher</span><input value={publisher} onChange={(e) => setPublisher(e.target.value)} className={fld} /></label>
+          <label className="text-xs"><span className="mb-1 block text-muted-foreground">Published Year</span><input type="number" value={year} onChange={(e) => setYear(e.target.value)} className={fld} /></label>
+          <label className="text-xs"><span className="mb-1 block text-muted-foreground">Pages</span><input type="number" value={pages} onChange={(e) => setPages(e.target.value)} className={fld} /></label>
+          <label className="text-xs sm:col-span-2"><span className="mb-1 block text-muted-foreground">Cover image URL</span><input value={coverUrl} onChange={(e) => setCoverUrl(e.target.value)} className={fld} /></label>
+          <label className="text-xs sm:col-span-2"><span className="mb-1 block text-muted-foreground">Description</span><textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={fld} /></label>
         </div>
         <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
           <button
@@ -621,10 +720,7 @@ function EditBookModal({ book, onClose }: { book: any; onClose: () => void }) {
             <button onClick={onClose} className="cursor-pointer rounded-lg border border-border px-4 py-2 text-sm hover:bg-surface-elevated">Cancel</button>
             <button
               disabled={update.isPending}
-              onClick={() => update.mutate(
-                { id: book.id, patch: { title, title_ml: titleMl || null, author, author_ml: authorMl || null, genre, shelf_code: shelf || null, publisher: publisher || null } },
-                { onSuccess: onClose },
-              )}
+              onClick={save}
               className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
             >
               <Save className="h-3.5 w-3.5" /> Save
@@ -645,40 +741,66 @@ function AddBookModal({ onClose, defaultLibraryId }: { onClose: () => void; defa
   const [titleMl, setTitleMl] = useState("");
   const [author, setAuthor] = useState("");
   const [authorMl, setAuthorMl] = useState("");
+  const [originalAuthor, setOriginalAuthor] = useState("");
   const [genre, setGenre] = useState("");
+  const [genreMl, setGenreMl] = useState("");
   const [shelf, setShelf] = useState("");
   const [publisher, setPublisher] = useState("");
+  const [language, setLanguage] = useState("");
+  const [rentPrice, setRentPrice] = useState("10");
+  const [pages, setPages] = useState("");
+  const [year, setYear] = useState("");
+  const [coverUrl, setCoverUrl] = useState("");
+  const [description, setDescription] = useState("");
   const fallbackLib = defaultLibraryId ?? selectedId ?? (scope && scope.length ? scope[0] : "") ?? "";
   const [libraryId, setLibraryId] = useState<string>(fallbackLib);
 
+  const fld = "w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm";
+
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="glass-card w-full max-w-lg rounded-2xl p-6">
+      <div onClick={(e) => e.stopPropagation()} className="glass-card max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl p-6">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold">Add a book</h2>
           <button onClick={onClose} className="cursor-pointer text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
         </div>
-        <div className="space-y-2">
-          <select value={libraryId} onChange={(e) => setLibraryId(e.target.value)} className="w-full cursor-pointer rounded-lg border border-border bg-background/50 px-3 py-2 text-sm">
-            {scope === null && <option value="">— No library (unassigned) —</option>}
-            {libs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-          </select>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (English)" className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
-          <input value={titleMl} onChange={(e) => setTitleMl(e.target.value)} placeholder="Title (Malayalam)" className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm font-mal" />
-          <input value={author} onChange={(e) => setAuthor(e.target.value)} placeholder="Author (English)" className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
-          <input value={authorMl} onChange={(e) => setAuthorMl(e.target.value)} placeholder="Author (Malayalam)" className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm font-mal" />
-          <input value={genre} onChange={(e) => setGenre(e.target.value)} placeholder="Genre (e.g. നോവൽ / Novel)" className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
-          <div className="grid grid-cols-2 gap-2">
-            <input value={shelf} onChange={(e) => setShelf(e.target.value)} placeholder="Rack # (shelf code)" className="rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
-            <input value={publisher} onChange={(e) => setPublisher(e.target.value)} placeholder="Publisher" className="rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
-          </div>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <label className="text-xs sm:col-span-2"><span className="mb-1 block text-muted-foreground">Library</span>
+            <select value={libraryId} onChange={(e) => setLibraryId(e.target.value)} className={`${fld} cursor-pointer`}>
+              {scope === null && <option value="">— No library (unassigned) —</option>}
+              {libs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            </select>
+          </label>
+          <label className="text-xs"><span className="mb-1 block text-muted-foreground">Rack #</span><input value={shelf} onChange={(e) => setShelf(e.target.value)} className={fld} /></label>
+          <label className="text-xs"><span className="mb-1 block text-muted-foreground">Price (₹)</span><input type="number" value={rentPrice} onChange={(e) => setRentPrice(e.target.value)} className={fld} /></label>
+          <label className="text-xs"><span className="mb-1 block text-muted-foreground">Title (English)</span><input value={title} onChange={(e) => setTitle(e.target.value)} className={fld} /></label>
+          <label className="text-xs"><span className="mb-1 block text-muted-foreground">Title (Malayalam)</span><input value={titleMl} onChange={(e) => setTitleMl(e.target.value)} className={`${fld} font-mal`} /></label>
+          <label className="text-xs"><span className="mb-1 block text-muted-foreground">Author (English)</span><input value={author} onChange={(e) => setAuthor(e.target.value)} className={fld} /></label>
+          <label className="text-xs"><span className="mb-1 block text-muted-foreground">Author (Malayalam)</span><input value={authorMl} onChange={(e) => setAuthorMl(e.target.value)} className={`${fld} font-mal`} /></label>
+          <label className="text-xs sm:col-span-2"><span className="mb-1 block text-muted-foreground">Original Author</span><input value={originalAuthor} onChange={(e) => setOriginalAuthor(e.target.value)} className={fld} /></label>
+          <label className="text-xs"><span className="mb-1 block text-muted-foreground">Genre (English)</span><input value={genre} onChange={(e) => setGenre(e.target.value)} className={fld} /></label>
+          <label className="text-xs"><span className="mb-1 block text-muted-foreground">Genre (Malayalam)</span><input value={genreMl} onChange={(e) => setGenreMl(e.target.value)} className={`${fld} font-mal`} /></label>
+          <label className="text-xs"><span className="mb-1 block text-muted-foreground">Language</span><input value={language} onChange={(e) => setLanguage(e.target.value)} className={fld} /></label>
+          <label className="text-xs"><span className="mb-1 block text-muted-foreground">Publisher</span><input value={publisher} onChange={(e) => setPublisher(e.target.value)} className={fld} /></label>
+          <label className="text-xs"><span className="mb-1 block text-muted-foreground">Published Year</span><input type="number" value={year} onChange={(e) => setYear(e.target.value)} className={fld} /></label>
+          <label className="text-xs"><span className="mb-1 block text-muted-foreground">Pages</span><input type="number" value={pages} onChange={(e) => setPages(e.target.value)} className={fld} /></label>
+          <label className="text-xs sm:col-span-2"><span className="mb-1 block text-muted-foreground">Cover image URL</span><input value={coverUrl} onChange={(e) => setCoverUrl(e.target.value)} className={fld} /></label>
+          <label className="text-xs sm:col-span-2"><span className="mb-1 block text-muted-foreground">Description</span><textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={fld} /></label>
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button onClick={onClose} className="cursor-pointer rounded-lg border border-border px-4 py-2 text-sm hover:bg-surface-elevated">Cancel</button>
           <button
             disabled={create.isPending || !title.trim() || !author.trim() || !genre.trim()}
             onClick={() => create.mutate(
-              { title, author, genre, title_ml: titleMl, author_ml: authorMl, shelf_code: shelf, publisher, library_id: libraryId || undefined },
+              {
+                title, author, genre,
+                title_ml: titleMl, author_ml: authorMl, original_author: originalAuthor, genre_ml: genreMl,
+                shelf_code: shelf, publisher, library_id: libraryId || undefined,
+                language, rent_price: Number(rentPrice) > 0 ? Number(rentPrice) : 10,
+                pages: pages.trim() ? Number(pages) : null,
+                published_year: year.trim() ? Number(year) : null,
+                cover_url: coverUrl, description,
+              },
               { onSuccess: onClose },
             )}
             className="cursor-pointer rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 hover:opacity-90 disabled:opacity-50"
@@ -690,6 +812,7 @@ function AddBookModal({ onClose, defaultLibraryId }: { onClose: () => void; defa
     </div>
   );
 }
+
 
 // ===== IMPORT MODAL =====
 function normalizeKey(k: string): string {
