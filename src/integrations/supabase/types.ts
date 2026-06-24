@@ -14,6 +14,77 @@ export type Database = {
   }
   public: {
     Tables: {
+      advertisements: {
+        Row: {
+          auto_close_seconds: number
+          banner_position: string | null
+          created_at: string
+          created_by: string | null
+          cta_text: string | null
+          cta_url: string | null
+          description: string | null
+          end_date: string | null
+          id: string
+          image_path: string | null
+          image_url: string
+          library_id: string | null
+          name: string
+          start_date: string | null
+          status: string
+          title: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          auto_close_seconds?: number
+          banner_position?: string | null
+          created_at?: string
+          created_by?: string | null
+          cta_text?: string | null
+          cta_url?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          image_path?: string | null
+          image_url: string
+          library_id?: string | null
+          name: string
+          start_date?: string | null
+          status?: string
+          title?: string | null
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          auto_close_seconds?: number
+          banner_position?: string | null
+          created_at?: string
+          created_by?: string | null
+          cta_text?: string | null
+          cta_url?: string | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          image_path?: string | null
+          image_url?: string
+          library_id?: string | null
+          name?: string
+          start_date?: string | null
+          status?: string
+          title?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advertisements_library_id_fkey"
+            columns: ["library_id"]
+            isOneToOne: false
+            referencedRelation: "libraries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       book_suggestions: {
         Row: {
           author: string | null
