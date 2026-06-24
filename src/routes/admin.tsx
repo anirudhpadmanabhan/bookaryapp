@@ -323,7 +323,7 @@ function BooksTab() {
           {libs.map((l) => (
             <option key={l.id} value={l.id}>{l.name}</option>
           ))}
-          <option value="__unassigned">Unassigned</option>
+          {scope === null && <option value="__unassigned">Unassigned</option>}
         </select>
         <div className="flex flex-1 min-w-[200px] items-center gap-2 rounded-xl border border-border bg-surface/50 px-4 py-2.5">
           <SearchIcon className="h-4 w-4 text-muted-foreground" />
