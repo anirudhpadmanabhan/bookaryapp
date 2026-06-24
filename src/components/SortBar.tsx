@@ -3,8 +3,8 @@ import type { BookSort, SortDirection } from "@/lib/books";
 import type { ViewMode } from "./BooksGrid";
 
 const SORT_OPTIONS: { value: BookSort; label: string }[] = [
-  { value: "newest", label: "New on shelf (latest rack)" },
-  { value: "shelf", label: "Rack code (numeric)" },
+  { value: "newest", label: "New on shelf (latest)" },
+  { value: "genre", label: "Genre / Category" },
   { value: "title", label: "Title A–Z" },
   { value: "rating", label: "Rating" },
 ];
