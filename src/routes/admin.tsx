@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouterState, redirect } from "@tanstack/react-router";
 import { AppLayout } from "@/components/AppLayout";
 import { useSession } from "@/lib/auth";
 import {
