@@ -317,10 +317,10 @@ function BookPage() {
       )}
 
       {/* Waitlist join modal */}
-      {showWait && user && profile && (
+      {showWait && user && (
         <WaitlistModal
           title={book.title}
-          defaultAddress={(profile as any).address ?? ""}
+          defaultAddress={(profile as any)?.address ?? ""}
           onClose={() => setShowWait(false)}
           onConfirm={(addr) => {
             joinWait.mutate({ bookId: book.id, address: addr }, { onSuccess: () => setShowWait(false) });
