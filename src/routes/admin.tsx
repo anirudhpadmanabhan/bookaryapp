@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouterState, redirect } from "@tanstack/react-router";
 import { AppLayout } from "@/components/AppLayout";
 import { useSession } from "@/lib/auth";
 import {
@@ -34,6 +34,20 @@ type Tab = "overview" | "books" | "rentals" | "waitlist" | "suggestions" | "ads"
 export const Route = createFileRoute("/admin")({
   ssr: false,
   head: () => ({ meta: [{ title: "Admin · Bookary" }] }),
+  beforeLoad: async ({ location }) => {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) {
+      throw redirect({ to: "/auth", search: { redirect: location.pathname } });
+    }
+    const { data: roleRows } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userData.user.id);
+    const roles = (roleRows ?? []).map((r: { role: string }) => r.role);
+    if (!roles.includes("admin") && !roles.includes("librarian")) {
+      throw redirect({ to: "/" });
+    }
+  },
   component: AdminPage,
 });
 

@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { useActiveBannerAd } from "@/lib/ads";
 
+const safeUrl = (u: string | null | undefined) =>
+  u && /^https?:\/\//i.test(u) ? u : null;
+
 /**
  * Platform-wide dismissible bottom banner advertisement.
  * Stays hidden after the user dismisses the current ad (per ad id, per session).
@@ -35,7 +38,7 @@ export function AdBottomBanner() {
           <p className="truncate text-xs text-white/70">{ad.description}</p>
         )}
       </div>
-      {ad.cta_text && ad.cta_url && (
+      {ad.cta_text && safeUrl(ad.cta_url) && (
         <span className="hidden flex-none rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground sm:inline-block">
           {ad.cta_text}
         </span>
@@ -43,14 +46,16 @@ export function AdBottomBanner() {
     </div>
   );
 
+  const href = safeUrl(ad.cta_url);
+
   return (
     <div className="fixed inset-x-0 bottom-0 z-[90] px-3 pb-3">
       <div className="mx-auto max-w-5xl rounded-2xl border border-border bg-black/85 p-3 shadow-2xl backdrop-blur">
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1">
-            {ad.cta_url ? (
+            {href ? (
               <a
-                href={ad.cta_url}
+                href={href}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block cursor-pointer"

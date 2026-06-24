@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { useActivePopupAd } from "@/lib/ads";
 
+const safeUrl = (u: string | null | undefined) =>
+  u && /^https?:\/\//i.test(u) ? u : null;
+
 export function AdPopup() {
   const { data: ad } = useActivePopupAd();
   const [open, setOpen] = useState(false);
@@ -36,20 +39,20 @@ export function AdPopup() {
         >
           <X className="h-4 w-4" />
         </button>
-        {ad.cta_url ? (
-          <a href={ad.cta_url} target="_blank" rel="noopener noreferrer">
+        {safeUrl(ad.cta_url) ? (
+          <a href={safeUrl(ad.cta_url)!} target="_blank" rel="noopener noreferrer">
             <img src={ad.image_url} alt={ad.title || ad.name} className="block w-full" />
           </a>
         ) : (
           <img src={ad.image_url} alt={ad.title || ad.name} className="block w-full" />
         )}
-        {(ad.title || ad.description || (ad.cta_text && ad.cta_url)) && (
+        {(ad.title || ad.description || (ad.cta_text && safeUrl(ad.cta_url))) && (
           <div className="space-y-2 p-4">
             {ad.title && <h3 className="text-lg font-semibold">{ad.title}</h3>}
             {ad.description && <p className="text-sm text-muted-foreground">{ad.description}</p>}
-            {ad.cta_text && ad.cta_url && (
+            {ad.cta_text && safeUrl(ad.cta_url) && (
               <a
-                href={ad.cta_url}
+                href={safeUrl(ad.cta_url)!}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex cursor-pointer rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"

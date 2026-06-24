@@ -176,6 +176,11 @@ function AdEditor({ initial, editingId, onClose }: { initial: FormState; editing
     if (!form.name.trim()) { toast.error("Name is required"); return; }
     if (!form.image_url) { toast.error("Image is required"); return; }
     if (form.type === "banner" && !form.banner_position) { toast.error("Banner position is required"); return; }
+    const ctaTrimmed = form.cta_url.trim();
+    if (ctaTrimmed && !/^https?:\/\//i.test(ctaTrimmed)) {
+      toast.error("CTA URL must start with http:// or https://");
+      return;
+    }
     const values = {
       name: form.name.trim(),
       type: form.type,
