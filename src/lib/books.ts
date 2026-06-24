@@ -42,7 +42,7 @@ export function colorAt(index: number): string {
 export type BookSort = "newest" | "title" | "rating" | "genre";
 export type SortDirection = "asc" | "desc";
 
-const GENRE_ENGLISH: Record<string, string> = {
+const GENRE_ENGLISH_RAW: Record<string, string> = {
   "നോവൽ": "Novel","ഡി.നോവൽ": "Detective novel","ക്രൈം നോവൽ": "Crime novel","ലഘുനോവൽ": "Short novel",
   "കഥ": "Stories","ചെറുകഥ": "Short stories","നർമ്മകഥ": "Humour stories","ബാലസാഹിത്യം": "Children's literature",
   "കവിത": "Poetry","ലേഖനം": "Essays","ഉപന്യാസം": "Essays","പഠനം": "Studies","ജി.കെ.പഠനം": "General knowledge studies",
@@ -58,7 +58,20 @@ const GENRE_ENGLISH: Record<string, string> = {
   "പ്രഭാഷണം": "Lecture","പ്രസംഗം": "Speech","വിദ്യാഭ്യാസം": "Education","ഫോക് ലോർ": "Folklore",
   "നർമ്മം": "Humour","കടങ്കഥ": "Riddles","വിമർശനം": "Review","ഡയറി": "Diary","പ്രബന്ധം": "Treatise",
   "നാടോടിസാഹിത്യം": "Folk literature","ഗാനങ്ങൾ": "Songs","കത്തുകൾ": "Letters","സോവിയറ്റ്സമീക്ഷ": "Soviet review",
+  "സ്പോർട്സ്": "Sports","സ്‌പോര്‍ട്‌സ്": "Sports","കായികം": "Sports","ഫുട്ബോൾ": "Football","ക്രിക്കറ്റ്": "Cricket",
+  "സംഗീതം": "Music","ചിത്രകല": "Art","പാചകം": "Cooking","കൃഷി": "Agriculture","രാഷ്ട്രീയം": "Politics",
+  "സാമ്പത്തികം": "Economics","തത്വശാസ്ത്രം": "Philosophy","മതം": "Religion","ആത്മീയത": "Spirituality",
+  "ജ്യോതിഷം": "Astrology","നിയമം": "Law","പത്രപ്രവർത്തനം": "Journalism","പരിസ്ഥിതി": "Environment",
 };
+
+// Normalize Malayalam: NFC + strip zero-width joiners so visually-equal strings collapse.
+function normMl(s: string): string {
+  return s.normalize("NFC").replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
+}
+
+const GENRE_ENGLISH: Record<string, string> = Object.fromEntries(
+  Object.entries(GENRE_ENGLISH_RAW).map(([k, v]) => [normMl(k), v]),
+);
 
 export function displayRating(book: Pick<Book, "rating" | "id">): number {
   const rating = Number(book.rating);
@@ -71,12 +84,16 @@ export function displayRating(book: Pick<Book, "rating" | "id">): number {
 export function genreEnglish(bookOrGenre: Pick<Book, "genre" | "genre_ml"> | string): string {
   const genre = typeof bookOrGenre === "string" ? bookOrGenre : bookOrGenre.genre;
   const ml = typeof bookOrGenre === "string" ? null : bookOrGenre.genre_ml;
-  return GENRE_ENGLISH[genre] ?? (ml ? GENRE_ENGLISH[ml] : undefined) ?? genre;
+  const g = normMl(genre);
+  const m = ml ? normMl(ml) : null;
+  return GENRE_ENGLISH[g] ?? (m ? GENRE_ENGLISH[m] : undefined) ?? genre;
 }
 
 export function genreMalayalam(book: Pick<Book, "genre" | "genre_ml">): string | null {
-  if (book.genre_ml && book.genre_ml !== genreEnglish(book)) return book.genre_ml;
-  return /[\u0D00-\u0D7F]/.test(book.genre) ? book.genre : null;
+  const en = genreEnglish(book);
+  if (book.genre_ml && normMl(book.genre_ml) !== normMl(en)) return book.genre_ml;
+  if (/[\u0D00-\u0D7F]/.test(book.genre) && normMl(book.genre) !== normMl(en)) return book.genre;
+  return null;
 }
 
 function shelfNum(code: string | null): number {
