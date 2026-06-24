@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_events: {
+        Row: {
+          ad_id: string
+          created_at: string
+          event_type: string
+          id: string
+          session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          ad_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          ad_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_events_ad_id_fkey"
+            columns: ["ad_id"]
+            isOneToOne: false
+            referencedRelation: "advertisements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       advertisements: {
         Row: {
           auto_close_seconds: number
@@ -671,6 +706,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      ad_stats: { Args: { _ad_id: string }; Returns: Json }
       admin_grant_librarian: { Args: { _email: string }; Returns: Json }
       admin_grant_librarian_for_library: {
         Args: { _email: string; _library_id: string }

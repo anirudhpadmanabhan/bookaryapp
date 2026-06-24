@@ -142,3 +142,62 @@ export async function uploadAdImage(file: File): Promise<{ url: string; path: st
   if (signErr) throw signErr;
   return { url: data.signedUrl, path };
 }
+
+// ---------- Analytics ----------
+
+function getSessionId(): string {
+  if (typeof window === "undefined") return "ssr";
+  try {
+    let sid = sessionStorage.getItem("ad_sid");
+    if (!sid) {
+      sid = `s_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+      sessionStorage.setItem("ad_sid", sid);
+    }
+    return sid;
+  } catch {
+    return "anon";
+  }
+}
+
+const trackedImpressions = new Set<string>();
+
+export async function trackAdEvent(adId: string, type: "impression" | "click") {
+  try {
+    // Dedupe impressions per ad per session in memory.
+    if (type === "impression") {
+      const key = `imp_${adId}`;
+      if (trackedImpressions.has(key)) return;
+      trackedImpressions.add(key);
+    }
+    const { data: u } = await supabase.auth.getUser();
+    await supabase.from("ad_events").insert({
+      ad_id: adId,
+      event_type: type,
+      user_id: u.user?.id ?? null,
+      session_id: getSessionId(),
+    });
+  } catch {
+    // Silently swallow — analytics must never break ads.
+  }
+}
+
+export type AdStats = {
+  impressions: number;
+  clicks: number;
+  unique_viewers: number;
+  ctr: number;
+  daily: Array<{ day: string; impressions: number; clicks: number }>;
+};
+
+export function useAdStats(adId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["ads", "stats", adId],
+    enabled: !!adId,
+    queryFn: async (): Promise<AdStats> => {
+      const { data, error } = await supabase.rpc("ad_stats", { _ad_id: adId! });
+      if (error) throw error;
+      return data as AdStats;
+    },
+    staleTime: 30_000,
+  });
+}

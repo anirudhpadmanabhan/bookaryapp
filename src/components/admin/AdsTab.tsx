@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import {
-  Plus, Pencil, Trash2, X, Save, Upload, Megaphone,
+  Plus, Pencil, Trash2, X, Save, Upload, Megaphone, Eye,
   FileText, CalendarClock, LayoutTemplate, Image as ImageIcon,
-  CircleDot, Clock3,
+  CircleDot, Clock3, BarChart3, MonitorPlay,
 } from "lucide-react";
 import {
   useAllAds, useUpsertAd, useDeleteAd, uploadAdImage,
   type Advertisement, type AdType, type AdStatus, type BannerPosition,
 } from "@/lib/ads";
+import { AdPreview, type AdPreviewData } from "./AdPreview";
+import { AdInsights } from "./AdInsights";
 
 type FormState = {
   name: string;
@@ -94,6 +96,8 @@ export function AdsTab() {
   const { data: ads = [], isLoading } = useAllAds();
   const [editing, setEditing] = useState<Advertisement | null>(null);
   const [creating, setCreating] = useState(false);
+  const [previewing, setPreviewing] = useState<Advertisement | null>(null);
+  const [insightsFor, setInsightsFor] = useState<Advertisement | null>(null);
   const del = useDeleteAd();
 
   return (
@@ -147,7 +151,23 @@ export function AdsTab() {
                   <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{fmtDT(ad.end_date)}</td>
                   <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{fmtDT(ad.updated_at)}</td>
                   <td className="px-3 py-2 text-right">
-                    <div className="inline-flex gap-1">
+                    <div className="inline-flex flex-wrap justify-end gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewing(ad)}
+                        className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-elevated"
+                        title="Preview"
+                      >
+                        <Eye className="h-3 w-3" /> Preview
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setInsightsFor(ad)}
+                        className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-elevated"
+                        title="Insights"
+                      >
+                        <BarChart3 className="h-3 w-3" /> Insights
+                      </button>
                       <button
                         type="button"
                         onClick={() => { setCreating(false); setEditing(ad); }}
@@ -184,11 +204,55 @@ export function AdsTab() {
           onClose={() => { setEditing(null); setCreating(false); }}
         />
       )}
+
+      {previewing && (
+        <Modal title={`Preview · ${previewing.name}`} onClose={() => setPreviewing(null)}>
+          <AdPreview ad={adToPreview(previewing)} />
+        </Modal>
+      )}
+
+      {insightsFor && (
+        <Modal title={`Insights · ${insightsFor.name}`} onClose={() => setInsightsFor(null)} wide>
+          <AdInsights adId={insightsFor.id} />
+        </Modal>
+      )}
     </div>
   );
 }
 
-type EditorTab = "basics" | "content" | "schedule" | "display";
+function adToPreview(ad: Advertisement): AdPreviewData {
+  return {
+    name: ad.name,
+    type: ad.type,
+    image_url: ad.image_url,
+    title: ad.title,
+    description: ad.description,
+    cta_text: ad.cta_text,
+    cta_url: ad.cta_url,
+    banner_position: ad.banner_position,
+  };
+}
+
+function Modal({ title, onClose, wide, children }: { title: string; onClose: () => void; wide?: boolean; children: React.ReactNode }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+      <div
+        className={`max-h-[90vh] w-full ${wide ? "max-w-3xl" : "max-w-xl"} overflow-y-auto rounded-2xl border border-border bg-surface p-5 shadow-2xl`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-bold">{title}</h3>
+          <button type="button" onClick={onClose} className="cursor-pointer rounded-lg p-1 hover:bg-surface-elevated">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+type EditorTab = "basics" | "content" | "schedule" | "display" | "preview" | "insights";
 
 function AdEditor({ initial, editingId, onClose }: { initial: FormState; editingId?: string; onClose: () => void }) {
   const [form, setForm] = useState<FormState>(initial);
@@ -249,12 +313,25 @@ function AdEditor({ initial, editingId, onClose }: { initial: FormState; editing
     });
   };
 
-  const TABS: { id: EditorTab; label: string; icon: any }[] = [
+  const TABS: { id: EditorTab; label: string; icon: any; hide?: boolean }[] = [
     { id: "basics",   label: "Basics",   icon: ImageIcon },
     { id: "content",  label: "Content",  icon: FileText },
     { id: "schedule", label: "Schedule", icon: CalendarClock },
     { id: "display",  label: "Display",  icon: LayoutTemplate },
+    { id: "preview",  label: "Preview",  icon: MonitorPlay },
+    { id: "insights", label: "Insights", icon: BarChart3, hide: !editingId },
   ];
+
+  const previewData: AdPreviewData = {
+    name: form.name || "Untitled ad",
+    type: form.type,
+    image_url: form.image_url,
+    title: form.title.trim() || null,
+    description: form.description.trim() || null,
+    cta_text: form.cta_text.trim() || null,
+    cta_url: form.cta_url.trim() || null,
+    banner_position: form.type === "banner" ? form.banner_position : null,
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
@@ -270,7 +347,7 @@ function AdEditor({ initial, editingId, onClose }: { initial: FormState; editing
         </div>
 
         <div className="mb-4 flex flex-wrap gap-1 rounded-xl border border-border bg-surface/40 p-1">
-          {TABS.map((t) => {
+          {TABS.filter((t) => !t.hide).map((t) => {
             const active = tab === t.id;
             return (
               <button
@@ -399,6 +476,19 @@ function AdEditor({ initial, editingId, onClose }: { initial: FormState; editing
             )}
           </div>
         )}
+
+        {tab === "preview" && (
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">This is exactly how your ad will appear to visitors. Switch the type or banner position to compare placements.</p>
+            <AdPreview ad={previewData} />
+          </div>
+        )}
+
+        {tab === "insights" && editingId && (
+          <AdInsights adId={editingId} />
+        )}
+
+
 
         <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-4">
           <p className="text-xs text-muted-foreground">

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
-import { useActivePopupAd } from "@/lib/ads";
+import { useActivePopupAd, trackAdEvent } from "@/lib/ads";
 
 const safeUrl = (u: string | null | undefined) =>
   u && /^https?:\/\//i.test(u) ? u : null;
@@ -14,6 +14,7 @@ export function AdPopup() {
     if (!ad || ad.id === shownId) return;
     setOpen(true);
     setShownId(ad.id);
+    trackAdEvent(ad.id, "impression");
     const seconds = Number(ad.auto_close_seconds ?? 0);
     if (!Number.isFinite(seconds) || seconds <= 0) return; // 0 = stay open until dismissed
     const t = setTimeout(() => setOpen(false), seconds * 1000);
@@ -21,6 +22,8 @@ export function AdPopup() {
   }, [ad, shownId]);
 
   if (!ad || !open) return null;
+  const onClick = () => trackAdEvent(ad.id, "click");
+
 
   return (
     <div
@@ -40,7 +43,7 @@ export function AdPopup() {
           <X className="h-4 w-4" />
         </button>
         {safeUrl(ad.cta_url) ? (
-          <a href={safeUrl(ad.cta_url)!} target="_blank" rel="noopener noreferrer">
+          <a href={safeUrl(ad.cta_url)!} target="_blank" rel="noopener noreferrer" onClick={onClick}>
             <img src={ad.image_url} alt={ad.title || ad.name} className="block w-full" />
           </a>
         ) : (
@@ -55,6 +58,7 @@ export function AdPopup() {
                 href={safeUrl(ad.cta_url)!}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={onClick}
                 className="inline-flex cursor-pointer rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90"
               >
                 {ad.cta_text}
