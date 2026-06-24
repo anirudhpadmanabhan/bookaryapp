@@ -622,6 +622,7 @@ function AddBookModal({ onClose, defaultLibraryId }: { onClose: () => void; defa
   const create = useCreateBook();
   const { selectedId } = useLibrary();
   const { data: libs = [] } = useAdminLibraries();
+  const scope = useMyLibraryScope();
   const [title, setTitle] = useState("");
   const [titleMl, setTitleMl] = useState("");
   const [author, setAuthor] = useState("");
@@ -629,7 +630,8 @@ function AddBookModal({ onClose, defaultLibraryId }: { onClose: () => void; defa
   const [genre, setGenre] = useState("");
   const [shelf, setShelf] = useState("");
   const [publisher, setPublisher] = useState("");
-  const [libraryId, setLibraryId] = useState<string>(defaultLibraryId ?? selectedId ?? "");
+  const fallbackLib = defaultLibraryId ?? selectedId ?? (scope && scope.length ? scope[0] : "") ?? "";
+  const [libraryId, setLibraryId] = useState<string>(fallbackLib);
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur" onClick={onClose}>
@@ -640,7 +642,7 @@ function AddBookModal({ onClose, defaultLibraryId }: { onClose: () => void; defa
         </div>
         <div className="space-y-2">
           <select value={libraryId} onChange={(e) => setLibraryId(e.target.value)} className="w-full cursor-pointer rounded-lg border border-border bg-background/50 px-3 py-2 text-sm">
-            <option value="">— No library (unassigned) —</option>
+            {scope === null && <option value="">— No library (unassigned) —</option>}
             {libs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
           </select>
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (English)" className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
