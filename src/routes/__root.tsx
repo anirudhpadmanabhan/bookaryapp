@@ -120,6 +120,25 @@ function RootComponent() {
     return () => sub.subscription.unsubscribe();
   }, [queryClient]);
 
+  // Persist catalog queries to localStorage so search works offline & boots instantly.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const persister = createSyncStoragePersister({ storage: window.localStorage, key: "bookary-qc" });
+    const [unsubscribe] = persistQueryClient({
+      queryClient,
+      persister,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      dehydrateOptions: {
+        shouldDehydrateQuery: (q) => {
+          const k = String(q.queryKey?.[0] ?? "");
+          return k === "books" || k === "home" || k === "book";
+        },
+      },
+    });
+    return () => unsubscribe();
+  }, [queryClient]);
+
+
   return (
     <QueryClientProvider client={queryClient}>
       <LibraryProvider>
