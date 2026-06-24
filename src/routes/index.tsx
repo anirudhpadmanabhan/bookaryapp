@@ -28,14 +28,23 @@ export const Route = createFileRoute("/")({
 const HOME_LIMIT = 60;
 
 function HomePage() {
+const HOME_LIMIT = 60;
+const PAGE_SIZE = 30;
+
+function HomePage() {
   const { data, isLoading } = useQuery({
     queryKey: ["home-data"],
     queryFn: () => fetchHomeData(HOME_LIMIT, 5),
     staleTime: 5 * 60_000,
   });
-  const books = data?.latest ?? [];
+  // Full catalogue for paginated "All Published Books" section.
+  const { data: allBooks = [] } = useQuery({
+    queryKey: ["books"],
+    queryFn: fetchBooks,
+    staleTime: 5 * 60_000,
+  });
   const popular = data?.popular ?? [];
-  const total = data?.total ?? 0;
+  const total = data?.total ?? allBooks.length;
   const genres = data?.genres ?? [];
   const writers = data?.writers ?? [];
   const languages = data?.languages ?? [];
@@ -43,12 +52,40 @@ function HomePage() {
   const [sort, setSort] = useState<BookSort>("newest");
   const [direction, setDirection] = useState<SortDirection>("desc");
   const [view, setView] = useState<ViewMode>("tile");
+  const [page, setPage] = useState(1);
   const [genresOpen, setGenresOpen] = useState(false);
   const [writersOpen, setWritersOpen] = useState(false);
   const [langsOpen, setLangsOpen] = useState(false);
 
-  const sorted = useMemo(() => sortBooks(books, sort, direction), [books, sort, direction]);
-  const shown = sorted.slice(0, HOME_LIMIT);
+  const sortedAll = useMemo(() => sortBooks(allBooks, sort, direction), [allBooks, sort, direction]);
+  const pageCount = Math.max(1, Math.ceil(sortedAll.length / PAGE_SIZE));
+  // Clamp page if sort/filter changes shrink the list.
+  useEffect(() => { if (page > pageCount) setPage(1); }, [pageCount, page]);
+  // Reset to page 1 whenever sort changes.
+  useEffect(() => { setPage(1); }, [sort, direction]);
+
+  const start = (page - 1) * PAGE_SIZE;
+  const shown = sortedAll.slice(start, start + PAGE_SIZE);
+
+  // Build a compact page-number list with ellipses around the current page.
+  const pageNumbers = useMemo(() => {
+    const pages: (number | "…")[] = [];
+    const add = (n: number) => { if (!pages.includes(n)) pages.push(n); };
+    add(1);
+    for (let n = page - 2; n <= page + 2; n++) {
+      if (n > 1 && n < pageCount) add(n);
+    }
+    if (pageCount > 1) add(pageCount);
+    const withGaps: (number | "…")[] = [];
+    for (let i = 0; i < pages.length; i++) {
+      const cur = pages[i] as number;
+      const prev = pages[i - 1] as number | undefined;
+      if (prev !== undefined && cur - prev > 1) withGaps.push("…");
+      withGaps.push(cur);
+    }
+    return withGaps;
+  }, [page, pageCount]);
+
 
 
   return (
