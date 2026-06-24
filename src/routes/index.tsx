@@ -1,12 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
-import { fetchHomeData, fetchBooks, sortBooks, type BookSort, type SortDirection, slugify } from "@/lib/books";
+import { fetchHomeData, fetchBooksPage, type BookSort, type SortDirection, slugify } from "@/lib/books";
 import { BooksGrid, type ViewMode } from "@/components/BooksGrid";
 import { BookCard } from "@/components/BookCard";
 import { colorAt } from "@/lib/books";
 import { SortBar } from "@/components/SortBar";
-import { AdBanner } from "@/components/AdBanner";
 import {
   Pagination, PaginationContent, PaginationItem, PaginationLink,
   PaginationPrevious, PaginationNext, PaginationEllipsis,
