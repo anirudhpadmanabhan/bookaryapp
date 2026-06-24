@@ -297,20 +297,20 @@ export type LibraryRow = {
 };
 
 export function useAdminLibraries() {
+  const scope = useMyLibraryScope();
   return useQuery({
-    queryKey: ["admin-libraries"],
+    queryKey: ["admin-libraries", scope ? scope.join(",") : "all"],
     staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("libraries")
-        .select("*")
-        .order("is_default", { ascending: false })
-        .order("name");
+      let q = supabase.from("libraries").select("*").order("is_default", { ascending: false }).order("name");
+      if (scope !== null) q = q.in("id", scope.length ? scope : ["00000000-0000-0000-0000-000000000000"]);
+      const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as LibraryRow[];
     },
   });
 }
+
 
 export function useCreateLibrary() {
   const qc = useQueryClient();
