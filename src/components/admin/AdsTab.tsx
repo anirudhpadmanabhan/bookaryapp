@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, X, Save, Upload, Megaphone } from "lucide-react";
+import {
+  Plus, Pencil, Trash2, X, Save, Upload, Megaphone,
+  FileText, CalendarClock, LayoutTemplate, Image as ImageIcon,
+  CircleDot, Clock3,
+} from "lucide-react";
 import {
   useAllAds, useUpsertAd, useDeleteAd, uploadAdImage,
   type Advertisement, type AdType, type AdStatus, type BannerPosition,
@@ -39,8 +43,12 @@ const EMPTY: FormState = {
 };
 
 function toFormState(ad: Advertisement): FormState {
-  const toLocal = (s: string | null) =>
-    s ? new Date(s).toISOString().slice(0, 16) : "";
+  const toLocal = (s: string | null) => {
+    if (!s) return "";
+    const d = new Date(s);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
   return {
     name: ad.name,
     type: ad.type,
@@ -58,6 +66,30 @@ function toFormState(ad: Advertisement): FormState {
   };
 }
 
+type EffectiveStatus = "live" | "scheduled" | "expired" | "paused";
+function effectiveStatus(ad: Advertisement): EffectiveStatus {
+  if (ad.status !== "active") return "paused";
+  const now = Date.now();
+  if (ad.start_date && new Date(ad.start_date).getTime() > now) return "scheduled";
+  if (ad.end_date && new Date(ad.end_date).getTime() < now) return "expired";
+  return "live";
+}
+
+const STATUS_META: Record<EffectiveStatus, { label: string; cls: string; dot: string }> = {
+  live:      { label: "Live now", cls: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30", dot: "bg-emerald-400 animate-pulse" },
+  scheduled: { label: "Scheduled", cls: "bg-sky-500/15 text-sky-300 border-sky-500/30", dot: "bg-sky-400" },
+  expired:   { label: "Expired",   cls: "bg-zinc-500/15 text-zinc-300 border-zinc-500/30", dot: "bg-zinc-400" },
+  paused:    { label: "Paused",    cls: "bg-amber-500/15 text-amber-300 border-amber-500/30", dot: "bg-amber-400" },
+};
+
+function fmtDT(s: string | null) {
+  if (!s) return "—";
+  return new Date(s).toLocaleString(undefined, {
+    year: "numeric", month: "short", day: "2-digit",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
 export function AdsTab() {
   const { data: ads = [], isLoading } = useAllAds();
   const [editing, setEditing] = useState<Advertisement | null>(null);
@@ -69,7 +101,7 @@ export function AdsTab() {
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold flex items-center gap-2"><Megaphone className="h-5 w-5 text-primary" /> Advertisements</h2>
-          <p className="text-xs text-muted-foreground">Manage popup and banner ads displayed across the library.</p>
+          <p className="text-xs text-muted-foreground">Schedule popup and banner ads. Status reflects the live state at this moment.</p>
         </div>
         <button
           type="button"
@@ -87,8 +119,8 @@ export function AdsTab() {
               <th className="px-3 py-2">Name</th>
               <th className="px-3 py-2">Type</th>
               <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Start</th>
-              <th className="px-3 py-2">End</th>
+              <th className="px-3 py-2">Starts</th>
+              <th className="px-3 py-2">Ends</th>
               <th className="px-3 py-2">Updated</th>
               <th className="px-3 py-2 text-right">Actions</th>
             </tr>
@@ -98,44 +130,49 @@ export function AdsTab() {
               <tr><td colSpan={7} className="px-3 py-6 text-center text-muted-foreground">Loading…</td></tr>
             ) : ads.length === 0 ? (
               <tr><td colSpan={7} className="px-3 py-6 text-center text-muted-foreground">No advertisements yet.</td></tr>
-            ) : ads.map((ad) => (
-              <tr key={ad.id} className="border-t border-border/60">
-                <td className="px-3 py-2 font-medium">{ad.name}</td>
-                <td className="px-3 py-2 capitalize">{ad.type}{ad.type === "banner" && ad.banner_position ? ` · ${ad.banner_position}` : ""}</td>
-                <td className="px-3 py-2">
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${ad.status === "active" ? "bg-emerald-500/20 text-emerald-300" : "bg-muted/40 text-muted-foreground"}`}>
-                    {ad.status}
-                  </span>
-                </td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">{ad.start_date ? new Date(ad.start_date).toLocaleDateString() : "—"}</td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">{ad.end_date ? new Date(ad.end_date).toLocaleDateString() : "—"}</td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">{new Date(ad.updated_at).toLocaleString()}</td>
-                <td className="px-3 py-2 text-right">
-                  <div className="inline-flex gap-1">
-                    <button
-                      type="button"
-                      onClick={() => { setCreating(false); setEditing(ad); }}
-                      className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-elevated"
-                    >
-                      <Pencil className="h-3 w-3" /> Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!confirm(`Delete "${ad.name}"?`)) return;
-                        del.mutate(ad, {
-                          onSuccess: () => toast.success("Ad deleted"),
-                          onError: (e: any) => toast.error(e.message || "Delete failed"),
-                        });
-                      }}
-                      className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-rose-500/40 px-2 py-1 text-xs text-rose-300 hover:bg-rose-500/10"
-                    >
-                      <Trash2 className="h-3 w-3" /> Delete
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            ) : ads.map((ad) => {
+              const eff = effectiveStatus(ad);
+              const meta = STATUS_META[eff];
+              return (
+                <tr key={ad.id} className="border-t border-border/60">
+                  <td className="px-3 py-2 font-medium">{ad.name}</td>
+                  <td className="px-3 py-2 capitalize">{ad.type}{ad.type === "banner" && ad.banner_position ? ` · ${ad.banner_position}` : ""}</td>
+                  <td className="px-3 py-2">
+                    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-semibold ${meta.cls}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
+                      {meta.label}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{fmtDT(ad.start_date)}</td>
+                  <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{fmtDT(ad.end_date)}</td>
+                  <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{fmtDT(ad.updated_at)}</td>
+                  <td className="px-3 py-2 text-right">
+                    <div className="inline-flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => { setCreating(false); setEditing(ad); }}
+                        className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-elevated"
+                      >
+                        <Pencil className="h-3 w-3" /> Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!confirm(`Delete "${ad.name}"?`)) return;
+                          del.mutate(ad, {
+                            onSuccess: () => toast.success("Ad deleted"),
+                            onError: (e: any) => toast.error(e.message || "Delete failed"),
+                          });
+                        }}
+                        className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-rose-500/40 px-2 py-1 text-xs text-rose-300 hover:bg-rose-500/10"
+                      >
+                        <Trash2 className="h-3 w-3" /> Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -151,9 +188,12 @@ export function AdsTab() {
   );
 }
 
+type EditorTab = "basics" | "content" | "schedule" | "display";
+
 function AdEditor({ initial, editingId, onClose }: { initial: FormState; editingId?: string; onClose: () => void }) {
   const [form, setForm] = useState<FormState>(initial);
   const [uploading, setUploading] = useState(false);
+  const [tab, setTab] = useState<EditorTab>("basics");
   const upsert = useUpsertAd();
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }));
@@ -173,12 +213,18 @@ function AdEditor({ initial, editingId, onClose }: { initial: FormState; editing
   };
 
   const submit = () => {
-    if (!form.name.trim()) { toast.error("Name is required"); return; }
-    if (!form.image_url) { toast.error("Image is required"); return; }
-    if (form.type === "banner" && !form.banner_position) { toast.error("Banner position is required"); return; }
+    if (!form.name.trim()) { setTab("basics"); toast.error("Name is required"); return; }
+    if (!form.image_url) { setTab("basics"); toast.error("Image is required"); return; }
+    if (form.type === "banner" && !form.banner_position) { setTab("display"); toast.error("Banner position is required"); return; }
     const ctaTrimmed = form.cta_url.trim();
     if (ctaTrimmed && !/^https?:\/\//i.test(ctaTrimmed)) {
+      setTab("content");
       toast.error("CTA URL must start with http:// or https://");
+      return;
+    }
+    if (form.start_date && form.end_date && new Date(form.end_date) <= new Date(form.start_date)) {
+      setTab("schedule");
+      toast.error("End time must be after start time");
       return;
     }
     const values = {
@@ -203,6 +249,13 @@ function AdEditor({ initial, editingId, onClose }: { initial: FormState; editing
     });
   };
 
+  const TABS: { id: EditorTab; label: string; icon: any }[] = [
+    { id: "basics",   label: "Basics",   icon: ImageIcon },
+    { id: "content",  label: "Content",  icon: FileText },
+    { id: "schedule", label: "Schedule", icon: CalendarClock },
+    { id: "display",  label: "Display",  icon: LayoutTemplate },
+  ];
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
       <div
@@ -216,98 +269,157 @@ function AdEditor({ initial, editingId, onClose }: { initial: FormState; editing
           </button>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Advertisement name *">
-            <input value={form.name} onChange={(e) => set("name", e.target.value)} className="input" />
-          </Field>
-          <Field label="Type *">
-            <select value={form.type} onChange={(e) => set("type", e.target.value as AdType)} className="input">
-              <option value="popup">Popup</option>
-              <option value="banner">Banner</option>
-            </select>
-          </Field>
+        <div className="mb-4 flex flex-wrap gap-1 rounded-xl border border-border bg-surface/40 p-1">
+          {TABS.map((t) => {
+            const active = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTab(t.id)}
+                className={`flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                  active ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground hover:bg-surface-elevated hover:text-foreground"
+                }`}
+              >
+                <t.icon className="h-3.5 w-3.5" />
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
 
-          <Field label="Image *" full>
-            <div className="flex flex-wrap items-center gap-3">
-              {form.image_url && (
-                <img src={form.image_url} alt="Ad" className="h-20 w-32 rounded-md border border-border object-cover" />
-              )}
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm hover:bg-surface">
-                <Upload className="h-4 w-4" />
-                {uploading ? "Uploading…" : form.image_url ? "Replace image" : "Upload image"}
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  disabled={uploading}
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }}
-                />
-              </label>
-            </div>
-          </Field>
-
-          <Field label="Title (popup only)">
-            <input value={form.title} onChange={(e) => set("title", e.target.value)} className="input" />
-          </Field>
-          <Field label="CTA button text">
-            <input value={form.cta_text} onChange={(e) => set("cta_text", e.target.value)} className="input" />
-          </Field>
-          <Field label="Description (popup only)" full>
-            <textarea value={form.description} onChange={(e) => set("description", e.target.value)} className="input min-h-20" />
-          </Field>
-          <Field label="CTA URL" full>
-            <input value={form.cta_url} onChange={(e) => set("cta_url", e.target.value)} placeholder="https://…" className="input" />
-          </Field>
-
-          <Field label="Status">
-            <select value={form.status} onChange={(e) => set("status", e.target.value as AdStatus)} className="input">
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </Field>
-          {form.type === "banner" ? (
-            <Field label="Banner position">
-              <select value={form.banner_position} onChange={(e) => set("banner_position", e.target.value as BannerPosition)} className="input">
-                <option value="top">Top of homepage</option>
-                <option value="middle">Between content sections</option>
-                <option value="bottom">Bottom of homepage</option>
+        {tab === "basics" && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Advertisement name *">
+              <input value={form.name} onChange={(e) => set("name", e.target.value)} className="input" placeholder="Internal name" />
+            </Field>
+            <Field label="Type *">
+              <select value={form.type} onChange={(e) => set("type", e.target.value as AdType)} className="input">
+                <option value="popup">Popup</option>
+                <option value="banner">Banner</option>
               </select>
             </Field>
-          ) : (
-            <Field label="Auto close (seconds)">
-              <input
-                type="number"
-                min={1}
-                value={form.auto_close_seconds}
-                onChange={(e) => set("auto_close_seconds", Number(e.target.value))}
-                className="input"
-              />
+            <Field label="Image *" full>
+              <div className="flex flex-wrap items-center gap-3">
+                {form.image_url && (
+                  <img src={form.image_url} alt="Ad" className="h-24 w-40 rounded-md border border-border object-cover" />
+                )}
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm hover:bg-surface">
+                  <Upload className="h-4 w-4" />
+                  {uploading ? "Uploading…" : form.image_url ? "Replace image" : "Upload image"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploading}
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }}
+                  />
+                </label>
+                <p className="w-full text-xs text-muted-foreground">PNG/JPG up to 5 MB. Use 16:9 for banners and square/portrait for popups.</p>
+              </div>
             </Field>
-          )}
+          </div>
+        )}
 
-          <Field label="Start date">
-            <input type="datetime-local" value={form.start_date} onChange={(e) => set("start_date", e.target.value)} className="input" />
-          </Field>
-          <Field label="End date">
-            <input type="datetime-local" value={form.end_date} onChange={(e) => set("end_date", e.target.value)} className="input" />
-          </Field>
-        </div>
+        {tab === "content" && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label={form.type === "popup" ? "Title" : "Title (optional overlay)"} full>
+              <input value={form.title} onChange={(e) => set("title", e.target.value)} className="input" placeholder="Headline shown to users" />
+            </Field>
+            <Field label="Description" full>
+              <textarea value={form.description} onChange={(e) => set("description", e.target.value)} className="input min-h-24" placeholder="Short supporting copy" />
+            </Field>
+            <Field label="CTA button text">
+              <input value={form.cta_text} onChange={(e) => set("cta_text", e.target.value)} className="input" placeholder="e.g. Learn more" />
+            </Field>
+            <Field label="CTA URL">
+              <input value={form.cta_url} onChange={(e) => set("cta_url", e.target.value)} placeholder="https://…" className="input" />
+            </Field>
+          </div>
+        )}
 
-        <div className="mt-5 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="cursor-pointer rounded-lg border border-border px-4 py-2 text-sm hover:bg-surface-elevated">
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={submit}
-            disabled={upsert.isPending || uploading}
-            className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-60"
-          >
-            <Save className="h-4 w-4" /> {upsert.isPending ? "Saving…" : "Save"}
-          </button>
+        {tab === "schedule" && (
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Start date & time">
+                <input type="datetime-local" value={form.start_date} onChange={(e) => set("start_date", e.target.value)} className="input" />
+              </Field>
+              <Field label="End date & time">
+                <input type="datetime-local" value={form.end_date} onChange={(e) => set("end_date", e.target.value)} className="input" />
+              </Field>
+            </div>
+            <Field label="Status">
+              <div className="flex gap-2">
+                {(["active", "inactive"] as AdStatus[]).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => set("status", s)}
+                    className={`inline-flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold capitalize transition ${
+                      form.status === s
+                        ? "border-primary bg-primary/15 text-primary"
+                        : "border-border bg-surface-elevated text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <CircleDot className="h-3.5 w-3.5" /> {s}
+                  </button>
+                ))}
+              </div>
+            </Field>
+            <div className="flex items-start gap-2 rounded-lg border border-border bg-surface-elevated/60 p-3 text-xs text-muted-foreground">
+              <Clock3 className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-primary" />
+              <p>
+                Leave dates empty for an always-on ad. The ad is auto-hidden before the start time and after the end time, even when the status is Active. Set status to Inactive to pause manually.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {tab === "display" && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {form.type === "banner" ? (
+              <Field label="Banner position" full>
+                <select value={form.banner_position} onChange={(e) => set("banner_position", e.target.value as BannerPosition)} className="input">
+                  <option value="top">Top of homepage</option>
+                  <option value="middle">Between content sections</option>
+                  <option value="bottom">Bottom of homepage (sticky)</option>
+                </select>
+              </Field>
+            ) : (
+              <Field label="Auto close (seconds)" full>
+                <input
+                  type="number"
+                  min={1}
+                  value={form.auto_close_seconds}
+                  onChange={(e) => set("auto_close_seconds", Number(e.target.value))}
+                  className="input"
+                />
+                <p className="mt-1 text-xs text-muted-foreground">Popup closes automatically after this many seconds.</p>
+              </Field>
+            )}
+          </div>
+        )}
+
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-4">
+          <p className="text-xs text-muted-foreground">
+            Tab <span className="font-semibold capitalize text-foreground">{tab}</span> · {form.type === "popup" ? "Popup overlay" : `Banner · ${form.banner_position}`}
+          </p>
+          <div className="flex gap-2">
+            <button type="button" onClick={onClose} className="cursor-pointer rounded-lg border border-border px-4 py-2 text-sm hover:bg-surface-elevated">
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={submit}
+              disabled={upsert.isPending || uploading}
+              className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-60"
+            >
+              <Save className="h-4 w-4" /> {upsert.isPending ? "Saving…" : "Save"}
+            </button>
+          </div>
         </div>
       </div>
-      <style>{`.input{width:100%;border-radius:0.5rem;border:1px solid hsl(var(--border));background:hsl(var(--surface-elevated));padding:.5rem .75rem;font-size:.875rem;outline:none}.input:focus{border-color:hsl(var(--primary))}`}</style>
+      <style>{`.input{width:100%;border-radius:0.5rem;border:1px solid hsl(var(--border));background:hsl(var(--surface-elevated));padding:.5rem .75rem;font-size:.875rem;outline:none;color:inherit}.input:focus{border-color:hsl(var(--primary))}`}</style>
     </div>
   );
 }
