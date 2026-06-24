@@ -153,9 +153,7 @@ function ProfilePage() {
     <AppLayout>
       {/* Identity card */}
       <div className="glass-card mb-8 flex flex-wrap items-start gap-6 rounded-3xl p-7">
-        <div className="grid h-20 w-20 place-items-center rounded-2xl bg-gradient-to-br from-primary to-accent text-2xl font-bold">
-          {profile.display_name.slice(0, 1).toUpperCase()}
-        </div>
+        <AvatarTile profile={profile} />
         <div className="flex-1 min-w-[220px]">
           {editingIdentity ? (
             <div className="flex flex-col gap-2">
