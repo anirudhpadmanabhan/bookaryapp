@@ -60,7 +60,7 @@ function HomePage() {
             <span className="font-mal text-accent">ചെറുകാട്</span> reading library — every book on every rack.
           </h1>
           <p className="mt-4 text-base text-foreground/80 md:text-lg">
-            Uploaded catalogue: {books.length.toLocaleString()} books · {genres.length} genres · {writers.length} writers.
+            Uploaded catalogue: {total.toLocaleString()} books · {genres.length} genres · {writers.length} writers.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link to="/search" className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90">
@@ -206,12 +206,12 @@ function HomePage() {
             <h2 className="text-xl font-bold">All Published Books</h2>
           </div>
           <Link to="/search" className="cursor-pointer text-sm font-medium text-primary hover:underline">
-            See all {books.length.toLocaleString()} ›
+            See all {total.toLocaleString()} ›
           </Link>
         </div>
         <SortBar
           count={shown.length}
-          total={books.length}
+          total={total}
           sort={sort}
           onSortChange={setSort}
           direction={direction}
