@@ -668,6 +668,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      home_data: {
+        Args: {
+          _latest_limit?: number
+          _library_id?: string
+          _popular_limit?: number
+        }
+        Returns: Json
+      }
       librarian_decide_suggestion: {
         Args: { _decision: string; _id: string; _note?: string }
         Returns: Json

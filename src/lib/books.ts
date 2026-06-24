@@ -116,6 +116,27 @@ export function sortBooks(books: Book[], sort: BookSort, direction: SortDirectio
 const LIST_COLUMNS =
   "id,title,title_ml,author,author_ml,original_author,genre,genre_ml,rating,rent_price,cover_color,pages,published_year,publisher,shelf_code,language,cover_url,created_at,library_id";
 
+export type HomeFacet = { key: string; ml?: string | null; count: number };
+export type HomeData = {
+  total: number;
+  latest: Book[];
+  popular: Book[];
+  genres: HomeFacet[];
+  writers: HomeFacet[];
+  languages: HomeFacet[];
+};
+
+export async function fetchHomeData(latestLimit = 60, popularLimit = 6): Promise<HomeData> {
+  const libraryId = getSelectedLibraryId();
+  const { data, error } = await supabase.rpc("home_data", {
+    _library_id: libraryId ?? undefined,
+    _latest_limit: latestLimit,
+    _popular_limit: popularLimit,
+  });
+  if (error) throw error;
+  return (data ?? { total: 0, latest: [], popular: [], genres: [], writers: [], languages: [] }) as HomeData;
+}
+
 export async function fetchBooks(): Promise<Book[]> {
   const libraryId = getSelectedLibraryId();
   const pageSize = 1000;
@@ -143,6 +164,7 @@ export async function fetchBooks(): Promise<Book[]> {
   if (error) throw error;
   return [first.data ?? [], ...pages.map((p) => p.data ?? [])].flat() as unknown as Book[];
 }
+
 
 export async function fetchBook(id: string): Promise<Book | null> {
   const { data, error } = await supabase.from("books").select("*").eq("id", id).maybeSingle();
