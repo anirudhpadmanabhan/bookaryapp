@@ -39,7 +39,7 @@ export function colorAt(index: number): string {
 }
 
 // Price options removed per product decision (flat ₹10 / 20 days).
-export type BookSort = "newest" | "title" | "rating" | "shelf";
+export type BookSort = "newest" | "title" | "rating" | "genre";
 export type SortDirection = "asc" | "desc";
 
 const GENRE_ENGLISH: Record<string, string> = {
@@ -90,14 +90,19 @@ export function sortBooks(books: Book[], sort: BookSort, direction: SortDirectio
     case "title":
       return arr.sort((a, b) => a.title.localeCompare(b.title) * (direction === "asc" ? 1 : -1));
     case "rating":
-      return arr.sort((a, b) => (displayRating(a) - displayRating(b)) * (direction === "asc" ? 1 : -1));
-    case "shelf":
-      // Always numeric by shelf code; books without a shelf go to the end.
       return arr.sort((a, b) => {
-        const na = shelfNum(a.shelf_code), nb = shelfNum(b.shelf_code);
-        const ma = Number.isFinite(na) ? 0 : 1, mb = Number.isFinite(nb) ? 0 : 1;
-        if (ma !== mb) return ma - mb;
-        return (na - nb) * (direction === "asc" ? 1 : -1);
+        const dr = (displayRating(a) - displayRating(b)) * (direction === "asc" ? 1 : -1);
+        if (dr !== 0) return dr;
+        // Tiebreaker so a second click visibly reorders equal-rated books too.
+        return a.title.localeCompare(b.title) * (direction === "asc" ? 1 : -1);
+      });
+    case "genre":
+      return arr.sort((a, b) => {
+        const ga = genreEnglish(a).toLowerCase();
+        const gb = genreEnglish(b).toLowerCase();
+        const c = ga.localeCompare(gb);
+        if (c !== 0) return c * (direction === "asc" ? 1 : -1);
+        return a.title.localeCompare(b.title) * (direction === "asc" ? 1 : -1);
       });
     case "newest":
     default:
