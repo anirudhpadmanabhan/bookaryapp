@@ -129,7 +129,7 @@ export type HomeData = {
 export async function fetchHomeData(latestLimit = 60, popularLimit = 6): Promise<HomeData> {
   const libraryId = getSelectedLibraryId();
   const { data, error } = await supabase.rpc("home_data", {
-    _library_id: libraryId,
+    _library_id: libraryId ?? undefined,
     _latest_limit: latestLimit,
     _popular_limit: popularLimit,
   });
