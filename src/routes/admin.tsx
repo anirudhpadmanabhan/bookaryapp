@@ -789,7 +789,7 @@ function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; 
           <label className="block">
             <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Target library</span>
             <select value={libraryId} onChange={(e) => setLibraryId(e.target.value)} className="w-full cursor-pointer rounded-lg border border-border bg-background/50 px-3 py-2 text-sm">
-              <option value="">— Unassigned —</option>
+              {scope === null && <option value="">— Unassigned —</option>}
               {libs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
             </select>
           </label>
