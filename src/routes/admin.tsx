@@ -23,9 +23,10 @@ import {
   Shield, Library as LibIcon, Package, Clock, Lightbulb,
   Search as SearchIcon, Trash2, CheckCircle2, Plus, Pencil, X, Save,
   Upload, Grid3x3, List as ListIcon, Building2, Users, Mail, Star, Activity,
-  FileText, FileDown, ArrowUpDown, ArrowUp, ArrowDown, LayoutDashboard,
+  FileText, FileDown, ArrowUpDown, ArrowUp, ArrowDown, LayoutDashboard, Megaphone,
 } from "lucide-react";
 import { exportCsv, exportPdf } from "@/lib/pdf-export";
+import { AdsTab } from "@/components/admin/AdsTab";
 
 type Tab = "overview" | "books" | "rentals" | "waitlist" | "suggestions" | "ads" | "libraries" | "roles" | "users" | "activity";
 
