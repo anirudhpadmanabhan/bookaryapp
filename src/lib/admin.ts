@@ -244,15 +244,20 @@ export function useLibraryMembers(libraryId: string | null | undefined) {
 
 // ===== WAITLIST MANAGEMENT =====
 export function useAllWaitlist() {
+  const scope = useMyLibraryScope();
   return useQuery({
-    queryKey: ["admin-waitlist"],
+    queryKey: ["admin-waitlist", scope ? scope.join(",") : "all"],
     staleTime: 30_000,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("waitlist")
-        .select("*, books(id, title, author)")
+        .select("*, books!inner(id, title, author, library_id)")
         .order("created_at", { ascending: true })
         .limit(200);
+      if (scope !== null) {
+        q = q.in("books.library_id", scope.length ? scope : ["00000000-0000-0000-0000-000000000000"]);
+      }
+      const { data, error } = await q;
       if (error) throw error;
       return data ?? [];
     },
