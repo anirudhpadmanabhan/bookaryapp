@@ -431,17 +431,17 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <LibrarySwitcher compact />
       </div>
 
-      <div className="mx-auto max-w-[1400px] px-4 py-6 md:px-6">
-        <div className="mb-6 hidden flex-col gap-3 md:flex">
-          <nav className="glass-card flex flex-wrap items-center gap-1 rounded-2xl p-2">
-            <span className="px-3 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Browse</span>
+      <div className="mx-auto flex max-w-[1400px] gap-6 px-4 py-6 md:px-6">
+        <aside className="sticky top-20 hidden h-[calc(100vh-6rem)] w-60 shrink-0 flex-col gap-6 self-start overflow-y-auto pr-1 md:flex">
+          <nav className="glass-card flex flex-col gap-1 rounded-2xl p-3">
+            <div className="px-3 pb-1 pt-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Browse</div>
             {navMain.map((n) => {
               const active = pathname === n.to;
               return (
                 <Link
                   key={n.to}
                   to={n.to}
-                  className={`flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm transition ${
+                  className={`flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${
                     active ? "bg-primary/15 text-primary" : "text-foreground/80 hover:bg-surface-elevated hover:text-foreground"
                   }`}
                 >
@@ -450,14 +450,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 </Link>
               );
             })}
-            <span className="ml-2 px-3 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Your shelf</span>
+            <div className="px-3 pb-1 pt-3 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Your shelf</div>
             {navMine.map((n) => {
               const active = pathname === n.to;
               return (
                 <Link
                   key={n.to}
                   to={n.to}
-                  className={`flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm transition ${
+                  className={`flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${
                     active ? "bg-primary/15 text-primary" : "text-foreground/80 hover:bg-surface-elevated hover:text-foreground"
                   }`}
                 >
@@ -468,16 +468,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
             })}
           </nav>
 
-          <div className="glass-card flex items-start gap-3 rounded-2xl p-3">
+          <div className="glass-card rounded-2xl p-4">
             <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-accent">
               <Sparkles className="h-3.5 w-3.5" />
               {tip.title}
             </div>
-            <p className="text-sm leading-snug text-foreground/80">{tip.body}</p>
+            <p className="mt-2 text-sm leading-snug text-foreground/80">{tip.body}</p>
           </div>
-        </div>
+        </aside>
 
-        <main className="min-w-0">
+        <main className="min-w-0 flex-1">
           {children}
         </main>
       </div>
