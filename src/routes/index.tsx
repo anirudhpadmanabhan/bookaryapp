@@ -89,6 +89,7 @@ function HomePage() {
 
   return (
     <AppLayout>
+      <AdBanner position="top" />
       {/* Hero */}
       <section className="glass-card relative mb-8 overflow-hidden rounded-3xl p-6 md:p-10">
         <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-primary/30 blur-3xl" />
