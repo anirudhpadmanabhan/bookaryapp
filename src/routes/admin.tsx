@@ -834,6 +834,33 @@ function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; 
         {filename && (
           <div className="mt-4 rounded-xl border border-border bg-surface/40 p-3 text-sm">
             <div className="font-medium">{filename}</div>
+            {detected.length > 0 && (
+              <div className="mt-2 rounded-md border border-border/50 bg-background/40 p-2 text-xs">
+                <div className="mb-1 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">Detected column mapping</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {detected.map((d, i) => (
+                    <span
+                      key={`${d.header}-${i}`}
+                      className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 ${
+                        d.field
+                          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                          : "border-border bg-surface/60 text-muted-foreground line-through"
+                      }`}
+                      title={d.field ? `${d.header} → ${d.field}` : `${d.header} (ignored)`}
+                    >
+                      <span className="font-medium">{d.header || "(blank)"}</span>
+                      {d.field && <span className="opacity-70">→ {d.field}</span>}
+                    </span>
+                  ))}
+                </div>
+                {!detected.some((d) => d.field === "shelf_code") && (
+                  <div className="mt-2 rounded bg-amber-500/10 px-2 py-1 text-[11px] text-amber-300">
+                    ⚠ No rack/shelf column detected. Rename your column to <code>Rack No</code>, <code>Shelf Code</code>, <code>Book No</code>, or <code>Accession No</code>.
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="text-xs text-muted-foreground">
               {rows.length.toLocaleString()} ready to import{skipped > 0 && ` · ${skipped} skipped (missing title/author)`} · target: <span className="font-semibold text-primary">{libName}</span>
               {mode === "overwrite" && overwriteCount > 0 && ` · will replace up to ${overwriteCount} existing rack codes`}
