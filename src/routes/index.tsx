@@ -1,13 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
-import { fetchHomeData, sortBooks, type BookSort, type SortDirection, slugify } from "@/lib/books";
+import { fetchHomeData, fetchBooks, sortBooks, type BookSort, type SortDirection, slugify } from "@/lib/books";
 import { BooksGrid, type ViewMode } from "@/components/BooksGrid";
 import { BookCard } from "@/components/BookCard";
 import { colorAt } from "@/lib/books";
 import { SortBar } from "@/components/SortBar";
-import { ArrowRight, Library, PenLine, Sparkles, ChevronDown, ChevronUp, Languages as LangIcon, Flame } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+  Pagination, PaginationContent, PaginationItem, PaginationLink,
+  PaginationPrevious, PaginationNext, PaginationEllipsis,
+} from "@/components/ui/pagination";
+import { ArrowRight, Library, PenLine, Sparkles, ChevronDown, ChevronUp, Languages as LangIcon, Flame, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+
 
 export const Route = createFileRoute("/")({
   ssr: false,
