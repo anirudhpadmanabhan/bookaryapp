@@ -121,6 +121,7 @@ function AdminPage() {
       {tab === "rentals" && <RentalsTab />}
       {tab === "waitlist" && <WaitlistTab />}
       {tab === "suggestions" && <SuggestionsTab />}
+      {tab === "ads" && <AdsTab />}
       {tab === "libraries" && isAdmin && <LibrariesTab />}
       {tab === "users" && isAdmin && <UsersTab />}
       {tab === "roles" && isAdmin && <StaffRolesTab />}
