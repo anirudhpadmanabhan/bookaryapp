@@ -30,18 +30,34 @@ export function useUpdateProfile() {
   const qc = useQueryClient();
   const { user } = useSession();
   return useMutation({
-    mutationFn: async (updates: { display_name?: string; tag?: string | null; phone?: string | null; address?: string | null }) => {
+    mutationFn: async (updates: { display_name?: string; tag?: string | null; phone?: string | null; address?: string | null; avatar_url?: string | null }) => {
       if (!user) throw new Error("Sign in");
       const { error } = await supabase.from("profiles").update(updates as any).eq("id", user.id);
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["profile"] });
+      qc.invalidateQueries({ queryKey: ["avatar-url"] });
       toast.success("Profile updated");
     },
     onError: (e: Error) => toast.error(e.message),
   });
 }
+
+// Sign a private avatar object path into a temporary URL (1 hour).
+export function useAvatarUrl(path: string | null | undefined) {
+  return useQuery({
+    enabled: !!path,
+    queryKey: ["avatar-url", path],
+    staleTime: 50 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase.storage.from("avatars").createSignedUrl(path!, 60 * 60);
+      if (error) throw error;
+      return data.signedUrl;
+    },
+  });
+}
+
 
 // FAVORITES
 export function useFavorites() {
