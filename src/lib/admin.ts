@@ -5,22 +5,27 @@ import { toast } from "sonner";
 
 export type AppRole = "admin" | "librarian" | "reader";
 
-export function useMyRoles() {
+function useMyRoleRows() {
   const { user } = useSession();
   return useQuery({
     enabled: !!user,
-    queryKey: ["my-roles", user?.id],
+    queryKey: ["my-role-rows", user?.id],
     staleTime: 30_000,
     refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("user_roles")
-        .select("role")
+        .select("role, library_id")
         .eq("user_id", user!.id);
       if (error) throw error;
-      return (data ?? []).map((r) => r.role as AppRole);
+      return (data ?? []) as Array<{ role: AppRole; library_id: string | null }>;
     },
   });
+}
+
+export function useMyRoles() {
+  const q = useMyRoleRows();
+  return { ...q, data: (q.data ?? []).map((r) => r.role) };
 }
 
 export function useIsStaff() {
@@ -31,6 +36,20 @@ export function useIsStaff() {
 export function useIsAdmin() {
   const { data: roles = [] } = useMyRoles();
   return roles.includes("admin");
+}
+
+/**
+ * Library scope for the signed-in user.
+ *  - `null` → full access (admin, OR legacy librarian with no specific library).
+ *  - `string[]` → restricted to these library ids only (library admin scope).
+ */
+export function useMyLibraryScope(): string[] | null {
+  const { data: rows = [] } = useMyRoleRows();
+  if (rows.some((r) => r.role === "admin")) return null;
+  const libRows = rows.filter((r) => r.role === "librarian");
+  if (libRows.length === 0) return [];
+  if (libRows.some((r) => r.library_id === null)) return null;
+  return Array.from(new Set(libRows.map((r) => r.library_id as string)));
 }
 
 // ===== BOOK MANAGEMENT =====
