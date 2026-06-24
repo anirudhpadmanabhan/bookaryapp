@@ -729,11 +729,12 @@ function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; 
   const importMut = useBulkImportBooks();
   const { selectedId } = useLibrary();
   const { data: libs = [] } = useAdminLibraries();
+  const scope = useMyLibraryScope();
   const [rows, setRows] = useState<BookImportRow[]>([]);
   const [filename, setFilename] = useState<string>("");
   const [skipped, setSkipped] = useState(0);
   const [mode, setMode] = useState<ImportMode>("append");
-  const [libraryId, setLibraryId] = useState<string>(defaultLibraryId ?? selectedId ?? "");
+  const [libraryId, setLibraryId] = useState<string>(defaultLibraryId ?? selectedId ?? (scope && scope.length ? scope[0] : ""));
   const [detected, setDetected] = useState<DetectedMapping>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
