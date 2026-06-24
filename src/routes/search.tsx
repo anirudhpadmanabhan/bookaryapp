@@ -170,9 +170,10 @@ function SearchPage() {
 
         {/* Live autocomplete dropdown — grouped: Books → Authors → Other */}
         {showDropdown && liveSuggestions.length > 0 && (() => {
-          const titleHits = liveSuggestions.filter((b) => scoreMatch(b, trimmed)?.bucket === 0);
-          const authorHits = liveSuggestions.filter((b) => scoreMatch(b, trimmed)?.bucket === 1);
-          const otherHits = liveSuggestions.filter((b) => scoreMatch(b, trimmed)?.bucket === 2);
+          const n = liveTrimmed.toLowerCase();
+          const titleHits = liveSuggestions.filter((b) => bucketFor(b, n) === 0);
+          const authorHits = liveSuggestions.filter((b) => bucketFor(b, n) === 1);
+          const otherHits = liveSuggestions.filter((b) => bucketFor(b, n) === 2);
           const Group = ({ label, items }: { label: string; items: typeof liveSuggestions }) =>
             items.length === 0 ? null : (
               <div>
