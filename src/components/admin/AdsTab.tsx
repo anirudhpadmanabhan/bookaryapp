@@ -96,6 +96,8 @@ export function AdsTab() {
   const { data: ads = [], isLoading } = useAllAds();
   const [editing, setEditing] = useState<Advertisement | null>(null);
   const [creating, setCreating] = useState(false);
+  const [previewing, setPreviewing] = useState<Advertisement | null>(null);
+  const [insightsFor, setInsightsFor] = useState<Advertisement | null>(null);
   const del = useDeleteAd();
 
   return (
