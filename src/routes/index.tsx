@@ -259,15 +259,78 @@ function HomePage() {
           view={view}
           onViewChange={setView}
         />
-        {isLoading ? (
+        {isLoading && allBooks.length === 0 ? (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             {Array.from({ length: 15 }).map((_, i) => (
               <div key={i} className="aspect-[2/3] animate-pulse rounded-xl bg-surface" />
             ))}
           </div>
         ) : (
-          <BooksGrid books={shown} view={view} hideShelf />
+          <>
+            <BooksGrid books={shown} view={view} hideShelf />
+            {pageCount > 1 && (
+              <div className="mt-8 flex flex-col items-center gap-2">
+                <Pagination>
+                  <PaginationContent className="flex-wrap justify-center">
+                    <PaginationItem>
+                      <PaginationLink
+                        aria-label="Go to first page"
+                        size="default"
+                        className={`gap-1 px-2.5 ${page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}`}
+                        onClick={() => page > 1 && setPage(1)}
+                      >
+                        <ChevronsLeft className="h-4 w-4" />
+                        <span className="hidden sm:inline">First</span>
+                      </PaginationLink>
+                    </PaginationItem>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        onClick={() => page > 1 && setPage(page - 1)}
+                      />
+                    </PaginationItem>
+                    {pageNumbers.map((p, i) =>
+                      p === "…" ? (
+                        <PaginationItem key={`e-${i}`}><PaginationEllipsis /></PaginationItem>
+                      ) : (
+                        <PaginationItem key={p}>
+                          <PaginationLink
+                            isActive={p === page}
+                            className="cursor-pointer"
+                            onClick={() => setPage(p)}
+                          >
+                            {p}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ),
+                    )}
+                    <PaginationItem>
+                      <PaginationNext
+                        className={page === pageCount ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        onClick={() => page < pageCount && setPage(page + 1)}
+                      />
+                    </PaginationItem>
+                    <PaginationItem>
+                      <PaginationLink
+                        aria-label="Go to last page"
+                        size="default"
+                        className={`gap-1 px-2.5 ${page === pageCount ? "pointer-events-none opacity-50" : "cursor-pointer"}`}
+                        onClick={() => page < pageCount && setPage(pageCount)}
+                      >
+                        <span className="hidden sm:inline">Last</span>
+                        <ChevronsRight className="h-4 w-4" />
+                      </PaginationLink>
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+                <p className="text-xs text-muted-foreground">
+                  Page {page} of {pageCount} · Showing {start + 1}–{Math.min(start + PAGE_SIZE, sortedAll.length)} of {sortedAll.length.toLocaleString()}
+                </p>
+              </div>
+            )}
+          </>
         )}
+
       </section>
     </AppLayout>
   );
