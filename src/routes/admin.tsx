@@ -7,6 +7,7 @@ import {
   useUpdateBook, useDeleteBook, useCreateBook,
   useAdminLibraries, useCreateLibrary, useUpdateLibrary, useDeleteLibrary,
   useStaffRoles, useSetUserRole, useLibraryMembers,
+  useGrantLibrarianForLibrary, useRevokeLibrarianForLibrary,
   useStaffUserSummary,
   useBulkImportBooks, useLibraryBookCounts, type BookImportRow, type ImportMode,
   useAdminUsers, useTransactionLog,
