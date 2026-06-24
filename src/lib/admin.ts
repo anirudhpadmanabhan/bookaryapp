@@ -66,11 +66,17 @@ export function useUpdateBook() {
         title_ml: string | null;
         author: string;
         author_ml: string | null;
+        original_author: string | null;
         genre: string;
+        genre_ml: string | null;
         shelf_code: string | null;
         rent_price: number;
         publisher: string | null;
         language: string | null;
+        pages: number | null;
+        published_year: number | null;
+        description: string | null;
+        cover_url: string | null;
       }>;
     }) => {
       const { error } = await supabase.from("books").update(patch as any).eq("id", id);
