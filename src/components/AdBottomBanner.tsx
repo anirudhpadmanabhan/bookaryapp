@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { useActiveBannerAd } from "@/lib/ads";
 
+const safeUrl = (u: string | null | undefined) =>
+  u && /^https?:\/\//i.test(u) ? u : null;
+
 /**
  * Platform-wide dismissible bottom banner advertisement.
  * Stays hidden after the user dismisses the current ad (per ad id, per session).
