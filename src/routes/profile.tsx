@@ -5,10 +5,11 @@ import {
   useProfile, useRentals, useTopUpWallet, useSuggestions, useSuggestBook,
   useReadingInsights, useFavorites, useDueSoonRentals, useUpdateProfile,
   useWaitlist, useLeaveWaitlist, useClaimReservation, useDeclineReservation,
+  useAvatarUrl,
 } from "@/lib/userdata";
 import {
   Wallet, BookOpen, CheckCircle2, Lightbulb, Clock, Flame, Heart, NotebookPen,
-  Trophy, BookMarked, AlertTriangle, BellRing, Pencil, X, Tag, Smartphone, Check, ChevronDown,
+  Trophy, BookMarked, AlertTriangle, BellRing, Pencil, X, Tag, Smartphone, Check, ChevronDown, Camera, Trash2,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
