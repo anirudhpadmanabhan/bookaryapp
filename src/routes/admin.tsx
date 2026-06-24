@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/re
 import { AppLayout } from "@/components/AppLayout";
 import { useSession } from "@/lib/auth";
 import {
-  useIsStaff, useIsAdmin, useMyRoles, useAllRentals, useUpdateRentalStatus, useMarkReturned,
+  useIsStaff, useIsAdmin, useMyRoles, useMyLibraryScope, useAllRentals, useUpdateRentalStatus, useMarkReturned,
   useAllWaitlist, useRemoveWaitlistEntry, useAllSuggestions, useDecideSuggestion,
   useUpdateBook, useDeleteBook, useCreateBook,
   useAdminLibraries, useCreateLibrary, useUpdateLibrary, useDeleteLibrary,
