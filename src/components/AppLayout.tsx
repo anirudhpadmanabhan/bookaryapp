@@ -431,9 +431,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <LibrarySwitcher compact />
       </div>
 
-      <div className="mx-auto flex max-w-[1400px] items-start gap-6 px-4 py-6 md:px-6">
-        <aside className="sticky top-20 z-20 hidden h-[calc(100vh-6rem)] w-60 shrink-0 flex-col gap-4 self-start overflow-y-auto overscroll-contain pr-1 md:flex">
-          <nav aria-label="Browse" className="glass-card flex flex-col gap-1 rounded-2xl p-3">
+      <div className="mx-auto flex max-w-[1400px] gap-6 px-4 py-6 md:px-6">
+        <aside className="sticky top-20 hidden h-fit w-60 shrink-0 flex-col gap-6 self-start md:flex">
+          <nav className="glass-card flex flex-col gap-1 rounded-2xl p-3">
             <div className="px-3 pb-1 pt-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Browse</div>
             {navMain.map((n) => {
               const active = pathname === n.to;
@@ -450,9 +450,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 </Link>
               );
             })}
-          </nav>
-
-          <nav aria-label="Your shelf" className="glass-card flex flex-col gap-1 rounded-2xl p-3">
             <div className="px-3 pb-1 pt-3 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Your shelf</div>
             {navMine.map((n) => {
               const active = pathname === n.to;
