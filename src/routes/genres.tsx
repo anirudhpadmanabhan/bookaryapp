@@ -75,7 +75,7 @@ export function GenresPage() {
             <BookOpen className="h-5 w-5 text-white/70" />
             <div>
               <div className="text-lg font-bold leading-tight">{info.en}</div>
-              {info.ml && <div className="font-mal text-sm text-white/85">{info.ml}</div>}
+              {info.ml && info.ml !== info.en && <div className="font-mal text-sm text-white/85">{info.ml}</div>}
               <div className="mt-2 text-xs text-white/75">{info.count} title{info.count !== 1 && "s"}</div>
             </div>
           </Link>
