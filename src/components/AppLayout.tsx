@@ -10,8 +10,9 @@ import { useIsStaff } from "@/lib/admin";
 import { Shield } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LibrarySwitcher } from "@/components/LibrarySwitcher";
+import { fetchBooks, type Book } from "@/lib/books";
 
 const navMain = [
   { to: "/", label: "Home", icon: Home },
@@ -58,6 +59,35 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const [bellOpen, setBellOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchRef = useRef<HTMLDivElement | null>(null);
+  const { data: allBooks = [] } = useQuery({
+    queryKey: ["books"],
+    queryFn: fetchBooks,
+    staleTime: 5 * 60_000,
+    enabled: searchOpen || searchValue.length >= 2,
+  });
+
+  const suggestions = useMemo<Book[]>(() => {
+    const n = searchValue.trim().toLowerCase();
+    if (n.length < 2) return [];
+    const ranked: { b: Book; s: number }[] = [];
+    for (const b of allBooks as Book[]) {
+      const title = `${b.title ?? ""} ${b.title_ml ?? ""}`.toLowerCase();
+      const author = `${b.author ?? ""} ${b.author_ml ?? ""} ${b.original_author ?? ""}`.toLowerCase();
+      const other = `${b.genre ?? ""} ${b.genre_ml ?? ""} ${b.shelf_code ?? ""}`.toLowerCase();
+      let s = -1;
+      if (title.startsWith(n)) s = 0;
+      else if (title.includes(` ${n}`)) s = 1;
+      else if (title.includes(n)) s = 2;
+      else if (author.startsWith(n)) s = 3;
+      else if (author.includes(n)) s = 4;
+      else if (other.includes(n)) s = 5;
+      if (s >= 0) ranked.push({ b, s });
+    }
+    ranked.sort((x, y) => x.s - y.s || (x.b.title || "").localeCompare(y.b.title || ""));
+    return ranked.slice(0, 8).map((r) => r.b);
+  }, [allBooks, searchValue]);
 
   const bellRef = useRef<HTMLDivElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
