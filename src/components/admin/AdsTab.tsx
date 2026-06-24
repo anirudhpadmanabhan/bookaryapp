@@ -204,6 +204,50 @@ export function AdsTab() {
           onClose={() => { setEditing(null); setCreating(false); }}
         />
       )}
+
+      {previewing && (
+        <Modal title={`Preview · ${previewing.name}`} onClose={() => setPreviewing(null)}>
+          <AdPreview ad={adToPreview(previewing)} />
+        </Modal>
+      )}
+
+      {insightsFor && (
+        <Modal title={`Insights · ${insightsFor.name}`} onClose={() => setInsightsFor(null)} wide>
+          <AdInsights adId={insightsFor.id} />
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function adToPreview(ad: Advertisement): AdPreviewData {
+  return {
+    name: ad.name,
+    type: ad.type,
+    image_url: ad.image_url,
+    title: ad.title,
+    description: ad.description,
+    cta_text: ad.cta_text,
+    cta_url: ad.cta_url,
+    banner_position: ad.banner_position,
+  };
+}
+
+function Modal({ title, onClose, wide, children }: { title: string; onClose: () => void; wide?: boolean; children: React.ReactNode }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+      <div
+        className={`max-h-[90vh] w-full ${wide ? "max-w-3xl" : "max-w-xl"} overflow-y-auto rounded-2xl border border-border bg-surface p-5 shadow-2xl`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-bold">{title}</h3>
+          <button type="button" onClick={onClose} className="cursor-pointer rounded-lg p-1 hover:bg-surface-elevated">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        {children}
+      </div>
     </div>
   );
 }
