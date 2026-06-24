@@ -65,6 +65,7 @@ export function AdBottomBanner() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block cursor-pointer"
+                onClick={onClick}
               >
                 {inner}
               </a>
