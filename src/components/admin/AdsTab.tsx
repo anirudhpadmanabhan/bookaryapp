@@ -313,12 +313,25 @@ function AdEditor({ initial, editingId, onClose }: { initial: FormState; editing
     });
   };
 
-  const TABS: { id: EditorTab; label: string; icon: any }[] = [
+  const TABS: { id: EditorTab; label: string; icon: any; hide?: boolean }[] = [
     { id: "basics",   label: "Basics",   icon: ImageIcon },
     { id: "content",  label: "Content",  icon: FileText },
     { id: "schedule", label: "Schedule", icon: CalendarClock },
     { id: "display",  label: "Display",  icon: LayoutTemplate },
+    { id: "preview",  label: "Preview",  icon: MonitorPlay },
+    { id: "insights", label: "Insights", icon: BarChart3, hide: !editingId },
   ];
+
+  const previewData: AdPreviewData = {
+    name: form.name || "Untitled ad",
+    type: form.type,
+    image_url: form.image_url,
+    title: form.title.trim() || null,
+    description: form.description.trim() || null,
+    cta_text: form.cta_text.trim() || null,
+    cta_url: form.cta_url.trim() || null,
+    banner_position: form.type === "banner" ? form.banner_position : null,
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
