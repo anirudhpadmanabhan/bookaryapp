@@ -127,11 +127,12 @@ function RootComponent() {
     const [unsubscribe] = persistQueryClient({
       queryClient,
       persister,
+      buster: "catalog-v2",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       dehydrateOptions: {
         shouldDehydrateQuery: (q) => {
           const k = String(q.queryKey?.[0] ?? "");
-          return k === "books" || k === "home-data" || k === "books-page" || k === "book" || k === "book-availability";
+          return q.state.status === "success" && (k === "books" || k === "home-data" || k === "genre-facets" || k === "books-page" || k === "book" || k === "book-availability");
         },
       },
     });
