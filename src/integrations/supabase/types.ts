@@ -179,7 +179,6 @@ export type Database = {
           rating: number
           rent_price: number
           shelf_code: string | null
-          shelf_code_num: number | null
           title: string
           title_ml: string | null
         }
@@ -202,7 +201,6 @@ export type Database = {
           rating?: number
           rent_price?: number
           shelf_code?: string | null
-          shelf_code_num?: number | null
           title: string
           title_ml?: string | null
         }
@@ -225,7 +223,6 @@ export type Database = {
           rating?: number
           rent_price?: number
           shelf_code?: string | null
-          shelf_code_num?: number | null
           title?: string
           title_ml?: string | null
         }

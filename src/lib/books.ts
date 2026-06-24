@@ -180,10 +180,7 @@ function sortColumn(sort: BookSort): { col: string; defaultAsc: boolean } {
     case "rating": return { col: "rating", defaultAsc: false };
     case "genre": return { col: "genre", defaultAsc: true };
     case "newest":
-    default:
-      // "New on shelf" = highest rack/shelf number first (latest physical entries).
-      // Uses the generated numeric mirror of shelf_code so 1000 > 999, not "1000" < "999".
-      return { col: "shelf_code_num", defaultAsc: false };
+    default: return { col: "created_at", defaultAsc: false };
   }
 }
 

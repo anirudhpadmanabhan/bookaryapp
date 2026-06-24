@@ -193,7 +193,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <div className="flex min-w-0 items-center gap-3">
             <Link to="/" className="flex cursor-pointer items-center gap-2.5">
               <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/30">
-                <BookMarked className="h-5 w-5 text-primary-foreground" />
+                <BookMarked className="h-5 w-5 text-white" />
               </div>
               <div className="leading-tight">
                 <div className="text-base font-bold tracking-tight">BOOKARY</div>
@@ -292,7 +292,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   >
                     <Bell className="h-4 w-4" />
                     {unreadCount > 0 && (
-                      <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
+                      <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
                         {unreadCount}
                       </span>
                     )}
