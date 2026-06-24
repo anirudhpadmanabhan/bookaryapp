@@ -1,10 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
-import {
-  fetchBooks, fetchPopularBooks, genreEnglish, genreMalayalam,
-  sortBooks, type BookSort, type SortDirection, slugify,
-} from "@/lib/books";
+import { fetchHomeData, sortBooks, type BookSort, type SortDirection, slugify } from "@/lib/books";
 import { BooksGrid, type ViewMode } from "@/components/BooksGrid";
 import { BookCard } from "@/components/BookCard";
 import { colorAt } from "@/lib/books";
@@ -26,8 +23,18 @@ export const Route = createFileRoute("/")({
 const HOME_LIMIT = 60;
 
 function HomePage() {
-  const { data: books = [], isLoading } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
-  const { data: popular = [] } = useQuery({ queryKey: ["popular-books"], queryFn: () => fetchPopularBooks(6) });
+  const { data, isLoading } = useQuery({
+    queryKey: ["home-data"],
+    queryFn: () => fetchHomeData(HOME_LIMIT, 6),
+    staleTime: 5 * 60_000,
+  });
+  const books = data?.latest ?? [];
+  const popular = data?.popular ?? [];
+  const total = data?.total ?? 0;
+  const genres = data?.genres ?? [];
+  const writers = data?.writers ?? [];
+  const languages = data?.languages ?? [];
+
   const [sort, setSort] = useState<BookSort>("newest");
   const [direction, setDirection] = useState<SortDirection>("desc");
   const [view, setView] = useState<ViewMode>("tile");
@@ -35,37 +42,9 @@ function HomePage() {
   const [writersOpen, setWritersOpen] = useState(false);
   const [langsOpen, setLangsOpen] = useState(false);
 
-  const languages = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const b of books) {
-      const l = (b.language ?? "Unknown").trim() || "Unknown";
-      map.set(l, (map.get(l) ?? 0) + 1);
-    }
-    return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
-  }, [books]);
-
   const sorted = useMemo(() => sortBooks(books, sort, direction), [books, sort, direction]);
   const shown = sorted.slice(0, HOME_LIMIT);
 
-  const genres = useMemo(() => {
-    const map = new Map<string, { count: number; ml: string | null; en: string }>();
-    for (const b of books) {
-      const cur = map.get(b.genre);
-      if (cur) cur.count++;
-      else map.set(b.genre, { count: 1, ml: genreMalayalam(b), en: genreEnglish(b) });
-    }
-    return Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count);
-  }, [books]);
-
-  const writers = useMemo(() => {
-    const map = new Map<string, { count: number; ml: string | null }>();
-    for (const b of books) {
-      const cur = map.get(b.author);
-      if (cur) cur.count++;
-      else map.set(b.author, { count: 1, ml: b.author_ml });
-    }
-    return Array.from(map.entries()).sort((a, b) => b[1].count - a[1].count);
-  }, [books]);
 
   return (
     <AppLayout>
