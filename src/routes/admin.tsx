@@ -262,6 +262,7 @@ type BooksView = "grid" | "table";
 function BooksTab() {
   const { data: books = [], isLoading } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
   const { data: libs = [] } = useAdminLibraries();
+  const scope = useMyLibraryScope();
   const [q, setQ] = useState("");
   const [view, setView] = useState<BooksView>("table");
   const [editing, setEditing] = useState<string | null>(null);
@@ -276,8 +277,14 @@ function BooksTab() {
     return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: "base" });
   };
 
+  const scopedBooks = useMemo(() => {
+    if (scope === null) return books as any[];
+    const set = new Set(scope);
+    return (books as any[]).filter((b) => b.library_id && set.has(b.library_id));
+  }, [books, scope]);
+
   const filtered = useMemo(() => {
-    let pool = books as any[];
+    let pool = scopedBooks;
     if (libFilter === "__unassigned") pool = pool.filter((b) => !b.library_id);
     else if (libFilter !== "all") pool = pool.filter((b) => b.library_id === libFilter);
 
@@ -294,13 +301,14 @@ function BooksTab() {
     }
     pool = [...pool].sort((a, b) => rackCompare(a.shelf_code, b.shelf_code));
     return pool.slice(0, 500);
-  }, [books, q, libFilter]);
+  }, [scopedBooks, q, libFilter]);
 
   const totalForScope = useMemo(() => {
-    if (libFilter === "all") return books.length;
-    if (libFilter === "__unassigned") return (books as any[]).filter((b) => !b.library_id).length;
-    return (books as any[]).filter((b) => b.library_id === libFilter).length;
-  }, [books, libFilter]);
+    if (libFilter === "all") return scopedBooks.length;
+    if (libFilter === "__unassigned") return scopedBooks.filter((b) => !b.library_id).length;
+    return scopedBooks.filter((b) => b.library_id === libFilter).length;
+  }, [scopedBooks, libFilter]);
+
 
   return (
     <div>
