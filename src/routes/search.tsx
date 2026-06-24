@@ -27,6 +27,7 @@ const PAGE_SIZE = 40;
 function SearchPage() {
   const { q: initialQ } = Route.useSearch();
   const [q, setQ] = useState(initialQ ?? "");
+  const [debouncedQ, setDebouncedQ] = useState(initialQ ?? "");
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [sort, setSort] = useState<BookSort>("newest");
   const [direction, setDirection] = useState<SortDirection>("desc");
@@ -39,62 +40,82 @@ function SearchPage() {
   const [suggestNote, setSuggestNote] = useState("");
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  const trimmed = q.trim();
+  const trimmed = debouncedQ.trim();
+  const liveTrimmed = q.trim();
 
-  // Score each match: prefix > word-prefix > contains, with title preferred over author over other.
-  // Lower score = more relevant. Returns null if no match.
+  // Debounce filtering so each keystroke isn't a 4,650-book scan.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQ(q), 120);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  // Pre-normalize every book once. Subsequent searches reuse these strings.
+  const indexed = useMemo(
+    () =>
+      books.map((b) => ({
+        book: b,
+        title: `${b.title ?? ""} ${b.title_ml ?? ""}`.toLowerCase(),
+        author: `${b.author ?? ""} ${b.author_ml ?? ""} ${b.original_author ?? ""}`.toLowerCase(),
+        other: `${b.genre ?? ""} ${b.genre_ml ?? ""} ${b.publisher ?? ""} ${b.shelf_code ?? ""}`.toLowerCase(),
+      })),
+    [books],
+  );
+
   type Ranked = { book: typeof books[number]; score: number; bucket: 0 | 1 | 2 };
-  const scoreMatch = (b: typeof books[number], needle: string): { score: number; bucket: 0 | 1 | 2 } | null => {
-    const n = needle.toLowerCase().trim();
-    if (!n) return null;
-    const title = `${b.title ?? ""} ${b.title_ml ?? ""}`.toLowerCase().trim();
-    const author = `${b.author ?? ""} ${b.author_ml ?? ""} ${b.original_author ?? ""}`.toLowerCase().trim();
-    const other = `${b.genre ?? ""} ${b.genre_ml ?? ""} ${b.publisher ?? ""} ${b.shelf_code ?? ""}`.toLowerCase();
-
-    const rank = (hay: string): number => {
-      if (!hay) return -1;
-      if (hay.startsWith(n)) return 0;            // exact prefix
-      if (new RegExp(`(^|\\s)${n.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}`).test(hay)) return 1; // word-start
-      if (hay.includes(n)) return 2;              // contains
-      return -1;
-    };
-
-    const t = rank(title);
-    if (t >= 0) return { score: t, bucket: 0 };       // 0,1,2
-    const a = rank(author);
-    if (a >= 0) return { score: 3 + a, bucket: 1 };   // 3,4,5
-    if (other.includes(n)) return { score: 6, bucket: 2 };
+  const rankIn = (hay: string, n: string): number => {
+    if (!hay) return -1;
+    if (hay.startsWith(n)) return 0;
+    const wordStart = hay.indexOf(" " + n);
+    if (wordStart >= 0) return 1;
+    if (hay.includes(n)) return 2;
+    return -1;
+  };
+  const scoreIndexed = (row: typeof indexed[number], n: string): { score: number; bucket: 0 | 1 | 2 } | null => {
+    const t = rankIn(row.title, n);
+    if (t >= 0) return { score: t, bucket: 0 };
+    const a = rankIn(row.author, n);
+    if (a >= 0) return { score: 3 + a, bucket: 1 };
+    if (row.other.includes(n)) return { score: 6, bucket: 2 };
     return null;
+  };
+
+  // Lookup used by the dropdown's grouped rendering — cheap because it uses the same index.
+  const bucketFor = (b: typeof books[number], n: string): 0 | 1 | 2 | null => {
+    const row = indexed.find((r) => r.book.id === b.id);
+    if (!row) return null;
+    return scoreIndexed(row, n)?.bucket ?? null;
   };
 
   const alphaTitle = (a: typeof books[number], b: typeof books[number]) =>
     (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: "base" });
 
   const liveSuggestions = useMemo(() => {
-    if (!trimmed || trimmed.length < 2) return [];
+    const n = liveTrimmed.toLowerCase();
+    if (!n || n.length < 2) return [];
     const ranked: Ranked[] = [];
-    for (const b of books) {
-      const m = scoreMatch(b, trimmed);
-      if (m) ranked.push({ book: b, score: m.score, bucket: m.bucket });
+    for (const row of indexed) {
+      const m = scoreIndexed(row, n);
+      if (m) ranked.push({ book: row.book, score: m.score, bucket: m.bucket });
+      if (ranked.length > 50) break;
     }
     ranked.sort((x, y) => x.score - y.score || alphaTitle(x.book, y.book));
     return ranked.slice(0, 10).map((r) => r.book);
-  }, [books, trimmed]);
+  }, [indexed, liveTrimmed]);
 
   const filtered = useMemo(() => {
     if (!trimmed) return sortBooks(books, sort, direction);
+    const n = trimmed.toLowerCase();
     const ranked: Ranked[] = [];
-    for (const b of books) {
-      const m = scoreMatch(b, trimmed);
-      if (m) ranked.push({ book: b, score: m.score, bucket: m.bucket });
+    for (const row of indexed) {
+      const m = scoreIndexed(row, n);
+      if (m) ranked.push({ book: row.book, score: m.score, bucket: m.bucket });
     }
-    // When the user hasn't picked an explicit sort (default newest), use relevance score.
     if (sort === "newest" && direction === "desc") {
       ranked.sort((x, y) => x.score - y.score || alphaTitle(x.book, y.book));
       return ranked.map((r) => r.book);
     }
     return sortBooks(ranked.map((r) => r.book), sort, direction);
-  }, [books, trimmed, sort, direction]);
+  }, [books, indexed, trimmed, sort, direction]);
 
 
 
