@@ -41,16 +41,29 @@ function SearchPage() {
 
   const trimmed = q.trim();
 
-  // Classify each match and sort: title-hits A→Z, then author-hits A→Z, then other-hits A→Z
-  type Ranked = { book: typeof books[number]; bucket: 0 | 1 | 2 };
-  const rankMatch = (b: typeof books[number], needle: string, needleMl: string): Ranked["bucket"] | null => {
-    const title = `${b.title} ${b.title_ml ?? ""}`.toLowerCase();
-    const author = `${b.author} ${b.author_ml ?? ""} ${b.original_author ?? ""}`.toLowerCase();
+  // Score each match: prefix > word-prefix > contains, with title preferred over author over other.
+  // Lower score = more relevant. Returns null if no match.
+  type Ranked = { book: typeof books[number]; score: number; bucket: 0 | 1 | 2 };
+  const scoreMatch = (b: typeof books[number], needle: string): { score: number; bucket: 0 | 1 | 2 } | null => {
+    const n = needle.toLowerCase().trim();
+    if (!n) return null;
+    const title = `${b.title ?? ""} ${b.title_ml ?? ""}`.toLowerCase().trim();
+    const author = `${b.author ?? ""} ${b.author_ml ?? ""} ${b.original_author ?? ""}`.toLowerCase().trim();
     const other = `${b.genre ?? ""} ${b.genre_ml ?? ""} ${b.publisher ?? ""} ${b.shelf_code ?? ""}`.toLowerCase();
-    const n = needle.toLowerCase();
-    if (title.includes(n) || (needleMl && (b.title_ml ?? "").includes(needleMl))) return 0;
-    if (author.includes(n) || (needleMl && (b.author_ml ?? "").includes(needleMl))) return 1;
-    if (other.includes(n)) return 2;
+
+    const rank = (hay: string): number => {
+      if (!hay) return -1;
+      if (hay.startsWith(n)) return 0;            // exact prefix
+      if (new RegExp(`(^|\\s)${n.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}`).test(hay)) return 1; // word-start
+      if (hay.includes(n)) return 2;              // contains
+      return -1;
+    };
+
+    const t = rank(title);
+    if (t >= 0) return { score: t, bucket: 0 };       // 0,1,2
+    const a = rank(author);
+    if (a >= 0) return { score: 3 + a, bucket: 1 };   // 3,4,5
+    if (other.includes(n)) return { score: 6, bucket: 2 };
     return null;
   };
 
@@ -61,34 +74,28 @@ function SearchPage() {
     if (!trimmed || trimmed.length < 2) return [];
     const ranked: Ranked[] = [];
     for (const b of books) {
-      const bucket = rankMatch(b, trimmed, trimmed);
-      if (bucket !== null) ranked.push({ book: b, bucket });
+      const m = scoreMatch(b, trimmed);
+      if (m) ranked.push({ book: b, score: m.score, bucket: m.bucket });
     }
-    ranked.sort((x, y) => x.bucket - y.bucket || alphaTitle(x.book, y.book));
-    return ranked.slice(0, 8).map((r) => r.book);
+    ranked.sort((x, y) => x.score - y.score || alphaTitle(x.book, y.book));
+    return ranked.slice(0, 10).map((r) => r.book);
   }, [books, trimmed]);
 
   const filtered = useMemo(() => {
     if (!trimmed) return sortBooks(books, sort, direction);
-    const tokens = trimmed.toLowerCase().split(/\s+/).filter(Boolean);
-    const mlTokens = trimmed.split(/\s+/).filter(Boolean);
     const ranked: Ranked[] = [];
     for (const b of books) {
-      // every token must match somewhere
-      const hay = [b.title, b.author, b.genre, b.publisher ?? "", b.shelf_code ?? ""].join(" ").toLowerCase();
-      const hayMl = [b.title_ml ?? "", b.author_ml ?? "", b.genre_ml ?? "", b.original_author ?? ""].join(" ");
-      const ok = tokens.every((t: string, i: number) => hay.includes(t) || hayMl.includes(mlTokens[i] ?? t));
-      if (!ok) continue;
-      const bucket = rankMatch(b, trimmed, trimmed) ?? 2;
-      ranked.push({ book: b, bucket });
+      const m = scoreMatch(b, trimmed);
+      if (m) ranked.push({ book: b, score: m.score, bucket: m.bucket });
     }
-    // When the user hasn't picked an explicit sort (default newest), use bucket+alphabetical.
+    // When the user hasn't picked an explicit sort (default newest), use relevance score.
     if (sort === "newest" && direction === "desc") {
-      ranked.sort((x, y) => x.bucket - y.bucket || alphaTitle(x.book, y.book));
+      ranked.sort((x, y) => x.score - y.score || alphaTitle(x.book, y.book));
       return ranked.map((r) => r.book);
     }
     return sortBooks(ranked.map((r) => r.book), sort, direction);
   }, [books, trimmed, sort, direction]);
+
 
 
   useEffect(() => { setVisible(PAGE_SIZE); }, [q, sort, direction]);
@@ -142,9 +149,9 @@ function SearchPage() {
 
         {/* Live autocomplete dropdown — grouped: Books → Authors → Other */}
         {showDropdown && liveSuggestions.length > 0 && (() => {
-          const titleHits = liveSuggestions.filter((b) => rankMatch(b, trimmed, trimmed) === 0);
-          const authorHits = liveSuggestions.filter((b) => rankMatch(b, trimmed, trimmed) === 1);
-          const otherHits = liveSuggestions.filter((b) => rankMatch(b, trimmed, trimmed) === 2);
+          const titleHits = liveSuggestions.filter((b) => scoreMatch(b, trimmed)?.bucket === 0);
+          const authorHits = liveSuggestions.filter((b) => scoreMatch(b, trimmed)?.bucket === 1);
+          const otherHits = liveSuggestions.filter((b) => scoreMatch(b, trimmed)?.bucket === 2);
           const Group = ({ label, items }: { label: string; items: typeof liveSuggestions }) =>
             items.length === 0 ? null : (
               <div>
@@ -171,7 +178,7 @@ function SearchPage() {
               </div>
             );
           return (
-            <div className="absolute left-0 right-0 top-full z-40 mt-1 max-h-96 overflow-y-auto rounded-2xl border border-border bg-popover shadow-2xl">
+            <div className="absolute left-0 right-0 top-full z-40 mt-1 rounded-2xl border border-border bg-popover shadow-2xl">
               <Group label="Books" items={titleHits} />
               {titleHits.length > 0 && (authorHits.length > 0 || otherHits.length > 0) && <div className="border-t border-border/40" />}
               <Group label="Authors" items={authorHits} />
@@ -180,6 +187,7 @@ function SearchPage() {
             </div>
           );
         })()}
+
       </div>
 
 
