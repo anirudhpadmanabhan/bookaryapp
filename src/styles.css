@@ -159,10 +159,10 @@
   }
 
   .glass-card {
-    background: linear-gradient(180deg, oklch(0.26 0.018 150 / 78%), oklch(0.20 0.014 150 / 82%));
-    border: 1px solid oklch(0.55 0.05 140 / 22%);
+    background: linear-gradient(180deg, oklch(0.25 0.04 255 / 78%), oklch(0.19 0.035 255 / 82%));
+    border: 1px solid oklch(0.60 0.12 250 / 25%);
     backdrop-filter: blur(12px);
-    box-shadow: 0 24px 70px -34px oklch(0.40 0.10 145 / 55%);
+    box-shadow: 0 24px 70px -34px oklch(0.45 0.18 255 / 55%);
   }
 }
 
@@ -170,20 +170,21 @@
 @layer base {
   * {
     scrollbar-width: thin;
-    scrollbar-color: oklch(0.30 0.02 150) transparent;
+    scrollbar-color: oklch(0.32 0.06 255) transparent;
   }
   *::-webkit-scrollbar { width: 10px; height: 10px; }
   *::-webkit-scrollbar-track { background: transparent; }
   *::-webkit-scrollbar-thumb {
-    background: oklch(0.30 0.02 150);
+    background: oklch(0.32 0.06 255);
     border-radius: 9999px;
     border: 2px solid transparent;
     background-clip: padding-box;
   }
   *::-webkit-scrollbar-thumb:hover {
-    background: oklch(0.40 0.04 145);
+    background: oklch(0.45 0.12 250);
     background-clip: padding-box;
     border: 2px solid transparent;
   }
   *::-webkit-scrollbar-corner { background: transparent; }
 }
+
