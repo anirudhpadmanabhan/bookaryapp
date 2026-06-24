@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import {
-  Plus, Pencil, Trash2, X, Save, Upload, Megaphone,
+  Plus, Pencil, Trash2, X, Save, Upload, Megaphone, Eye,
   FileText, CalendarClock, LayoutTemplate, Image as ImageIcon,
-  CircleDot, Clock3,
+  CircleDot, Clock3, BarChart3, MonitorPlay,
 } from "lucide-react";
 import {
   useAllAds, useUpsertAd, useDeleteAd, uploadAdImage,
   type Advertisement, type AdType, type AdStatus, type BannerPosition,
 } from "@/lib/ads";
+import { AdPreview, type AdPreviewData } from "./AdPreview";
+import { AdInsights } from "./AdInsights";
 
 type FormState = {
   name: string;
