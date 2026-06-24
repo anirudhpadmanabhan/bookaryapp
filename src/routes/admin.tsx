@@ -665,16 +665,37 @@ function AddBookModal({ onClose, defaultLibraryId }: { onClose: () => void; defa
 
 // ===== IMPORT MODAL =====
 function normalizeKey(k: string): string {
-  return k.toLowerCase().replace(/[\s_-]+/g, "");
+  // strip BOM, accents, all non-alphanumerics → lowercase
+  return String(k)
+    .replace(/^\uFEFF/, "")
+    .normalize("NFKD")
+    .replace(/[^\p{L}\p{N}]+/gu, "")
+    .toLowerCase();
 }
 const FIELD_MAP: Record<string, keyof BookImportRow> = {
-  title: "title", titleen: "title", englishtitle: "title", name: "title",
+  // English title
+  title: "title", titleen: "title", englishtitle: "title", booktitle: "title",
+  bookname: "title", nameen: "title", englishname: "title",
+  // Malayalam title
   titleml: "title_ml", malayalamtitle: "title_ml", titlemal: "title_ml",
+  mltitle: "title_ml", titlemalayalam: "title_ml", nameml: "title_ml", malayalamname: "title_ml",
+  // Author
   author: "author", authoren: "author", englishauthor: "author", writer: "author",
-  authorml: "author_ml", malayalamauthor: "author_ml",
-  genre: "genre", category: "genre", type: "genre",
-  shelf: "shelf_code", shelfcode: "shelf_code", rack: "shelf_code", rackno: "shelf_code", rackcode: "shelf_code", shelfno: "shelf_code", number: "shelf_code", no: "shelf_code", sno: "shelf_code",
-  publisher: "publisher", publication: "publisher",
+  writeren: "author", authorname: "author",
+  // Author Malayalam
+  authorml: "author_ml", malayalamauthor: "author_ml", writerml: "author_ml", mlauthor: "author_ml",
+  // Genre
+  genre: "genre", category: "genre", type: "genre", subject: "genre",
+  // Shelf / rack code — only explicit headers, never bare "no"/"number" (those collide with serial numbers)
+  shelf: "shelf_code", shelfcode: "shelf_code", shelfno: "shelf_code", shelfnumber: "shelf_code",
+  rack: "shelf_code", rackcode: "shelf_code", rackno: "shelf_code", racknumber: "shelf_code",
+  bookno: "shelf_code", bookcode: "shelf_code", booknumber: "shelf_code",
+  accession: "shelf_code", accessionno: "shelf_code", accessionnumber: "shelf_code",
+  acc: "shelf_code", accno: "shelf_code", callno: "shelf_code", callnumber: "shelf_code",
+  code: "shelf_code",
+  // Publisher
+  publisher: "publisher", publication: "publisher", publishers: "publisher",
+  // Price
   price: "rent_price", rentprice: "rent_price", rent: "rent_price",
 };
 
@@ -682,12 +703,17 @@ function mapRow(raw: Record<string, any>): BookImportRow | null {
   const mapped: any = {};
   for (const [k, v] of Object.entries(raw)) {
     const target = FIELD_MAP[normalizeKey(String(k))];
-    if (target && v != null && String(v).trim() !== "") mapped[target] = v;
+    if (target && v != null && String(v).trim() !== "") {
+      // shelf_code must stay textual ("4556"), not numeric — XLSX may parse as number
+      mapped[target] = target === "shelf_code" ? String(v).trim() : v;
+    }
   }
   if (!mapped.title || !mapped.author) return null;
   if (!mapped.genre) mapped.genre = "നോവൽ";
   return mapped as BookImportRow;
 }
+
+type DetectedMapping = { header: string; field: keyof BookImportRow | null }[];
 
 function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; defaultLibraryId?: string }) {
   const importMut = useBulkImportBooks();
@@ -698,12 +724,14 @@ function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; 
   const [skipped, setSkipped] = useState(0);
   const [mode, setMode] = useState<ImportMode>("append");
   const [libraryId, setLibraryId] = useState<string>(defaultLibraryId ?? selectedId ?? "");
+  const [detected, setDetected] = useState<DetectedMapping>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const handleFile = async (file: File) => {
     setFilename(file.name);
     setRows([]);
     setSkipped(0);
+    setDetected([]);
     try {
       let records: Record<string, any>[] = [];
       if (file.name.toLowerCase().endsWith(".csv")) {
@@ -714,8 +742,12 @@ function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; 
         const buf = await file.arrayBuffer();
         const wb = XLSX.read(buf, { type: "array" });
         const sheet = wb.Sheets[wb.SheetNames[0]];
-        records = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+        records = XLSX.utils.sheet_to_json(sheet, { defval: "", raw: false });
       }
+      // Detect header → field mapping from first row
+      const headers = records[0] ? Object.keys(records[0]) : [];
+      setDetected(headers.map((h) => ({ header: h, field: FIELD_MAP[normalizeKey(h)] ?? null })));
+
       const mapped: BookImportRow[] = [];
       let skip = 0;
       for (const r of records) {
@@ -729,6 +761,7 @@ function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; 
       toast.error(`Couldn't read file: ${e?.message ?? e}`);
     }
   };
+
 
   const overwriteCount = rows.filter((r) => !!r.shelf_code).length;
   const libName = libs.find((l) => l.id === libraryId)?.name ?? "Unassigned";
@@ -801,6 +834,33 @@ function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; 
         {filename && (
           <div className="mt-4 rounded-xl border border-border bg-surface/40 p-3 text-sm">
             <div className="font-medium">{filename}</div>
+            {detected.length > 0 && (
+              <div className="mt-2 rounded-md border border-border/50 bg-background/40 p-2 text-xs">
+                <div className="mb-1 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">Detected column mapping</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {detected.map((d, i) => (
+                    <span
+                      key={`${d.header}-${i}`}
+                      className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 ${
+                        d.field
+                          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                          : "border-border bg-surface/60 text-muted-foreground line-through"
+                      }`}
+                      title={d.field ? `${d.header} → ${d.field}` : `${d.header} (ignored)`}
+                    >
+                      <span className="font-medium">{d.header || "(blank)"}</span>
+                      {d.field && <span className="opacity-70">→ {d.field}</span>}
+                    </span>
+                  ))}
+                </div>
+                {!detected.some((d) => d.field === "shelf_code") && (
+                  <div className="mt-2 rounded bg-amber-500/10 px-2 py-1 text-[11px] text-amber-300">
+                    ⚠ No rack/shelf column detected. Rename your column to <code>Rack No</code>, <code>Shelf Code</code>, <code>Book No</code>, or <code>Accession No</code>.
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="text-xs text-muted-foreground">
               {rows.length.toLocaleString()} ready to import{skipped > 0 && ` · ${skipped} skipped (missing title/author)`} · target: <span className="font-semibold text-primary">{libName}</span>
               {mode === "overwrite" && overwriteCount > 0 && ` · will replace up to ${overwriteCount} existing rack codes`}
