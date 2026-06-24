@@ -18,8 +18,8 @@ export function AdBanner({ position }: { position: BannerPosition }) {
 
   return (
     <section className="mb-6">
-      {ad.cta_url ? (
-        <a href={ad.cta_url} target="_blank" rel="noopener noreferrer" className="block cursor-pointer">
+      {href ? (
+        <a href={href} target="_blank" rel="noopener noreferrer" className="block cursor-pointer">
           {img}
         </a>
       ) : (
