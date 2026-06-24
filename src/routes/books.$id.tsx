@@ -50,19 +50,24 @@ function BookPage() {
     return reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
   }, [reviews]);
 
-  // Detect if any OTHER user holds this rental (so we can offer the waitlist).
+  // Detect if any OTHER user is actively holding this rental (so we can offer the waitlist).
+  // Reserved holds don't block availability, and we use limit(1) instead of maybeSingle()
+  // so multiple historical rows don't throw and silently hide the waitlist button.
   useEffect(() => {
     if (!book || !user) { setOtherRental(null); return; }
     let cancelled = false;
     (async () => {
       const { data } = await supabase
         .from("rentals")
-        .select("user_id, due_at")
+        .select("user_id, due_at, tracking_status")
         .eq("book_id", book.id)
         .is("returned_at", null)
-        .maybeSingle();
+        .neq("tracking_status", "reserved")
+        .order("rented_at", { ascending: false })
+        .limit(1);
       if (cancelled) return;
-      if (data && data.user_id !== user.id) setOtherRental({ due_at: data.due_at });
+      const row = data?.[0];
+      if (row && row.user_id !== user.id) setOtherRental({ due_at: row.due_at });
       else setOtherRental(null);
     })();
     return () => { cancelled = true; };
