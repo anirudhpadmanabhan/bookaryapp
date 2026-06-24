@@ -476,6 +476,90 @@ function ProfilePage() {
 }
 
 
+function AvatarTile({ profile }: { profile: any }) {
+  const { user } = useSession();
+  const qc = useQueryClient();
+  const updateProfile = useUpdateProfile();
+  const { data: signedUrl } = useAvatarUrl(profile.avatar_url);
+  const inputRef = useState<{ el: HTMLInputElement | null }>({ el: null })[0];
+  const [uploading, setUploading] = useState(false);
+
+  const onPick = async (file: File) => {
+    if (!user) return;
+    if (file.size > 3 * 1024 * 1024) return toast.error("Image must be under 3 MB");
+    if (!file.type.startsWith("image/")) return toast.error("Pick an image file");
+    setUploading(true);
+    try {
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `${user.id}/avatar.${ext}`;
+      // Remove any older avatar with a different extension
+      if (profile.avatar_url && profile.avatar_url !== path) {
+        await supabase.storage.from("avatars").remove([profile.avatar_url]).catch(() => {});
+      }
+      const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      await new Promise((r) => updateProfile.mutate({ avatar_url: path }, { onSuccess: () => r(null), onError: () => r(null) }));
+      qc.invalidateQueries({ queryKey: ["avatar-url"] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const onRemove = async () => {
+    if (!profile.avatar_url) return;
+    try {
+      await supabase.storage.from("avatars").remove([profile.avatar_url]).catch(() => {});
+      updateProfile.mutate({ avatar_url: null });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Couldn't remove photo");
+    }
+  };
+
+  return (
+    <div className="group relative">
+      <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-accent text-2xl font-bold">
+        {signedUrl ? (
+          <img src={signedUrl} alt={profile.display_name} className="h-full w-full object-cover" />
+        ) : (
+          <span>{profile.display_name.slice(0, 1).toUpperCase()}</span>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={() => inputRef.el?.click()}
+        title={signedUrl ? "Change photo" : "Add photo"}
+        className="absolute -bottom-1 -right-1 inline-flex cursor-pointer items-center gap-1 rounded-full bg-primary px-2 py-1 text-[10px] font-semibold text-primary-foreground shadow-lg hover:opacity-90 disabled:opacity-60"
+        disabled={uploading}
+      >
+        <Camera className="h-3 w-3" /> {uploading ? "…" : signedUrl ? "Change" : "Add"}
+      </button>
+      {profile.avatar_url && (
+        <button
+          type="button"
+          onClick={onRemove}
+          title="Remove photo"
+          className="absolute -top-1 -right-1 hidden cursor-pointer rounded-full border border-border bg-background p-1 text-rose-300 shadow-lg hover:bg-rose-500/10 group-hover:inline-flex"
+        >
+          <Trash2 className="h-3 w-3" />
+        </button>
+      )}
+      <input
+        ref={(el) => { inputRef.el = el; }}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onPick(f);
+          e.target.value = "";
+        }}
+      />
+    </div>
+  );
+}
+
 function UPIModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (amount: number) => void }) {
   const [upi, setUpi] = useState("");
   const [amount, setAmount] = useState(100);
