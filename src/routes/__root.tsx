@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "sonner";
 import { LibraryProvider } from "@/lib/library";
 import { AdPopup } from "@/components/AdPopup";
+import { AdBottomBanner } from "@/components/AdBottomBanner";
 
 function NotFoundComponent() {
   return (
@@ -122,6 +123,7 @@ function RootComponent() {
       <LibraryProvider>
         <Outlet />
         <AdPopup />
+        <AdBottomBanner />
         <Toaster theme="dark" position="top-right" richColors />
       </LibraryProvider>
     </QueryClientProvider>
