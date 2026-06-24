@@ -89,7 +89,6 @@ function HomePage() {
 
   return (
     <AppLayout>
-      <AdBanner position="top" />
       {/* Hero */}
       <section className="glass-card relative mb-8 overflow-hidden rounded-3xl p-6 md:p-10">
         <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-primary/30 blur-3xl" />
@@ -237,8 +236,6 @@ function HomePage() {
         )}
       </section>
 
-      <AdBanner position="middle" />
-
       {/* All Books */}
       <section>
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
@@ -263,14 +260,14 @@ function HomePage() {
           view={view}
           onViewChange={setView}
         />
-        {isLoading && allBooks.length === 0 ? (
+        {(isLoading || pageLoading) && shown.length === 0 ? (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             {Array.from({ length: 15 }).map((_, i) => (
               <div key={i} className="aspect-[2/3] animate-pulse rounded-xl bg-surface" />
             ))}
           </div>
         ) : (
-          <>
+          <div className={pageFetching ? "opacity-70 transition-opacity" : ""}>
             <BooksGrid books={shown} view={view} hideShelf />
             {pageCount > 1 && (
               <div className="mt-8 flex flex-col items-center gap-2">
@@ -328,15 +325,14 @@ function HomePage() {
                   </PaginationContent>
                 </Pagination>
                 <p className="text-xs text-muted-foreground">
-                  Page {page} of {pageCount} · Showing {start + 1}–{Math.min(start + PAGE_SIZE, sortedAll.length)} of {sortedAll.length.toLocaleString()}
+                  Page {page} of {pageCount} · Showing {start + 1}–{Math.min(start + PAGE_SIZE, totalAll)} of {totalAll.toLocaleString()}
                 </p>
               </div>
             )}
-          </>
+          </div>
         )}
 
       </section>
-      <AdBanner position="bottom" />
     </AppLayout>
   );
 }
