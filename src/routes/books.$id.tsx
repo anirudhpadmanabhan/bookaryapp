@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
-import { displayRating as catalogRating, fetchBook, genreEnglish, genreMalayalam, synopsisFor, slugify } from "@/lib/books";
+import { displayRating as catalogRating, fetchBook, fetchBookAvailability, genreEnglish, genreMalayalam, synopsisFor, slugify } from "@/lib/books";
 import { BookCover } from "@/components/BookCover";
 import {
   Heart, Star, Calendar, ArrowLeft, NotebookPen,
@@ -10,10 +10,9 @@ import {
 import {
   useFavorites, useRentals, useRentBook, useToggleFavorite, useAddDiary,
   useReviews, useUpsertReview, useDeleteReview, useProfile,
-  useWaitlist, useJoinWaitlist, useLeaveWaitlist, useWaitlistPosition,
+  useWaitlist, useJoinWaitlist, useLeaveWaitlist, useWaitlistPosition, useClaimReservation, useDeclineReservation,
 } from "@/lib/userdata";
 import { useSession } from "@/lib/auth";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useMemo, useState, useEffect } from "react";
 
@@ -29,16 +28,22 @@ function BookPage() {
   const { user } = useSession();
   const { data: profile } = useProfile();
   const { data: book, isLoading } = useQuery({ queryKey: ["book", id], queryFn: () => fetchBook(id) });
+  const { data: availability } = useQuery({
+    enabled: !!book && !!user,
+    queryKey: ["book-availability", id],
+    queryFn: () => fetchBookAvailability(id),
+  });
   const { data: favorites } = useFavorites();
   const { data: rentals } = useRentals();
   const { data: reviews = [] } = useReviews(id);
   const { data: myWaitlist = [] } = useWaitlist();
   const { data: waitlistPos } = useWaitlistPosition(id);
-  const [otherRental, setOtherRental] = useState<{ due_at: string } | null>(null);
 
   const rent = useRentBook();
   const joinWait = useJoinWaitlist();
   const leaveWait = useLeaveWaitlist();
+  const claimReservation = useClaimReservation();
+  const declineReservation = useDeclineReservation();
   const toggle = useToggleFavorite();
   const addDiary = useAddDiary();
   const [note, setNote] = useState("");
@@ -50,35 +55,14 @@ function BookPage() {
     return reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
   }, [reviews]);
 
-  // Detect if any OTHER user is actively holding this rental (so we can offer the waitlist).
-  // Reserved holds don't block availability, and we use limit(1) instead of maybeSingle()
-  // so multiple historical rows don't throw and silently hide the waitlist button.
-  useEffect(() => {
-    if (!book || !user) { setOtherRental(null); return; }
-    let cancelled = false;
-    (async () => {
-      const { data } = await supabase
-        .from("rentals")
-        .select("user_id, due_at, tracking_status")
-        .eq("book_id", book.id)
-        .is("returned_at", null)
-        .neq("tracking_status", "reserved")
-        .order("rented_at", { ascending: false })
-        .limit(1);
-      if (cancelled) return;
-      const row = data?.[0];
-      if (row && row.user_id !== user.id) setOtherRental({ due_at: row.due_at });
-      else setOtherRental(null);
-    })();
-    return () => { cancelled = true; };
-  }, [book, user, rentals]);
-
   if (isLoading) return <AppLayout><div className="h-64 animate-pulse rounded-2xl bg-surface" /></AppLayout>;
   if (!book) return <AppLayout><p>Book not found.</p></AppLayout>;
 
   const isFav = !!favorites?.some((f) => f.book_id === book.id);
-  const activeRental = rentals?.find((r: any) => r.book_id === book.id && !r.returned_at);
+  const activeRental = rentals?.find((r: any) => r.book_id === book.id && !r.returned_at && r.tracking_status !== "reserved");
+  const pendingReservation = rentals?.find((r: any) => r.book_id === book.id && !r.returned_at && r.tracking_status === "reserved");
   const onWaitlist = !!myWaitlist?.some((w: any) => w.book_id === book.id);
+  const otherRental = availability?.out_of_stock && !activeRental && !pendingReservation ? { due_at: availability.due_at } : null;
   const displayRating = avgRating ?? catalogRating(book);
   const enGenre = genreEnglish(book);
   const mlGenre = genreMalayalam(book);
@@ -98,6 +82,31 @@ function BookPage() {
 
   // Renders the primary action used both inline and in the fixed mobile bar.
   const PrimaryAction = ({ className = "" }: { className?: string }) => {
+    if (pendingReservation) {
+      return (
+        <div className={`flex flex-col items-stretch gap-1.5 ${className}`}>
+          <button
+            type="button"
+            onClick={() => claimReservation.mutate(pendingReservation.id)}
+            disabled={claimReservation.isPending}
+            className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-emerald-500 px-6 py-3 text-sm font-semibold text-emerald-950 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Clock className="h-4 w-4" /> Claim reservation
+          </button>
+          <button
+            type="button"
+            onClick={() => declineReservation.mutate(pendingReservation.id)}
+            disabled={declineReservation.isPending}
+            className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-surface px-6 py-2 text-xs font-semibold hover:bg-surface-elevated disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Let next reader have it
+          </button>
+          {pendingReservation.reserved_until && (
+            <span className="text-center text-[11px] text-emerald-200/80">Reserve before {new Date(pendingReservation.reserved_until).toLocaleString()}</span>
+          )}
+        </div>
+      );
+    }
     if (activeRental) {
       return (
         <span className={`inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500/15 px-5 py-3 text-sm font-semibold text-emerald-300 ${className}`}>
@@ -209,7 +218,13 @@ function BookPage() {
 
           {otherRental && !activeRental && (
             <div className="mt-5 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-              Currently rented by another reader — due {new Date(otherRental.due_at).toLocaleDateString()}. Join the waiting list and you'll be auto-assigned when it's returned.
+              Currently rented by another reader{otherRental.due_at ? ` — due ${new Date(otherRental.due_at).toLocaleDateString()}` : ""}. Join the waiting list and you'll be auto-assigned when it's returned.
+            </div>
+          )}
+
+          {pendingReservation && (
+            <div className="mt-5 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+              Good news — this book is available for you. Claim it before the reservation expires.
             </div>
           )}
 

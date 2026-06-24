@@ -65,7 +65,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     queryKey: ["books"],
     queryFn: fetchBooks,
     staleTime: 5 * 60_000,
-    enabled: searchOpen || searchValue.length >= 2,
+    enabled: searchValue.trim().length >= 2,
   });
 
   const suggestions = useMemo<Book[]>(() => {

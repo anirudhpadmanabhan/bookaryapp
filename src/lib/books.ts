@@ -62,6 +62,20 @@ const GENRE_ENGLISH_RAW: Record<string, string> = {
   "സംഗീതം": "Music","ചിത്രകല": "Art","പാചകം": "Cooking","കൃഷി": "Agriculture","രാഷ്ട്രീയം": "Politics",
   "സാമ്പത്തികം": "Economics","തത്വശാസ്ത്രം": "Philosophy","മതം": "Religion","ആത്മീയത": "Spirituality",
   "ജ്യോതിഷം": "Astrology","നിയമം": "Law","പത്രപ്രവർത്തനം": "Journalism","പരിസ്ഥിതി": "Environment",
+  "അനുസ്മരണം": "Commemoration","ആക്ഷേപഹാസ്യം": "Satire","ആത്മീയം": "Spirituality","ഇയർബുക്ക്": "Yearbook",
+  "കാഴചകൾ": "Views","കുട്ടികളുടെ ശാസ്ത്രം": "Children's science","ക്രൈം ത്രില്ലർ": "Crime thriller",
+  "ചികിത്സ": "Treatment","നാടോടി കഥകൾ": "Folk tales","നിരീക്ഷണം": "Observation",
+  "നോവൽപഠനം": "Novel studies","പഴഞ്ചൊല്ല്": "Proverbs","ഫിക്ഷ൯": "Fiction","ശാസ്ത്ര നോവൽ": "Science novel",
+  "ശാസ്ത്രകഥ": "Science fiction","സംഭാഷണം": "Conversation","ആട്ടക്കഥ": "Attakatha","ആയുർവ്വേദം": "Ayurveda",
+  "ആർക്കിടെക്ച്ചർ": "Architecture","ഉപനിഷത്ത്": "Upanishad","ഒറിഗാമി": "Origami","കഥാനുഭവം": "Story experience",
+  "കരിയർഗൈഡ്": "Career guide","കല": "Art","കലകൾ": "Arts","കവികളിലുടെ": "Through poets","ജീവശാസ്ത്രം": "Biology",
+  "ഡി.കഥകൾ": "Detective stories","തത്വചിന്ത": "Philosophy","നാട൯പാട്ട്": "Folk songs","നിയമങ്ങൾ": "Laws",
+  "പാചകകുറിപ്പ്": "Recipes","പാട്ടുകൾ": "Songs","ബാല നാടകം": "Children's drama","ബാലവൈജഞാനികം": "Children's knowledge",
+  "ഭക്തികവിത": "Devotional poetry","മാ.നോവൽ": "Magic novel","മാജിക്": "Magic","മൊഴി": "Language","യോഗ": "Yoga",
+  "ലഘു ലേഖനം": "Short essays","ലിസ്റ്റ്": "List","വക്കീൽ കഥകൾ": "Lawyer stories","വാക്യങ്ങൾ": "Sentences",
+  "വായന": "Reading","വിശ്വ.നോവൽ": "World novel","വ്യാകരണം": "Grammar","വ്യാഖ്യാനം": "Commentary",
+  "സംഘടന": "Organization","സമാഹാരം": "Collection","സാമൂഹ്യം": "Society","സിദ്ധാന്തം": "Theory","സോഷ്യലിസം": "Socialism",
+  "kvt]mÀSvkv": "Sports","kvt]mÀsvkv": "Sports",
 };
 
 // Normalize Malayalam: NFC + strip zero-width joiners so visually-equal strings collapse.
@@ -93,6 +107,7 @@ export function genreMalayalam(book: Pick<Book, "genre" | "genre_ml">): string |
   const en = genreEnglish(book);
   if (book.genre_ml && normMl(book.genre_ml) !== normMl(en)) return book.genre_ml;
   if (/[\u0D00-\u0D7F]/.test(book.genre) && normMl(book.genre) !== normMl(en)) return book.genre;
+  if (/kvt\]m/i.test(book.genre) && normMl(book.genre) !== normMl(en)) return book.genre;
   return null;
 }
 
@@ -148,7 +163,7 @@ export type HomeData = {
   languages: HomeFacet[];
 };
 
-export async function fetchHomeData(latestLimit = 60, popularLimit = 6): Promise<HomeData> {
+export async function fetchHomeData(latestLimit = 60, popularLimit = 5): Promise<HomeData> {
   const libraryId = getSelectedLibraryId();
   const { data, error } = await supabase.rpc("home_data", {
     _library_id: libraryId ?? undefined,
@@ -157,6 +172,12 @@ export async function fetchHomeData(latestLimit = 60, popularLimit = 6): Promise
   });
   if (error) throw error;
   return (data ?? { total: 0, latest: [], popular: [], genres: [], writers: [], languages: [] }) as HomeData;
+}
+
+export async function fetchBookAvailability(id: string): Promise<{ out_of_stock: boolean; due_at: string | null }> {
+  const { data, error } = await supabase.rpc("book_availability" as any, { _book_id: id });
+  if (error) throw error;
+  return (data ?? { out_of_stock: false, due_at: null }) as { out_of_stock: boolean; due_at: string | null };
 }
 
 export async function fetchBooks(): Promise<Book[]> {

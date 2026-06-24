@@ -20,7 +20,7 @@ function GenrePage() {
   const [view, setView] = useState<ViewMode>("tile");
 
   const inGenre = useMemo(
-    () => books.filter((b) => b.genre.toLowerCase() === target.toLowerCase()),
+    () => books.filter((b) => b.genre.toLowerCase() === target.toLowerCase() || genreEnglish(b).toLowerCase() === target.toLowerCase()),
     [books, target],
   );
   const sorted = useMemo(() => sortBooks(inGenre, sort), [inGenre, sort]);

@@ -765,6 +765,7 @@ export type Database = {
         }
         Returns: Json
       }
+      book_availability: { Args: { _book_id: string }; Returns: Json }
       claim_reservation: { Args: { _rental_id: string }; Returns: Json }
       decline_reservation: { Args: { _rental_id: string }; Returns: Json }
       enqueue_my_due_reminders: { Args: never; Returns: number }
