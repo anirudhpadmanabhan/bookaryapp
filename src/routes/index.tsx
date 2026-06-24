@@ -336,6 +336,7 @@ function HomePage() {
         )}
 
       </section>
+      <AdBanner position="bottom" />
     </AppLayout>
   );
 }
