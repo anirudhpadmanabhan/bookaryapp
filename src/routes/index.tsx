@@ -91,7 +91,7 @@ function HomePage() {
             </div>
             <span className="hidden text-xs text-muted-foreground sm:inline">Currently available — out books rotate automatically</span>
           </div>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             {popular.map((b, i) => (
               <BookCard key={b.id} book={b} coverColor={colorAt(i)} />
             ))}
