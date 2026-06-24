@@ -22,7 +22,7 @@ export const Route = createFileRoute("/search")({
   component: SearchPage,
 });
 
-const PAGE_SIZE = 60;
+const PAGE_SIZE = 40;
 
 function SearchPage() {
   const { q: initialQ } = Route.useSearch();
@@ -30,8 +30,8 @@ function SearchPage() {
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [sort, setSort] = useState<BookSort>("newest");
   const [direction, setDirection] = useState<SortDirection>("desc");
-  const [view, setView] = useState<ViewMode>("tile");
-  const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
+  const [view, setView] = useState<ViewMode>("list");
+  const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks, staleTime: 5 * 60_000 });
   const { user } = useSession();
   const suggest = useSuggestBook();
   const [suggestAuthor, setSuggestAuthor] = useState("");
