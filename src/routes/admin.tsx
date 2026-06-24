@@ -76,6 +76,7 @@ function AdminPage() {
     { id: "rentals", label: "Rentals", icon: Package },
     { id: "waitlist", label: "Waitlist", icon: Clock },
     { id: "suggestions", label: "Suggestions", icon: Lightbulb },
+    { id: "ads", label: "Ads", icon: Megaphone },
     { id: "libraries", label: "Libraries", icon: Building2, adminOnly: true },
     { id: "users", label: "Users", icon: Users, adminOnly: true },
     { id: "roles", label: "Roles", icon: Shield, adminOnly: true },
