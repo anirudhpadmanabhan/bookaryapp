@@ -154,6 +154,7 @@ const LIST_COLUMNS =
   "id,title,title_ml,author,author_ml,original_author,genre,genre_ml,rating,rent_price,cover_color,pages,published_year,publisher,shelf_code,language,cover_url,created_at,library_id";
 
 export type HomeFacet = { key: string; ml?: string | null; count: number };
+export type GenreFacet = { key: string; ml: string | null; en: string; count: number; slugKey: string };
 export type HomeData = {
   total: number;
   latest: Book[];
@@ -172,6 +173,71 @@ export async function fetchHomeData(latestLimit = 60, popularLimit = 5): Promise
   });
   if (error) throw error;
   return (data ?? { total: 0, latest: [], popular: [], genres: [], writers: [], languages: [] }) as HomeData;
+}
+
+type GenreFacetSource = {
+  genre?: string | null;
+  genre_ml?: string | null;
+  key?: string | null;
+  ml?: string | null;
+  count?: number | null;
+};
+
+export function buildGenreFacets(rows: GenreFacetSource[]): GenreFacet[] {
+  const map = new Map<string, GenreFacet>();
+  for (const row of rows) {
+    const genre = String(row.genre ?? row.key ?? "").trim();
+    const genreMl = row.genre_ml ?? row.ml ?? null;
+    const en = genreEnglish({ genre, genre_ml: genreMl }).trim();
+    if (!en) continue;
+    const ml = genreMalayalam({ genre, genre_ml: genreMl });
+    const count = Number(row.count ?? 1);
+    const mapKey = en.toLowerCase();
+    const cur = map.get(mapKey);
+    if (cur) {
+      cur.count += Number.isFinite(count) && count > 0 ? count : 1;
+      if (!cur.ml && ml) cur.ml = ml;
+    } else {
+      map.set(mapKey, {
+        key: genre || en,
+        ml,
+        en,
+        count: Number.isFinite(count) && count > 0 ? count : 1,
+        slugKey: en,
+      });
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => b.count - a.count || a.en.localeCompare(b.en));
+}
+
+export async function fetchGenreFacets(): Promise<{ genres: GenreFacet[]; total: number }> {
+  const libraryId = getSelectedLibraryId();
+  const pageSize = 1000;
+  const makeQuery = (from: number, to: number, withCount = false) => {
+    let q = supabase
+      .from("books")
+      .select("genre,genre_ml", withCount ? { count: "exact" } : undefined)
+      .range(from, to);
+    if (libraryId) q = q.eq("library_id", libraryId);
+    return q;
+  };
+
+  const first = await makeQuery(0, pageSize - 1, true);
+  if (first.error) throw first.error;
+  const total = first.count ?? first.data?.length ?? 0;
+  if (total <= pageSize) {
+    return { genres: buildGenreFacets((first.data ?? []) as GenreFacetSource[]), total };
+  }
+
+  const ranges = [];
+  for (let from = pageSize; from < total; from += pageSize) {
+    ranges.push([from, Math.min(from + pageSize - 1, total - 1)] as const);
+  }
+  const pages = await Promise.all(ranges.map(([from, to]) => makeQuery(from, to)));
+  const error = pages.find((p) => p.error)?.error;
+  if (error) throw error;
+  const rows = [first.data ?? [], ...pages.map((p) => p.data ?? [])].flat() as GenreFacetSource[];
+  return { genres: buildGenreFacets(rows), total };
 }
 
 export async function fetchBookAvailability(id: string): Promise<{ out_of_stock: boolean; due_at: string | null }> {

@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
-import { fetchBooks, colorAt, genreEnglish, genreMalayalam, slugify } from "@/lib/books";
+import { fetchGenreFacets, colorAt, slugify } from "@/lib/books";
 import { BookOpen, Search as SearchIcon, ArrowDownUp } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -19,34 +19,25 @@ export const Route = createFileRoute("/genres")({
 });
 
 export function GenresPage() {
-  const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
+  const { data } = useQuery({ queryKey: ["genre-facets"], queryFn: fetchGenreFacets });
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<GenreSort>("popular");
 
   const genres = useMemo(() => {
-    const map = new Map<string, { count: number; ml: string | null; en: string; slugKey: string }>();
-    for (const b of books) {
-      const en = genreEnglish(b);
-      const ml = genreMalayalam(b);
-      const key = en.toLowerCase();
-      const cur = map.get(key);
-      if (cur) cur.count++;
-      else map.set(key, { count: 1, ml, en, slugKey: b.genre });
-    }
-    const arr = Array.from(map.entries());
-    if (sort === "az") arr.sort((a, b) => a[1].en.localeCompare(b[1].en));
-    else arr.sort((a, b) => b[1].count - a[1].count);
+    const arr = [...(data?.genres ?? [])];
+    if (sort === "az") arr.sort((a, b) => a.en.localeCompare(b.en));
+    else arr.sort((a, b) => b.count - a.count || a.en.localeCompare(b.en));
     return arr;
-  }, [books, sort]);
+  }, [data?.genres, sort]);
 
   const filtered = q.trim()
-    ? genres.filter(([g, info]) => g.toLowerCase().includes(q.toLowerCase()) || info.en.toLowerCase().includes(q.toLowerCase()) || (info.ml ?? "").includes(q))
+    ? genres.filter((info) => info.key.toLowerCase().includes(q.toLowerCase()) || info.en.toLowerCase().includes(q.toLowerCase()) || (info.ml ?? "").includes(q))
     : genres;
 
   return (
     <AppLayout>
       <h1 className="mb-1 text-2xl font-bold">Genres</h1>
-      <p className="mb-5 text-sm text-muted-foreground">{genres.length} genres · {books.length.toLocaleString()} titles total</p>
+      <p className="mb-5 text-sm text-muted-foreground">{genres.length} genres · {(data?.total ?? 0).toLocaleString()} titles total</p>
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <div className="glass-card flex flex-1 items-center gap-3 rounded-2xl px-4 py-3">
@@ -68,9 +59,9 @@ export function GenresPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {filtered.map(([genre, info], i) => (
+        {filtered.map((info, i) => (
           <Link
-            key={genre}
+            key={info.en}
             to="/genres/$slug"
             params={{ slug: slugify(info.slugKey) }}
             className={`cover cover-${colorAt(i)} aspect-[4/3] flex flex-col items-center justify-center text-center gap-2 !p-4 cursor-pointer transition-transform hover:scale-[1.02]`}
