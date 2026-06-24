@@ -5,8 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 8px);
+  --radius-md: calc(var(--radius) - 4px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --radius-2xl: calc(var(--radius) + 8px);
@@ -34,51 +34,52 @@
   --color-surface-elevated: var(--surface-elevated);
   --color-malayalam: var(--malayalam);
 
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", "DM Sans", ui-sans-serif, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
   --font-serif: "Noto Serif Malayalam", "Manjari", serif;
 }
 
 :root {
-  --radius: 0.875rem;
+  --radius: 1.25rem;
 
-  /* Deep midnight indigo base, inspired by the Bookary look */
-  --background: oklch(0.16 0.04 280);
-  --foreground: oklch(0.96 0.01 280);
+  /* Botanical Noir — deep forest with sage + warm cream accents */
+  --background: oklch(0.18 0.012 150);
+  --foreground: oklch(0.96 0.01 95);
 
-  --surface: oklch(0.21 0.05 280);
-  --surface-elevated: oklch(0.26 0.06 280);
+  --surface: oklch(0.24 0.016 150);
+  --surface-elevated: oklch(0.30 0.02 150);
 
-  --card: oklch(0.21 0.05 280);
-  --card-foreground: oklch(0.96 0.01 280);
-  --popover: oklch(0.22 0.05 280);
-  --popover-foreground: oklch(0.96 0.01 280);
+  --card: oklch(0.24 0.016 150);
+  --card-foreground: oklch(0.96 0.01 95);
+  --popover: oklch(0.22 0.016 150);
+  --popover-foreground: oklch(0.96 0.01 95);
 
-  --primary: oklch(0.66 0.21 285);
-  --primary-foreground: oklch(0.99 0 0);
+  --primary: oklch(0.78 0.10 130);
+  --primary-foreground: oklch(0.18 0.02 150);
 
-  --secondary: oklch(0.28 0.06 280);
-  --secondary-foreground: oklch(0.96 0.01 280);
+  --secondary: oklch(0.30 0.018 150);
+  --secondary-foreground: oklch(0.96 0.01 95);
 
-  --muted: oklch(0.26 0.04 280);
-  --muted-foreground: oklch(0.72 0.03 280);
+  --muted: oklch(0.27 0.014 150);
+  --muted-foreground: oklch(0.74 0.018 130);
 
-  --accent: oklch(0.7 0.18 50);            /* warm amber accent */
-  --accent-foreground: oklch(0.18 0.04 50);
+  --accent: oklch(0.88 0.055 90);
+  --accent-foreground: oklch(0.20 0.02 150);
 
-  --malayalam: oklch(0.82 0.13 75);        /* gold for Malayalam script */
+  --malayalam: oklch(0.88 0.055 90);
 
-  --destructive: oklch(0.62 0.24 27);
+  --destructive: oklch(0.62 0.22 25);
   --destructive-foreground: oklch(0.99 0 0);
 
-  --border: oklch(0.32 0.04 280 / 60%);
-  --input: oklch(0.3 0.04 280);
-  --ring: oklch(0.66 0.21 285);
+  --border: oklch(0.40 0.02 140 / 40%);
+  --input: oklch(0.30 0.018 150);
+  --ring: oklch(0.78 0.10 130);
 }
 
-.dark { /* same — app is dark by default */
-  --background: oklch(0.16 0.04 280);
-  --foreground: oklch(0.96 0.01 280);
+.dark {
+  --background: oklch(0.18 0.012 150);
+  --foreground: oklch(0.96 0.01 95);
 }
 
 @layer base {
@@ -97,38 +98,50 @@
 
   body {
     background-image:
-      radial-gradient(60rem 40rem at 10% -10%, oklch(0.34 0.13 290 / 35%), transparent 60%),
-      radial-gradient(50rem 35rem at 110% 10%, oklch(0.4 0.13 30 / 18%), transparent 60%);
+      radial-gradient(55rem 38rem at 8% -6%, oklch(0.55 0.14 140 / 22%), transparent 62%),
+      radial-gradient(45rem 32rem at 105% 4%, oklch(0.78 0.12 80 / 16%), transparent 60%),
+      radial-gradient(60rem 40rem at 50% 110%, oklch(0.50 0.12 145 / 18%), transparent 65%);
     background-attachment: fixed;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
   }
 
   .font-mal {
     font-family: var(--font-serif);
     font-feature-settings: "ss01";
+    color: var(--color-accent);
   }
 }
 
 /* Book cover gradient palettes */
 @layer components {
   .cover { @apply relative overflow-hidden rounded-xl flex flex-col justify-between p-5 text-white shadow-lg; aspect-ratio: 2 / 3; }
-  .cover-violet   { background: linear-gradient(155deg, #4c1d95, #1e1b4b 60%, #0b0a1f); }
-  .cover-midnight { background: linear-gradient(160deg, #1e1b4b, #0c1024 70%); }
-  .cover-plum     { background: linear-gradient(160deg, #4a044e, #1f0a23 80%); }
-  .cover-rust     { background: linear-gradient(160deg, #9a3412, #3a1208 80%); }
+  .cover-violet   { background: linear-gradient(155deg, #2f3d24, #16201a 60%, #0a120c); }
+  .cover-midnight { background: linear-gradient(160deg, #1b2a1f, #0a120c 70%); }
+  .cover-plum     { background: linear-gradient(160deg, #3d2840, #1a0f1c 80%); }
+  .cover-rust     { background: linear-gradient(160deg, #7a3a1f, #2a1208 80%); }
   .cover-teal     { background: linear-gradient(160deg, #134e4a, #042f2e 80%); }
-  .cover-forest   { background: linear-gradient(160deg, #14532d, #052016 80%); }
-  .cover-oxblood  { background: linear-gradient(160deg, #7f1d1d, #1f0606 80%); }
-  .cover-amber    { background: linear-gradient(160deg, #b45309, #3b1d04 80%); }
-  .cover-crimson  { background: linear-gradient(160deg, #9f1239, #2a0612 80%); }
-  .cover-butter   { background: linear-gradient(160deg, #ca8a04, #3b2a04 80%); }
-  .cover-rose     { background: linear-gradient(160deg, #be185d, #2a061a 80%); }
-  .cover-wine     { background: linear-gradient(160deg, #6b21a8, #1f0838 80%); }
-  .cover-sage     { background: linear-gradient(160deg, #4d7c0f, #1c2a08 80%); }
+  .cover-forest   { background: linear-gradient(160deg, #2d4a2b, #0c1a0e 80%); }
+  .cover-oxblood  { background: linear-gradient(160deg, #6b1d1d, #1f0606 80%); }
+  .cover-amber    { background: linear-gradient(160deg, #a06a18, #2e1d04 80%); }
+  .cover-crimson  { background: linear-gradient(160deg, #8a2440, #2a0612 80%); }
+  .cover-butter   { background: linear-gradient(160deg, #b8881a, #2e2204 80%); }
+  .cover-rose     { background: linear-gradient(160deg, #9b3866, #2a0e1c 80%); }
+  .cover-wine     { background: linear-gradient(160deg, #5a2a6e, #1c0a2a 80%); }
+  .cover-sage     { background: linear-gradient(160deg, #5a7a3a, #1c2a10 80%); }
   .cover-fog      { background: linear-gradient(160deg, #475569, #0f172a 80%); }
-  .cover-cobalt   { background: linear-gradient(160deg, #1e40af, #0b1733 80%); }
-  .cover-gold     { background: linear-gradient(160deg, #a16207, #2b1a04 80%); }
+  .cover-cobalt   { background: linear-gradient(160deg, #2c4a8a, #0b1733 80%); }
+  .cover-gold     { background: linear-gradient(160deg, #9a7218, #2b1f04 80%); }
   .cover-stone    { background: linear-gradient(160deg, #44403c, #0f0d0c 80%); }
-  .cover-indigo   { background: linear-gradient(160deg, #4338ca, #110f33 80%); }
+  .cover-indigo   { background: linear-gradient(160deg, #3d4488, #110f33 80%); }
 
   .cover::after {
     content: "";
@@ -144,8 +157,9 @@
   }
 
   .glass-card {
-    background: linear-gradient(180deg, oklch(0.24 0.05 280 / 80%), oklch(0.2 0.05 280 / 80%));
-    border: 1px solid oklch(0.32 0.04 280 / 50%);
-    backdrop-filter: blur(8px);
+    background: linear-gradient(180deg, oklch(0.26 0.018 150 / 78%), oklch(0.20 0.014 150 / 82%));
+    border: 1px solid oklch(0.55 0.05 140 / 22%);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 24px 70px -34px oklch(0.40 0.10 145 / 55%);
   }
 }
