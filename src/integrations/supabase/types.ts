@@ -14,42 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      _csv_books_stage: {
-        Row: {
-          author: string | null
-          cover_url: string | null
-          genre_ml: string | null
-          language: string | null
-          original_author: string | null
-          publisher: string | null
-          shelf: string
-          title: string | null
-          title_ml: string | null
-        }
-        Insert: {
-          author?: string | null
-          cover_url?: string | null
-          genre_ml?: string | null
-          language?: string | null
-          original_author?: string | null
-          publisher?: string | null
-          shelf: string
-          title?: string | null
-          title_ml?: string | null
-        }
-        Update: {
-          author?: string | null
-          cover_url?: string | null
-          genre_ml?: string | null
-          language?: string | null
-          original_author?: string | null
-          publisher?: string | null
-          shelf?: string
-          title?: string | null
-          title_ml?: string | null
-        }
-        Relationships: []
-      }
       ad_events: {
         Row: {
           ad_id: string

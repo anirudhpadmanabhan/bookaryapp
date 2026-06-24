@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS public._csv_books_stage;
