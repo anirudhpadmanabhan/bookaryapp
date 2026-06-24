@@ -178,14 +178,14 @@ function HomePage() {
         </button>
         {langsOpen && (
           <div className="mt-3 flex flex-wrap gap-2">
-            {languages.slice(0, 30).map(([name, count]) => (
+            {languages.slice(0, 30).map((info) => (
               <Link
-                key={name}
+                key={info.key}
                 to="/languages/$slug"
-                params={{ slug: slugify(name) }}
+                params={{ slug: slugify(info.key) }}
                 className="cursor-pointer rounded-full border border-border bg-surface/60 px-3 py-1.5 text-xs hover:border-primary/60 hover:text-primary"
               >
-                {name} <span className="text-muted-foreground">· {count}</span>
+                {info.key} <span className="text-muted-foreground">· {info.count}</span>
               </Link>
             ))}
             <Link to="/languages" className="cursor-pointer rounded-full bg-primary/15 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/25">
