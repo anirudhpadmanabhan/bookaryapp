@@ -25,7 +25,7 @@ const HOME_LIMIT = 60;
 function HomePage() {
   const { data, isLoading } = useQuery({
     queryKey: ["home-data"],
-    queryFn: () => fetchHomeData(HOME_LIMIT, 6),
+    queryFn: () => fetchHomeData(HOME_LIMIT, 5),
     staleTime: 5 * 60_000,
   });
   const books = data?.latest ?? [];
