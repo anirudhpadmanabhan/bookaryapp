@@ -36,9 +36,27 @@ function HomePage() {
     staleTime: 5 * 60_000,
   });
   const popular = (data?.popular ?? []).slice(0, 5);
-  const genres = data?.genres ?? [];
+  const rawGenres = data?.genres ?? [];
   const writers = data?.writers ?? [];
   const languages = data?.languages ?? [];
+
+  // Dedupe genres by their normalized English label so the count matches the /genres page.
+  const genres = useMemo(() => {
+    const map = new Map<string, { key: string; ml: string | null; en: string; count: number }>();
+    for (const info of rawGenres) {
+      const en = genreEnglish({ genre: info.key, genre_ml: info.ml ?? null });
+      const ml = genreMalayalam({ genre: info.key, genre_ml: info.ml ?? null });
+      const k = en.toLowerCase();
+      const cur = map.get(k);
+      if (cur) {
+        cur.count += info.count;
+        if (!cur.ml && ml) cur.ml = ml;
+      } else {
+        map.set(k, { key: info.key, ml, en, count: info.count });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => b.count - a.count);
+  }, [rawGenres]);
 
   const [sort, setSort] = useState<BookSort>("newest");
   const [direction, setDirection] = useState<SortDirection>("desc");
