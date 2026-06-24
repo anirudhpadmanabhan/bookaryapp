@@ -77,7 +77,7 @@ function SearchPage() {
       // every token must match somewhere
       const hay = [b.title, b.author, b.genre, b.publisher ?? "", b.shelf_code ?? ""].join(" ").toLowerCase();
       const hayMl = [b.title_ml ?? "", b.author_ml ?? "", b.genre_ml ?? "", b.original_author ?? ""].join(" ");
-      const ok = tokens.every((t, i) => hay.includes(t) || hayMl.includes(mlTokens[i] ?? t));
+      const ok = tokens.every((t: string, i: number) => hay.includes(t) || hayMl.includes(mlTokens[i] ?? t));
       if (!ok) continue;
       const bucket = rankMatch(b, trimmed, trimmed) ?? 2;
       ranked.push({ book: b, bucket });
