@@ -170,6 +170,43 @@ export async function fetchBooks(): Promise<Book[]> {
   return [first.data ?? [], ...pages.map((p) => p.data ?? [])].flat() as unknown as Book[];
 }
 
+/**
+ * Server-paginated books fetch — fast initial paint for "All Published Books".
+ * Sort is pushed to Postgres for every column we expose in SortBar.
+ */
+function sortColumn(sort: BookSort): { col: string; defaultAsc: boolean } {
+  switch (sort) {
+    case "title": return { col: "title", defaultAsc: true };
+    case "rating": return { col: "rating", defaultAsc: false };
+    case "genre": return { col: "genre", defaultAsc: true };
+    case "newest":
+    default: return { col: "created_at", defaultAsc: false };
+  }
+}
+
+export async function fetchBooksPage(opts: {
+  page: number;
+  pageSize: number;
+  sort: BookSort;
+  direction: SortDirection;
+}): Promise<{ books: Book[]; total: number }> {
+  const libraryId = getSelectedLibraryId();
+  const { col } = sortColumn(opts.sort);
+  const ascending = opts.direction === "asc";
+  const from = (opts.page - 1) * opts.pageSize;
+  const to = from + opts.pageSize - 1;
+  let q = supabase
+    .from("books")
+    .select(LIST_COLUMNS, { count: "exact" })
+    .order(col, { ascending, nullsFirst: false })
+    .order("id", { ascending: true })
+    .range(from, to);
+  if (libraryId) q = q.eq("library_id", libraryId);
+  const { data, count, error } = await q;
+  if (error) throw error;
+  return { books: (data ?? []) as unknown as Book[], total: count ?? 0 };
+}
+
 
 export async function fetchBook(id: string): Promise<Book | null> {
   const { data, error } = await supabase.from("books").select("*").eq("id", id).maybeSingle();
