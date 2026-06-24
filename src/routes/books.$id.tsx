@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
-import { displayRating as catalogRating, fetchBook, genreEnglish, genreMalayalam, synopsisFor } from "@/lib/books";
+import { displayRating as catalogRating, fetchBook, genreEnglish, genreMalayalam, synopsisFor, slugify } from "@/lib/books";
 import { BookCover } from "@/components/BookCover";
 import {
   Heart, Star, Calendar, ArrowLeft, NotebookPen,
@@ -159,13 +159,27 @@ function BookPage() {
         </div>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
-            {enGenre} {mlGenre && <>· <span className="font-mal text-accent">{mlGenre}</span></>}
+            <Link
+              to="/genres/$slug"
+              params={{ slug: slugify(book.genre) }}
+              className="cursor-pointer rounded-full bg-primary/10 px-2.5 py-0.5 text-primary hover:bg-primary/20"
+            >
+              {enGenre}
+            </Link>
+            {mlGenre && <>· <span className="font-mal text-accent">{mlGenre}</span></>}
           </div>
           <h1 className="mt-1 text-3xl font-bold md:text-4xl">{book.title}</h1>
           {book.title_ml && <p className="font-mal mt-1 text-xl text-accent">{book.title_ml}</p>}
           <p className="mt-3 text-muted-foreground">
-            by <span className="font-medium text-foreground">{book.author}</span>
-            {book.author_ml && <> · <span className="font-mal">{book.author_ml}</span></>}
+            by{" "}
+            <Link
+              to="/writers/$slug"
+              params={{ slug: slugify(book.author) }}
+              className="cursor-pointer font-medium text-foreground hover:text-primary hover:underline"
+            >
+              {book.author}
+            </Link>
+            {book.author_ml && <> · <Link to="/writers/$slug" params={{ slug: slugify(book.author) }} className="font-mal cursor-pointer hover:text-primary hover:underline">{book.author_ml}</Link></>}
           </p>
           {book.original_author && book.original_author !== book.author_ml && (
             <p className="mt-1 text-xs text-muted-foreground">Original author: <span className="font-mal">{book.original_author}</span></p>

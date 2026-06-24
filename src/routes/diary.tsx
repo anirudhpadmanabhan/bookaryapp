@@ -210,9 +210,15 @@ function ReviewsView({ entries }: { entries: any[] }) {
   });
 
   type Row = { kind: "diary" | "review"; id: string; created_at: string; rating: number | null; body: string; quote: string | null; book: any };
+  // Reviews and diary entries are kept in sync server-side (writing one upserts the other).
+  // Show the review when both exist for the same book + body so the tab doesn't double-list.
+  const reviewKeys = new Set(
+    (bookReviews as any[]).map((r) => `${r.book_id}|${(r.body ?? "").trim()}`),
+  );
   const rows: Row[] = [
     ...entries
       .filter((e) => (e.note && e.note.trim()) || e.rating)
+      .filter((e) => !e.book_id || !reviewKeys.has(`${e.book_id}|${(e.note ?? "").trim()}`))
       .map((e) => ({ kind: "diary" as const, id: `d-${e.id}`, created_at: e.created_at, rating: e.rating ?? null, body: e.note ?? "", quote: null, book: e.books })),
     ...(bookReviews as any[]).map((r) => ({ kind: "review" as const, id: `r-${r.id}`, created_at: r.created_at, rating: r.rating, body: r.body ?? "", quote: r.favorite_quote ?? null, book: r.books })),
   ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
