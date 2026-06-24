@@ -30,7 +30,8 @@ function SearchPage() {
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [sort, setSort] = useState<BookSort>("newest");
   const [direction, setDirection] = useState<SortDirection>("desc");
-  const [view, setView] = useState<ViewMode>("list");
+  const [view, setView] = useState<ViewMode>("tile");
+  const [showDropdown, setShowDropdown] = useState(false);
   const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks, staleTime: 5 * 60_000 });
   const { user } = useSession();
   const suggest = useSuggestBook();
@@ -40,30 +41,55 @@ function SearchPage() {
 
   const trimmed = q.trim();
 
+  // Classify each match and sort: title-hits A→Z, then author-hits A→Z, then other-hits A→Z
+  type Ranked = { book: typeof books[number]; bucket: 0 | 1 | 2 };
+  const rankMatch = (b: typeof books[number], needle: string, needleMl: string): Ranked["bucket"] | null => {
+    const title = `${b.title} ${b.title_ml ?? ""}`.toLowerCase();
+    const author = `${b.author} ${b.author_ml ?? ""} ${b.original_author ?? ""}`.toLowerCase();
+    const other = `${b.genre ?? ""} ${b.genre_ml ?? ""} ${b.publisher ?? ""} ${b.shelf_code ?? ""}`.toLowerCase();
+    const n = needle.toLowerCase();
+    if (title.includes(n) || (needleMl && (b.title_ml ?? "").includes(needleMl))) return 0;
+    if (author.includes(n) || (needleMl && (b.author_ml ?? "").includes(needleMl))) return 1;
+    if (other.includes(n)) return 2;
+    return null;
+  };
+
+  const alphaTitle = (a: typeof books[number], b: typeof books[number]) =>
+    (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: "base" });
+
   const liveSuggestions = useMemo(() => {
     if (!trimmed || trimmed.length < 2) return [];
-    const ql = trimmed.toLowerCase();
-    return books
-      .filter((b) => {
-        const hay = [b.title, b.author, b.publisher ?? "", b.shelf_code ?? ""].join(" ").toLowerCase();
-        const hayMl = [b.title_ml ?? "", b.author_ml ?? ""].join(" ");
-        return hay.includes(ql) || hayMl.includes(trimmed);
-      })
-      .slice(0, 8);
+    const ranked: Ranked[] = [];
+    for (const b of books) {
+      const bucket = rankMatch(b, trimmed, trimmed);
+      if (bucket !== null) ranked.push({ book: b, bucket });
+    }
+    ranked.sort((x, y) => x.bucket - y.bucket || alphaTitle(x.book, y.book));
+    return ranked.slice(0, 8).map((r) => r.book);
   }, [books, trimmed]);
 
   const filtered = useMemo(() => {
-    const base = trimmed
-      ? books.filter((b) => {
-          const tokens = trimmed.toLowerCase().split(/\s+/).filter(Boolean);
-          const mlTokens = trimmed.split(/\s+/).filter(Boolean);
-          const hay = [b.title, b.author, b.genre, b.publisher ?? "", b.shelf_code ?? ""].join(" ").toLowerCase();
-          const hayMl = [b.title_ml ?? "", b.author_ml ?? "", b.genre_ml ?? "", b.original_author ?? ""].join(" ");
-          return tokens.every((t: string, i: number) => hay.includes(t) || hayMl.includes(mlTokens[i] ?? t));
-        })
-      : books;
-    return sortBooks(base, sort, direction);
+    if (!trimmed) return sortBooks(books, sort, direction);
+    const tokens = trimmed.toLowerCase().split(/\s+/).filter(Boolean);
+    const mlTokens = trimmed.split(/\s+/).filter(Boolean);
+    const ranked: Ranked[] = [];
+    for (const b of books) {
+      // every token must match somewhere
+      const hay = [b.title, b.author, b.genre, b.publisher ?? "", b.shelf_code ?? ""].join(" ").toLowerCase();
+      const hayMl = [b.title_ml ?? "", b.author_ml ?? "", b.genre_ml ?? "", b.original_author ?? ""].join(" ");
+      const ok = tokens.every((t: string, i: number) => hay.includes(t) || hayMl.includes(mlTokens[i] ?? t));
+      if (!ok) continue;
+      const bucket = rankMatch(b, trimmed, trimmed) ?? 2;
+      ranked.push({ book: b, bucket });
+    }
+    // When the user hasn't picked an explicit sort (default newest), use bucket+alphabetical.
+    if (sort === "newest" && direction === "desc") {
+      ranked.sort((x, y) => x.bucket - y.bucket || alphaTitle(x.book, y.book));
+      return ranked.map((r) => r.book);
+    }
+    return sortBooks(ranked.map((r) => r.book), sort, direction);
   }, [books, trimmed, sort, direction]);
+
 
   useEffect(() => { setVisible(PAGE_SIZE); }, [q, sort, direction]);
 
@@ -98,35 +124,64 @@ function SearchPage() {
     <AppLayout>
       <h1 className="mb-1 text-2xl font-bold">Search the catalog</h1>
       <p className="mb-5 text-sm text-muted-foreground">{books.length.toLocaleString()} books available — search by title, author, genre, or shelf code.</p>
-      <div className="glass-card relative mb-2 flex items-center gap-3 rounded-2xl px-4 py-3">
-        <SearchIcon className="h-5 w-5 text-muted-foreground" />
-        <input
-          autoFocus
-          aria-label="Search the catalog"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Try 'Basheer', 'നോവൽ', 'Aadujeevitham', or a shelf number…"
-          className="w-full bg-transparent text-base outline-none placeholder:text-muted-foreground"
-        />
-        {q && <button onClick={() => setQ("")} className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">Clear</button>}
+      <div className="relative mb-4">
+        <div className="glass-card flex items-center gap-3 rounded-2xl px-4 py-3">
+          <SearchIcon className="h-5 w-5 text-muted-foreground" />
+          <input
+            autoFocus
+            aria-label="Search the catalog"
+            value={q}
+            onChange={(e) => { setQ(e.target.value); setShowDropdown(true); }}
+            onFocus={() => setShowDropdown(true)}
+            onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+            placeholder="Try 'Basheer', 'നോവൽ', 'Aadujeevitham', or a shelf number…"
+            className="w-full bg-transparent text-base outline-none placeholder:text-muted-foreground"
+          />
+          {q && <button onClick={() => setQ("")} className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">Clear</button>}
+        </div>
+
+        {/* Live autocomplete dropdown — grouped: Books → Authors → Other */}
+        {showDropdown && liveSuggestions.length > 0 && (() => {
+          const titleHits = liveSuggestions.filter((b) => rankMatch(b, trimmed, trimmed) === 0);
+          const authorHits = liveSuggestions.filter((b) => rankMatch(b, trimmed, trimmed) === 1);
+          const otherHits = liveSuggestions.filter((b) => rankMatch(b, trimmed, trimmed) === 2);
+          const Group = ({ label, items }: { label: string; items: typeof liveSuggestions }) =>
+            items.length === 0 ? null : (
+              <div>
+                <div className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">{label}</div>
+                <ul>
+                  {items.map((b) => (
+                    <li key={b.id}>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => { e.preventDefault(); setQ(b.title); setShowDropdown(false); }}
+                        className="flex w-full cursor-pointer items-center gap-3 px-3 py-2 text-left hover:bg-surface-elevated"
+                      >
+                        <div className="grid h-9 w-7 shrink-0 place-items-center rounded bg-gradient-to-br from-primary/30 to-accent/20 text-[10px] font-bold text-primary">
+                          {b.shelf_code ?? "—"}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-medium">{b.title}</div>
+                          <div className="truncate text-xs text-muted-foreground">{b.author}{b.genre ? ` · ${b.genre}` : ""}</div>
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          return (
+            <div className="absolute left-0 right-0 top-full z-40 mt-1 max-h-96 overflow-y-auto rounded-2xl border border-border bg-popover shadow-2xl">
+              <Group label="Books" items={titleHits} />
+              {titleHits.length > 0 && (authorHits.length > 0 || otherHits.length > 0) && <div className="border-t border-border/40" />}
+              <Group label="Authors" items={authorHits} />
+              {authorHits.length > 0 && otherHits.length > 0 && <div className="border-t border-border/40" />}
+              <Group label="Other" items={otherHits} />
+            </div>
+          );
+        })()}
       </div>
 
-      {/* Live autocomplete suggestions */}
-      {liveSuggestions.length > 0 && filtered.length > 0 && (
-        <div className="mb-4 flex flex-wrap gap-2">
-          <span className="text-xs uppercase tracking-wider text-muted-foreground self-center">Suggestions:</span>
-          {liveSuggestions.slice(0, 6).map((b) => (
-            <button
-              key={b.id}
-              type="button"
-              onClick={() => setQ(b.title)}
-              className="cursor-pointer rounded-full border border-border bg-surface/60 px-3 py-1 text-xs hover:border-primary/60 hover:text-primary"
-            >
-              {b.title}
-            </button>
-          ))}
-        </div>
-      )}
 
       <SortBar
         count={filtered.length}
