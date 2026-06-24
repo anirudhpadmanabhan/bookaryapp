@@ -30,7 +30,8 @@ function SearchPage() {
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [sort, setSort] = useState<BookSort>("newest");
   const [direction, setDirection] = useState<SortDirection>("desc");
-  const [view, setView] = useState<ViewMode>("list");
+  const [view, setView] = useState<ViewMode>("tile");
+  const [showDropdown, setShowDropdown] = useState(false);
   const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks, staleTime: 5 * 60_000 });
   const { user } = useSession();
   const suggest = useSuggestBook();
@@ -40,30 +41,55 @@ function SearchPage() {
 
   const trimmed = q.trim();
 
+  // Classify each match and sort: title-hits A→Z, then author-hits A→Z, then other-hits A→Z
+  type Ranked = { book: typeof books[number]; bucket: 0 | 1 | 2 };
+  const rankMatch = (b: typeof books[number], needle: string, needleMl: string): Ranked["bucket"] | null => {
+    const title = `${b.title} ${b.title_ml ?? ""}`.toLowerCase();
+    const author = `${b.author} ${b.author_ml ?? ""} ${b.original_author ?? ""}`.toLowerCase();
+    const other = `${b.genre ?? ""} ${b.genre_ml ?? ""} ${b.publisher ?? ""} ${b.shelf_code ?? ""}`.toLowerCase();
+    const n = needle.toLowerCase();
+    if (title.includes(n) || (needleMl && (b.title_ml ?? "").includes(needleMl))) return 0;
+    if (author.includes(n) || (needleMl && (b.author_ml ?? "").includes(needleMl))) return 1;
+    if (other.includes(n)) return 2;
+    return null;
+  };
+
+  const alphaTitle = (a: typeof books[number], b: typeof books[number]) =>
+    (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: "base" });
+
   const liveSuggestions = useMemo(() => {
     if (!trimmed || trimmed.length < 2) return [];
-    const ql = trimmed.toLowerCase();
-    return books
-      .filter((b) => {
-        const hay = [b.title, b.author, b.publisher ?? "", b.shelf_code ?? ""].join(" ").toLowerCase();
-        const hayMl = [b.title_ml ?? "", b.author_ml ?? ""].join(" ");
-        return hay.includes(ql) || hayMl.includes(trimmed);
-      })
-      .slice(0, 8);
+    const ranked: Ranked[] = [];
+    for (const b of books) {
+      const bucket = rankMatch(b, trimmed, trimmed);
+      if (bucket !== null) ranked.push({ book: b, bucket });
+    }
+    ranked.sort((x, y) => x.bucket - y.bucket || alphaTitle(x.book, y.book));
+    return ranked.slice(0, 8).map((r) => r.book);
   }, [books, trimmed]);
 
   const filtered = useMemo(() => {
-    const base = trimmed
-      ? books.filter((b) => {
-          const tokens = trimmed.toLowerCase().split(/\s+/).filter(Boolean);
-          const mlTokens = trimmed.split(/\s+/).filter(Boolean);
-          const hay = [b.title, b.author, b.genre, b.publisher ?? "", b.shelf_code ?? ""].join(" ").toLowerCase();
-          const hayMl = [b.title_ml ?? "", b.author_ml ?? "", b.genre_ml ?? "", b.original_author ?? ""].join(" ");
-          return tokens.every((t: string, i: number) => hay.includes(t) || hayMl.includes(mlTokens[i] ?? t));
-        })
-      : books;
-    return sortBooks(base, sort, direction);
+    if (!trimmed) return sortBooks(books, sort, direction);
+    const tokens = trimmed.toLowerCase().split(/\s+/).filter(Boolean);
+    const mlTokens = trimmed.split(/\s+/).filter(Boolean);
+    const ranked: Ranked[] = [];
+    for (const b of books) {
+      // every token must match somewhere
+      const hay = [b.title, b.author, b.genre, b.publisher ?? "", b.shelf_code ?? ""].join(" ").toLowerCase();
+      const hayMl = [b.title_ml ?? "", b.author_ml ?? "", b.genre_ml ?? "", b.original_author ?? ""].join(" ");
+      const ok = tokens.every((t, i) => hay.includes(t) || hayMl.includes(mlTokens[i] ?? t));
+      if (!ok) continue;
+      const bucket = rankMatch(b, trimmed, trimmed) ?? 2;
+      ranked.push({ book: b, bucket });
+    }
+    // When the user hasn't picked an explicit sort (default newest), use bucket+alphabetical.
+    if (sort === "newest" && direction === "desc") {
+      ranked.sort((x, y) => x.bucket - y.bucket || alphaTitle(x.book, y.book));
+      return ranked.map((r) => r.book);
+    }
+    return sortBooks(ranked.map((r) => r.book), sort, direction);
   }, [books, trimmed, sort, direction]);
+
 
   useEffect(() => { setVisible(PAGE_SIZE); }, [q, sort, direction]);
 
