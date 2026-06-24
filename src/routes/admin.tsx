@@ -877,32 +877,52 @@ function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; 
         {filename && (
           <div className="mt-4 rounded-xl border border-border bg-surface/40 p-3 text-sm">
             <div className="font-medium">{filename}</div>
-            {detected.length > 0 && (
+            {headers.length > 0 && (
               <div className="mt-2 rounded-md border border-border/50 bg-background/40 p-2 text-xs">
-                <div className="mb-1 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">Detected column mapping</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {detected.map((d, i) => (
-                    <span
-                      key={`${d.header}-${i}`}
-                      className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 ${
-                        d.field
-                          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
-                          : "border-border bg-surface/60 text-muted-foreground line-through"
-                      }`}
-                      title={d.field ? `${d.header} → ${d.field}` : `${d.header} (ignored)`}
-                    >
-                      <span className="font-medium">{d.header || "(blank)"}</span>
-                      {d.field && <span className="opacity-70">→ {d.field}</span>}
-                    </span>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <div className="font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">Column mapping</div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const reset: Record<string, keyof BookImportRow | ""> = {};
+                      for (const h of headers) reset[h] = (FIELD_MAP[normalizeKey(h)] ?? "") as keyof BookImportRow | "";
+                      setMapping(reset);
+                    }}
+                    className="cursor-pointer rounded border border-border px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground"
+                  >
+                    Auto-detect
+                  </button>
+                </div>
+                <div className="grid gap-1.5 sm:grid-cols-2">
+                  {headers.map((h, i) => (
+                    <div key={`${h}-${i}`} className="flex items-center gap-2 rounded-md border border-border/50 bg-surface/40 px-2 py-1.5">
+                      <span className="min-w-0 flex-1 truncate font-medium" title={h}>{h || "(blank)"}</span>
+                      <span className="text-muted-foreground">→</span>
+                      <select
+                        value={mapping[h] ?? ""}
+                        onChange={(e) => setMapping((m) => ({ ...m, [h]: e.target.value as keyof BookImportRow | "" }))}
+                        className="cursor-pointer rounded border border-border bg-background/60 px-1.5 py-0.5 text-[11px]"
+                      >
+                        {IMPORT_FIELDS.map((f) => (
+                          <option key={f.value} value={f.value}>{f.label}</option>
+                        ))}
+                      </select>
+                    </div>
                   ))}
                 </div>
-                {!detected.some((d) => d.field === "shelf_code") && (
+                {!Object.values(mapping).includes("shelf_code") && (
                   <div className="mt-2 rounded bg-amber-500/10 px-2 py-1 text-[11px] text-amber-300">
-                    ⚠ No rack/shelf column detected. Rename your column to <code>Rack No</code>, <code>Shelf Code</code>, <code>Book No</code>, or <code>Accession No</code>.
+                    ⚠ No column is mapped to <code>Rack / Shelf code</code>. Overwrite mode needs this to match existing books.
+                  </div>
+                )}
+                {(!Object.values(mapping).includes("title") || !Object.values(mapping).includes("author")) && (
+                  <div className="mt-2 rounded bg-rose-500/10 px-2 py-1 text-[11px] text-rose-300">
+                    ⚠ Map at least one column to <code>Title</code> and one to <code>Author</code>.
                   </div>
                 )}
               </div>
             )}
+
 
             <div className="text-xs text-muted-foreground">
               {rows.length.toLocaleString()} ready to import{skipped > 0 && ` · ${skipped} skipped (missing title/author)`} · target: <span className="font-semibold text-primary">{libName}</span>
