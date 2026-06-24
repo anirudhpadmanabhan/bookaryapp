@@ -149,9 +149,9 @@ function SearchPage() {
 
         {/* Live autocomplete dropdown — grouped: Books → Authors → Other */}
         {showDropdown && liveSuggestions.length > 0 && (() => {
-          const titleHits = liveSuggestions.filter((b) => rankMatch(b, trimmed, trimmed) === 0);
-          const authorHits = liveSuggestions.filter((b) => rankMatch(b, trimmed, trimmed) === 1);
-          const otherHits = liveSuggestions.filter((b) => rankMatch(b, trimmed, trimmed) === 2);
+          const titleHits = liveSuggestions.filter((b) => scoreMatch(b, trimmed)?.bucket === 0);
+          const authorHits = liveSuggestions.filter((b) => scoreMatch(b, trimmed)?.bucket === 1);
+          const otherHits = liveSuggestions.filter((b) => scoreMatch(b, trimmed)?.bucket === 2);
           const Group = ({ label, items }: { label: string; items: typeof liveSuggestions }) =>
             items.length === 0 ? null : (
               <div>
@@ -178,7 +178,7 @@ function SearchPage() {
               </div>
             );
           return (
-            <div className="absolute left-0 right-0 top-full z-40 mt-1 max-h-96 overflow-y-auto rounded-2xl border border-border bg-popover shadow-2xl">
+            <div className="absolute left-0 right-0 top-full z-40 mt-1 rounded-2xl border border-border bg-popover shadow-2xl">
               <Group label="Books" items={titleHits} />
               {titleHits.length > 0 && (authorHits.length > 0 || otherHits.length > 0) && <div className="border-t border-border/40" />}
               <Group label="Authors" items={authorHits} />
@@ -187,6 +187,7 @@ function SearchPage() {
             </div>
           );
         })()}
+
       </div>
 
 
