@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
-import { useActiveBannerAd } from "@/lib/ads";
+import { useActiveBannerAd, trackAdEvent } from "@/lib/ads";
 
 const safeUrl = (u: string | null | undefined) =>
   u && /^https?:\/\//i.test(u) ? u : null;
@@ -18,12 +18,18 @@ export function AdBottomBanner() {
     setDismissedId(sessionStorage.getItem("ad_bottom_dismissed_id"));
   }, []);
 
+  useEffect(() => {
+    if (ad && ad.id !== dismissedId) trackAdEvent(ad.id, "impression");
+  }, [ad, dismissedId]);
+
   if (!ad || ad.id === dismissedId) return null;
 
   const dismiss = () => {
     sessionStorage.setItem("ad_bottom_dismissed_id", ad.id);
     setDismissedId(ad.id);
   };
+  const onClick = () => trackAdEvent(ad.id, "click");
+
 
   const inner = (
     <div className="flex items-center gap-3">
