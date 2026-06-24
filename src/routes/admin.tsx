@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { exportCsv, exportPdf } from "@/lib/pdf-export";
 
-type Tab = "overview" | "books" | "rentals" | "waitlist" | "suggestions" | "libraries" | "roles" | "users" | "activity";
+type Tab = "overview" | "books" | "rentals" | "waitlist" | "suggestions" | "ads" | "libraries" | "roles" | "users" | "activity";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
