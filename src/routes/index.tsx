@@ -25,7 +25,7 @@ const HOME_LIMIT = 60;
 function HomePage() {
   const { data, isLoading } = useQuery({
     queryKey: ["home-data"],
-    queryFn: () => fetchHomeData(HOME_LIMIT, 6),
+    queryFn: () => fetchHomeData(HOME_LIMIT, 5),
     staleTime: 5 * 60_000,
   });
   const books = data?.latest ?? [];
@@ -91,7 +91,7 @@ function HomePage() {
             </div>
             <span className="hidden text-xs text-muted-foreground sm:inline">Currently available — out books rotate automatically</span>
           </div>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             {popular.map((b, i) => (
               <BookCard key={b.id} book={b} coverColor={colorAt(i)} />
             ))}
