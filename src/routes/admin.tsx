@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/re
 import { AppLayout } from "@/components/AppLayout";
 import { useSession } from "@/lib/auth";
 import {
-  useIsStaff, useIsAdmin, useMyRoles, useAllRentals, useUpdateRentalStatus, useMarkReturned,
+  useIsStaff, useIsAdmin, useMyRoles, useMyLibraryScope, useAllRentals, useUpdateRentalStatus, useMarkReturned,
   useAllWaitlist, useRemoveWaitlistEntry, useAllSuggestions, useDecideSuggestion,
   useUpdateBook, useDeleteBook, useCreateBook,
   useAdminLibraries, useCreateLibrary, useUpdateLibrary, useDeleteLibrary,
@@ -262,6 +262,7 @@ type BooksView = "grid" | "table";
 function BooksTab() {
   const { data: books = [], isLoading } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
   const { data: libs = [] } = useAdminLibraries();
+  const scope = useMyLibraryScope();
   const [q, setQ] = useState("");
   const [view, setView] = useState<BooksView>("table");
   const [editing, setEditing] = useState<string | null>(null);
@@ -276,8 +277,14 @@ function BooksTab() {
     return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: "base" });
   };
 
+  const scopedBooks = useMemo(() => {
+    if (scope === null) return books as any[];
+    const set = new Set(scope);
+    return (books as any[]).filter((b) => b.library_id && set.has(b.library_id));
+  }, [books, scope]);
+
   const filtered = useMemo(() => {
-    let pool = books as any[];
+    let pool = scopedBooks;
     if (libFilter === "__unassigned") pool = pool.filter((b) => !b.library_id);
     else if (libFilter !== "all") pool = pool.filter((b) => b.library_id === libFilter);
 
@@ -294,13 +301,14 @@ function BooksTab() {
     }
     pool = [...pool].sort((a, b) => rackCompare(a.shelf_code, b.shelf_code));
     return pool.slice(0, 500);
-  }, [books, q, libFilter]);
+  }, [scopedBooks, q, libFilter]);
 
   const totalForScope = useMemo(() => {
-    if (libFilter === "all") return books.length;
-    if (libFilter === "__unassigned") return (books as any[]).filter((b) => !b.library_id).length;
-    return (books as any[]).filter((b) => b.library_id === libFilter).length;
-  }, [books, libFilter]);
+    if (libFilter === "all") return scopedBooks.length;
+    if (libFilter === "__unassigned") return scopedBooks.filter((b) => !b.library_id).length;
+    return scopedBooks.filter((b) => b.library_id === libFilter).length;
+  }, [scopedBooks, libFilter]);
+
 
   return (
     <div>
@@ -315,7 +323,7 @@ function BooksTab() {
           {libs.map((l) => (
             <option key={l.id} value={l.id}>{l.name}</option>
           ))}
-          <option value="__unassigned">Unassigned</option>
+          {scope === null && <option value="__unassigned">Unassigned</option>}
         </select>
         <div className="flex flex-1 min-w-[200px] items-center gap-2 rounded-xl border border-border bg-surface/50 px-4 py-2.5">
           <SearchIcon className="h-4 w-4 text-muted-foreground" />
@@ -614,6 +622,7 @@ function AddBookModal({ onClose, defaultLibraryId }: { onClose: () => void; defa
   const create = useCreateBook();
   const { selectedId } = useLibrary();
   const { data: libs = [] } = useAdminLibraries();
+  const scope = useMyLibraryScope();
   const [title, setTitle] = useState("");
   const [titleMl, setTitleMl] = useState("");
   const [author, setAuthor] = useState("");
@@ -621,7 +630,8 @@ function AddBookModal({ onClose, defaultLibraryId }: { onClose: () => void; defa
   const [genre, setGenre] = useState("");
   const [shelf, setShelf] = useState("");
   const [publisher, setPublisher] = useState("");
-  const [libraryId, setLibraryId] = useState<string>(defaultLibraryId ?? selectedId ?? "");
+  const fallbackLib = defaultLibraryId ?? selectedId ?? (scope && scope.length ? scope[0] : "") ?? "";
+  const [libraryId, setLibraryId] = useState<string>(fallbackLib);
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur" onClick={onClose}>
@@ -632,7 +642,7 @@ function AddBookModal({ onClose, defaultLibraryId }: { onClose: () => void; defa
         </div>
         <div className="space-y-2">
           <select value={libraryId} onChange={(e) => setLibraryId(e.target.value)} className="w-full cursor-pointer rounded-lg border border-border bg-background/50 px-3 py-2 text-sm">
-            <option value="">— No library (unassigned) —</option>
+            {scope === null && <option value="">— No library (unassigned) —</option>}
             {libs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
           </select>
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (English)" className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
@@ -719,11 +729,12 @@ function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; 
   const importMut = useBulkImportBooks();
   const { selectedId } = useLibrary();
   const { data: libs = [] } = useAdminLibraries();
+  const scope = useMyLibraryScope();
   const [rows, setRows] = useState<BookImportRow[]>([]);
   const [filename, setFilename] = useState<string>("");
   const [skipped, setSkipped] = useState(0);
   const [mode, setMode] = useState<ImportMode>("append");
-  const [libraryId, setLibraryId] = useState<string>(defaultLibraryId ?? selectedId ?? "");
+  const [libraryId, setLibraryId] = useState<string>(defaultLibraryId ?? selectedId ?? (scope && scope.length ? scope[0] : ""));
   const [detected, setDetected] = useState<DetectedMapping>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -778,7 +789,7 @@ function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; 
           <label className="block">
             <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Target library</span>
             <select value={libraryId} onChange={(e) => setLibraryId(e.target.value)} className="w-full cursor-pointer rounded-lg border border-border bg-background/50 px-3 py-2 text-sm">
-              <option value="">— Unassigned —</option>
+              {scope === null && <option value="">— Unassigned —</option>}
               {libs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
             </select>
           </label>

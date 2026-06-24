@@ -5,22 +5,27 @@ import { toast } from "sonner";
 
 export type AppRole = "admin" | "librarian" | "reader";
 
-export function useMyRoles() {
+function useMyRoleRows() {
   const { user } = useSession();
   return useQuery({
     enabled: !!user,
-    queryKey: ["my-roles", user?.id],
+    queryKey: ["my-role-rows", user?.id],
     staleTime: 30_000,
     refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("user_roles")
-        .select("role")
+        .select("role, library_id")
         .eq("user_id", user!.id);
       if (error) throw error;
-      return (data ?? []).map((r) => r.role as AppRole);
+      return (data ?? []) as Array<{ role: AppRole; library_id: string | null }>;
     },
   });
+}
+
+export function useMyRoles() {
+  const q = useMyRoleRows();
+  return { ...q, data: (q.data ?? []).map((r) => r.role) };
 }
 
 export function useIsStaff() {
@@ -31,6 +36,20 @@ export function useIsStaff() {
 export function useIsAdmin() {
   const { data: roles = [] } = useMyRoles();
   return roles.includes("admin");
+}
+
+/**
+ * Library scope for the signed-in user.
+ *  - `null` → full access (admin, OR legacy librarian with no specific library).
+ *  - `string[]` → restricted to these library ids only (library admin scope).
+ */
+export function useMyLibraryScope(): string[] | null {
+  const { data: rows = [] } = useMyRoleRows();
+  if (rows.some((r) => r.role === "admin")) return null;
+  const libRows = rows.filter((r) => r.role === "librarian");
+  if (libRows.length === 0) return [];
+  if (libRows.some((r) => r.library_id === null)) return null;
+  return Array.from(new Set(libRows.map((r) => r.library_id as string)));
 }
 
 // ===== BOOK MANAGEMENT =====
@@ -120,15 +139,20 @@ export function useCreateBook() {
 
 // ===== RENTAL MANAGEMENT =====
 export function useAllRentals() {
+  const scope = useMyLibraryScope();
   return useQuery({
-    queryKey: ["admin-rentals"],
+    queryKey: ["admin-rentals", scope ? scope.join(",") : "all"],
     staleTime: 30_000,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("rentals")
-        .select("*, books(id, title, author, shelf_code, library_id)")
+        .select("*, books!inner(id, title, author, shelf_code, library_id)")
         .order("rented_at", { ascending: false })
         .limit(500);
+      if (scope !== null) {
+        query = query.in("books.library_id", scope.length ? scope : ["00000000-0000-0000-0000-000000000000"]);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       const rows = (data ?? []) as any[];
       const userIds = [...new Set(rows.map((r) => r.user_id))];
@@ -146,6 +170,7 @@ export function useAllRentals() {
     },
   });
 }
+
 
 export function useUpdateRentalStatus() {
   const qc = useQueryClient();
@@ -219,15 +244,20 @@ export function useLibraryMembers(libraryId: string | null | undefined) {
 
 // ===== WAITLIST MANAGEMENT =====
 export function useAllWaitlist() {
+  const scope = useMyLibraryScope();
   return useQuery({
-    queryKey: ["admin-waitlist"],
+    queryKey: ["admin-waitlist", scope ? scope.join(",") : "all"],
     staleTime: 30_000,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("waitlist")
-        .select("*, books(id, title, author)")
+        .select("*, books!inner(id, title, author, library_id)")
         .order("created_at", { ascending: true })
         .limit(200);
+      if (scope !== null) {
+        q = q.in("books.library_id", scope.length ? scope : ["00000000-0000-0000-0000-000000000000"]);
+      }
+      const { data, error } = await q;
       if (error) throw error;
       return data ?? [];
     },
@@ -278,20 +308,20 @@ export type LibraryRow = {
 };
 
 export function useAdminLibraries() {
+  const scope = useMyLibraryScope();
   return useQuery({
-    queryKey: ["admin-libraries"],
+    queryKey: ["admin-libraries", scope ? scope.join(",") : "all"],
     staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("libraries")
-        .select("*")
-        .order("is_default", { ascending: false })
-        .order("name");
+      let q = supabase.from("libraries").select("*").order("is_default", { ascending: false }).order("name");
+      if (scope !== null) q = q.in("id", scope.length ? scope : ["00000000-0000-0000-0000-000000000000"]);
+      const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as LibraryRow[];
     },
   });
 }
+
 
 export function useCreateLibrary() {
   const qc = useQueryClient();
