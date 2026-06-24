@@ -477,6 +477,19 @@ function AdEditor({ initial, editingId, onClose }: { initial: FormState; editing
           </div>
         )}
 
+        {tab === "preview" && (
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">This is exactly how your ad will appear to visitors. Switch the type or banner position to compare placements.</p>
+            <AdPreview ad={previewData} />
+          </div>
+        )}
+
+        {tab === "insights" && editingId && (
+          <AdInsights adId={editingId} />
+        )}
+
+
+
         <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-4">
           <p className="text-xs text-muted-foreground">
             Tab <span className="font-semibold capitalize text-foreground">{tab}</span> · {form.type === "popup" ? "Popup overlay" : `Banner · ${form.banner_position}`}
