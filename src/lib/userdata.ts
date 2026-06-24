@@ -281,9 +281,16 @@ export function useAddDiary() {
   return useMutation({
     mutationFn: async ({ bookId, note, rating }: { bookId: string | null; note: string; rating?: number | null }) => {
       if (!user) throw new Error("Sign in");
-      const { error } = await supabase
-        .from("reading_diary")
-        .insert({ user_id: user.id, book_id: bookId, note, rating: rating ?? null, progress_pct: 0 } as any);
+      const { error } = bookId
+        ? await supabase
+            .from("reading_diary")
+            .upsert(
+              { user_id: user.id, book_id: bookId, note, rating: rating ?? null, progress_pct: 0 } as any,
+              { onConflict: "user_id,book_id" },
+            )
+        : await supabase
+            .from("reading_diary")
+            .insert({ user_id: user.id, book_id: null, note, rating: rating ?? null, progress_pct: 0 } as any);
       if (error) throw error;
       if (bookId && rating && rating > 0) {
         const { error: reviewError } = await supabase.from("reviews").upsert(
