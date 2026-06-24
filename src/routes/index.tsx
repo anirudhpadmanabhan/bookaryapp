@@ -146,14 +146,14 @@ function HomePage() {
         </button>
         {writersOpen && (
           <div className="mt-3 flex flex-wrap gap-2">
-            {writers.slice(0, 40).map(([w, info]) => (
+            {writers.slice(0, 40).map((info) => (
               <Link
-                key={w}
+                key={info.key}
                 to="/writers/$slug"
-                params={{ slug: slugify(w) }}
+                params={{ slug: slugify(info.key) }}
                 className="cursor-pointer rounded-full border border-border bg-surface/60 px-3 py-1.5 text-xs hover:border-accent/60 hover:text-accent"
               >
-                {w}{info.ml ? ` / ${info.ml}` : ""} <span className="text-muted-foreground">· {info.count}</span>
+                {info.key}{info.ml ? ` / ${info.ml}` : ""} <span className="text-muted-foreground">· {info.count}</span>
               </Link>
             ))}
             <Link to="/writers" className="cursor-pointer rounded-full bg-accent/15 px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/25">
