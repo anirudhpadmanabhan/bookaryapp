@@ -727,12 +727,11 @@ const FIELD_MAP: Record<string, keyof BookImportRow> = {
   price: "rent_price", rentprice: "rent_price", rent: "rent_price",
 };
 
-function mapRow(raw: Record<string, any>): BookImportRow | null {
+function mapRow(raw: Record<string, any>, mapping: Record<string, keyof BookImportRow | "">): BookImportRow | null {
   const mapped: any = {};
   for (const [k, v] of Object.entries(raw)) {
-    const target = FIELD_MAP[normalizeKey(String(k))];
+    const target = mapping[k];
     if (target && v != null && String(v).trim() !== "") {
-      // shelf_code must stay textual ("4556"), not numeric — XLSX may parse as number
       mapped[target] = target === "shelf_code" ? String(v).trim() : v;
     }
   }
@@ -741,26 +740,36 @@ function mapRow(raw: Record<string, any>): BookImportRow | null {
   return mapped as BookImportRow;
 }
 
-type DetectedMapping = { header: string; field: keyof BookImportRow | null }[];
+const IMPORT_FIELDS: { value: keyof BookImportRow | ""; label: string }[] = [
+  { value: "", label: "— Ignore —" },
+  { value: "title", label: "Title (English)" },
+  { value: "title_ml", label: "Title (Malayalam)" },
+  { value: "author", label: "Author (English)" },
+  { value: "author_ml", label: "Author (Malayalam)" },
+  { value: "genre", label: "Genre" },
+  { value: "shelf_code", label: "Rack / Shelf code" },
+  { value: "publisher", label: "Publisher" },
+  { value: "rent_price", label: "Rent price" },
+];
 
 function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; defaultLibraryId?: string }) {
   const importMut = useBulkImportBooks();
   const { selectedId } = useLibrary();
   const { data: libs = [] } = useAdminLibraries();
   const scope = useMyLibraryScope();
-  const [rows, setRows] = useState<BookImportRow[]>([]);
+  const [rawRecords, setRawRecords] = useState<Record<string, any>[]>([]);
+  const [headers, setHeaders] = useState<string[]>([]);
+  const [mapping, setMapping] = useState<Record<string, keyof BookImportRow | "">>({});
   const [filename, setFilename] = useState<string>("");
-  const [skipped, setSkipped] = useState(0);
   const [mode, setMode] = useState<ImportMode>("append");
   const [libraryId, setLibraryId] = useState<string>(defaultLibraryId ?? selectedId ?? (scope && scope.length ? scope[0] : ""));
-  const [detected, setDetected] = useState<DetectedMapping>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const handleFile = async (file: File) => {
     setFilename(file.name);
-    setRows([]);
-    setSkipped(0);
-    setDetected([]);
+    setRawRecords([]);
+    setHeaders([]);
+    setMapping({});
     try {
       let records: Record<string, any>[] = [];
       if (file.name.toLowerCase().endsWith(".csv")) {
@@ -773,23 +782,28 @@ function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; 
         const sheet = wb.Sheets[wb.SheetNames[0]];
         records = XLSX.utils.sheet_to_json(sheet, { defval: "", raw: false });
       }
-      // Detect header → field mapping from first row
-      const headers = records[0] ? Object.keys(records[0]) : [];
-      setDetected(headers.map((h) => ({ header: h, field: FIELD_MAP[normalizeKey(h)] ?? null })));
-
-      const mapped: BookImportRow[] = [];
-      let skip = 0;
-      for (const r of records) {
-        const m = mapRow(r);
-        if (m) mapped.push(m); else skip++;
-      }
-      setRows(mapped);
-      setSkipped(skip);
-      if (mapped.length === 0) toast.error("No usable rows. Need at least 'title' and 'author' columns.");
+      const hdrs = records[0] ? Object.keys(records[0]) : [];
+      const auto: Record<string, keyof BookImportRow | ""> = {};
+      for (const h of hdrs) auto[h] = (FIELD_MAP[normalizeKey(h)] ?? "") as keyof BookImportRow | "";
+      setHeaders(hdrs);
+      setMapping(auto);
+      setRawRecords(records);
     } catch (e: any) {
       toast.error(`Couldn't read file: ${e?.message ?? e}`);
     }
   };
+
+  const { rows, skipped } = useMemo(() => {
+    if (!rawRecords.length) return { rows: [] as BookImportRow[], skipped: 0 };
+    const mapped: BookImportRow[] = [];
+    let skip = 0;
+    for (const r of rawRecords) {
+      const m = mapRow(r, mapping);
+      if (m) mapped.push(m); else skip++;
+    }
+    return { rows: mapped, skipped: skip };
+  }, [rawRecords, mapping]);
+
 
 
   const overwriteCount = rows.filter((r) => !!r.shelf_code).length;
@@ -863,32 +877,52 @@ function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; 
         {filename && (
           <div className="mt-4 rounded-xl border border-border bg-surface/40 p-3 text-sm">
             <div className="font-medium">{filename}</div>
-            {detected.length > 0 && (
+            {headers.length > 0 && (
               <div className="mt-2 rounded-md border border-border/50 bg-background/40 p-2 text-xs">
-                <div className="mb-1 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">Detected column mapping</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {detected.map((d, i) => (
-                    <span
-                      key={`${d.header}-${i}`}
-                      className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 ${
-                        d.field
-                          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
-                          : "border-border bg-surface/60 text-muted-foreground line-through"
-                      }`}
-                      title={d.field ? `${d.header} → ${d.field}` : `${d.header} (ignored)`}
-                    >
-                      <span className="font-medium">{d.header || "(blank)"}</span>
-                      {d.field && <span className="opacity-70">→ {d.field}</span>}
-                    </span>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <div className="font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">Column mapping</div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const reset: Record<string, keyof BookImportRow | ""> = {};
+                      for (const h of headers) reset[h] = (FIELD_MAP[normalizeKey(h)] ?? "") as keyof BookImportRow | "";
+                      setMapping(reset);
+                    }}
+                    className="cursor-pointer rounded border border-border px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground"
+                  >
+                    Auto-detect
+                  </button>
+                </div>
+                <div className="grid gap-1.5 sm:grid-cols-2">
+                  {headers.map((h, i) => (
+                    <div key={`${h}-${i}`} className="flex items-center gap-2 rounded-md border border-border/50 bg-surface/40 px-2 py-1.5">
+                      <span className="min-w-0 flex-1 truncate font-medium" title={h}>{h || "(blank)"}</span>
+                      <span className="text-muted-foreground">→</span>
+                      <select
+                        value={mapping[h] ?? ""}
+                        onChange={(e) => setMapping((m) => ({ ...m, [h]: e.target.value as keyof BookImportRow | "" }))}
+                        className="cursor-pointer rounded border border-border bg-background/60 px-1.5 py-0.5 text-[11px]"
+                      >
+                        {IMPORT_FIELDS.map((f) => (
+                          <option key={f.value} value={f.value}>{f.label}</option>
+                        ))}
+                      </select>
+                    </div>
                   ))}
                 </div>
-                {!detected.some((d) => d.field === "shelf_code") && (
+                {!Object.values(mapping).includes("shelf_code") && (
                   <div className="mt-2 rounded bg-amber-500/10 px-2 py-1 text-[11px] text-amber-300">
-                    ⚠ No rack/shelf column detected. Rename your column to <code>Rack No</code>, <code>Shelf Code</code>, <code>Book No</code>, or <code>Accession No</code>.
+                    ⚠ No column is mapped to <code>Rack / Shelf code</code>. Overwrite mode needs this to match existing books.
+                  </div>
+                )}
+                {(!Object.values(mapping).includes("title") || !Object.values(mapping).includes("author")) && (
+                  <div className="mt-2 rounded bg-rose-500/10 px-2 py-1 text-[11px] text-rose-300">
+                    ⚠ Map at least one column to <code>Title</code> and one to <code>Author</code>.
                   </div>
                 )}
               </div>
             )}
+
 
             <div className="text-xs text-muted-foreground">
               {rows.length.toLocaleString()} ready to import{skipped > 0 && ` · ${skipped} skipped (missing title/author)`} · target: <span className="font-semibold text-primary">{libName}</span>
