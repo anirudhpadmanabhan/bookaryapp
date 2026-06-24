@@ -151,7 +151,23 @@ export function AdsTab() {
                   <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{fmtDT(ad.end_date)}</td>
                   <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{fmtDT(ad.updated_at)}</td>
                   <td className="px-3 py-2 text-right">
-                    <div className="inline-flex gap-1">
+                    <div className="inline-flex flex-wrap justify-end gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewing(ad)}
+                        className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-elevated"
+                        title="Preview"
+                      >
+                        <Eye className="h-3 w-3" /> Preview
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setInsightsFor(ad)}
+                        className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-elevated"
+                        title="Insights"
+                      >
+                        <BarChart3 className="h-3 w-3" /> Insights
+                      </button>
                       <button
                         type="button"
                         onClick={() => { setCreating(false); setEditing(ad); }}
