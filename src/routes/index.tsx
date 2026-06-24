@@ -1,12 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
-import { fetchHomeData, fetchBooks, sortBooks, type BookSort, type SortDirection, slugify } from "@/lib/books";
+import { fetchHomeData, fetchBooksPage, type BookSort, type SortDirection, slugify } from "@/lib/books";
 import { BooksGrid, type ViewMode } from "@/components/BooksGrid";
 import { BookCard } from "@/components/BookCard";
 import { colorAt } from "@/lib/books";
 import { SortBar } from "@/components/SortBar";
-import { AdBanner } from "@/components/AdBanner";
 import {
   Pagination, PaginationContent, PaginationItem, PaginationLink,
   PaginationPrevious, PaginationNext, PaginationEllipsis,
@@ -36,14 +35,7 @@ function HomePage() {
     queryFn: () => fetchHomeData(HOME_LIMIT, 5),
     staleTime: 5 * 60_000,
   });
-  // Full catalogue for paginated "All Published Books" section.
-  const { data: allBooks = [] } = useQuery({
-    queryKey: ["books"],
-    queryFn: fetchBooks,
-    staleTime: 5 * 60_000,
-  });
   const popular = data?.popular ?? [];
-  const total = data?.total ?? allBooks.length;
   const genres = data?.genres ?? [];
   const writers = data?.writers ?? [];
   const languages = data?.languages ?? [];
@@ -56,15 +48,23 @@ function HomePage() {
   const [writersOpen, setWritersOpen] = useState(false);
   const [langsOpen, setLangsOpen] = useState(false);
 
-  const sortedAll = useMemo(() => sortBooks(allBooks, sort, direction), [allBooks, sort, direction]);
-  const pageCount = Math.max(1, Math.ceil(sortedAll.length / PAGE_SIZE));
-  // Clamp page if sort/filter changes shrink the list.
+  // Server-paginated "All Published Books" — only fetches the current page.
+  const { data: pageData, isLoading: pageLoading, isFetching: pageFetching } = useQuery({
+    queryKey: ["books-page", { page, sort, direction, pageSize: PAGE_SIZE }],
+    queryFn: () => fetchBooksPage({ page, pageSize: PAGE_SIZE, sort, direction }),
+    staleTime: 5 * 60_000,
+    placeholderData: keepPreviousData,
+  });
+  const shown = pageData?.books ?? [];
+  const totalAll = pageData?.total ?? data?.total ?? 0;
+  const total = data?.total ?? totalAll;
+  const pageCount = Math.max(1, Math.ceil(totalAll / PAGE_SIZE));
+  // Clamp page if list shrinks.
   useEffect(() => { if (page > pageCount) setPage(1); }, [pageCount, page]);
   // Reset to page 1 whenever sort changes.
   useEffect(() => { setPage(1); }, [sort, direction]);
 
   const start = (page - 1) * PAGE_SIZE;
-  const shown = sortedAll.slice(start, start + PAGE_SIZE);
 
   // Build a compact page-number list with ellipses around the current page.
   const pageNumbers = useMemo(() => {
@@ -89,7 +89,6 @@ function HomePage() {
 
   return (
     <AppLayout>
-      <AdBanner position="top" />
       {/* Hero */}
       <section className="glass-card relative mb-8 overflow-hidden rounded-3xl p-6 md:p-10">
         <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-primary/30 blur-3xl" />
@@ -237,8 +236,6 @@ function HomePage() {
         )}
       </section>
 
-      <AdBanner position="middle" />
-
       {/* All Books */}
       <section>
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
@@ -263,14 +260,14 @@ function HomePage() {
           view={view}
           onViewChange={setView}
         />
-        {isLoading && allBooks.length === 0 ? (
+        {(isLoading || pageLoading) && shown.length === 0 ? (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             {Array.from({ length: 15 }).map((_, i) => (
               <div key={i} className="aspect-[2/3] animate-pulse rounded-xl bg-surface" />
             ))}
           </div>
         ) : (
-          <>
+          <div className={pageFetching ? "opacity-70 transition-opacity" : ""}>
             <BooksGrid books={shown} view={view} hideShelf />
             {pageCount > 1 && (
               <div className="mt-8 flex flex-col items-center gap-2">
@@ -328,15 +325,14 @@ function HomePage() {
                   </PaginationContent>
                 </Pagination>
                 <p className="text-xs text-muted-foreground">
-                  Page {page} of {pageCount} · Showing {start + 1}–{Math.min(start + PAGE_SIZE, sortedAll.length)} of {sortedAll.length.toLocaleString()}
+                  Page {page} of {pageCount} · Showing {start + 1}–{Math.min(start + PAGE_SIZE, totalAll)} of {totalAll.toLocaleString()}
                 </p>
               </div>
             )}
-          </>
+          </div>
         )}
 
       </section>
-      <AdBanner position="bottom" />
     </AppLayout>
   );
 }
