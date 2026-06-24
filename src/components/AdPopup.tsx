@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { useActivePopupAd } from "@/lib/ads";
 
+const safeUrl = (u: string | null | undefined) =>
+  u && /^https?:\/\//i.test(u) ? u : null;
+
 export function AdPopup() {
   const { data: ad } = useActivePopupAd();
   const [open, setOpen] = useState(false);
