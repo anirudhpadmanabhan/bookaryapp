@@ -1103,30 +1103,116 @@ function WaitlistTab() {
   const remove = useRemoveWaitlistEntry();
   const [viewingUser, setViewingUser] = useState<string | null>(null);
 
+  // Pull pending (reserved-but-unclaimed) rentals so staff can see who is in their 24-hour claim window.
+  const { data: reservations = [] } = useQuery({
+    queryKey: ["admin-reservations"],
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("rentals")
+        .select("id, user_id, book_id, reserved_until, created_at, books(id, title, author)")
+        .eq("tracking_status", "reserved")
+        .is("returned_at", null)
+        .order("reserved_until", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  // Group queue entries by book so staff can see "this book has 3 readers waiting, in this order".
+  const grouped = useMemo(() => {
+    const m = new Map<string, { book: any; rows: any[] }>();
+    for (const w of list as any[]) {
+      const id = w.books?.id ?? "unknown";
+      const g = m.get(id) ?? { book: w.books, rows: [] };
+      g.rows.push(w);
+      m.set(id, g);
+    }
+    // rows already arrive sorted by created_at ASC, so queue order is preserved.
+    return [...m.values()].sort((a, b) => b.rows.length - a.rows.length);
+  }, [list]);
+
   if (isLoading) return <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-16 animate-pulse rounded-xl bg-surface/60" />)}</div>;
-  if (list.length === 0) return <p className="glass-card rounded-2xl p-8 text-center text-sm text-muted-foreground">No waitlist entries.</p>;
+
+  const totalQueued = (list as any[]).length;
+  const totalReserved = (reservations as any[]).length;
 
   return (
-    <div className="space-y-2">
-      {(list as any[]).map((w) => (
-        <div key={w.id} className="glass-card flex items-center justify-between gap-3 rounded-xl p-3">
-          <div className="min-w-0">
-            <Link to="/books/$id" params={{ id: w.books?.id ?? "" }} className="cursor-pointer text-sm font-semibold hover:text-primary">
-              {w.books?.title ?? "Book"}
-            </Link>
-            <p className="text-xs text-muted-foreground">
-              by {w.books?.author ?? "—"} · joined {new Date(w.created_at).toLocaleDateString()}
-            </p>
-            <button onClick={() => setViewingUser(w.user_id)} className="cursor-pointer text-[11px] text-primary hover:underline">View reader →</button>
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <Stat label="Books with a queue" value={grouped.length} />
+        <Stat label="Total readers waiting" value={totalQueued} />
+        <Stat label="Pending 24h reservations" value={totalReserved} />
+      </div>
+
+      {totalReserved > 0 && (
+        <section>
+          <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-amber-300">
+            <Clock className="h-4 w-4" /> Pending reservations · auto-expire if not claimed
+          </h2>
+          <div className="space-y-2">
+            {(reservations as any[]).map((r) => {
+              const left = r.reserved_until ? Math.max(0, Math.round((new Date(r.reserved_until).getTime() - Date.now()) / 3_600_000)) : null;
+              return (
+                <div key={r.id} className="glass-card flex items-center justify-between gap-3 rounded-xl p-3">
+                  <div className="min-w-0">
+                    <Link to="/books/$id" params={{ id: r.books?.id ?? "" }} className="cursor-pointer text-sm font-semibold hover:text-primary">
+                      {r.books?.title ?? "Book"}
+                    </Link>
+                    <p className="text-xs text-muted-foreground">
+                      Offered {new Date(r.created_at).toLocaleString()} · {left !== null ? `${left}h left` : "no expiry"}
+                    </p>
+                    <button onClick={() => setViewingUser(r.user_id)} className="cursor-pointer text-[11px] text-primary hover:underline">View reader →</button>
+                  </div>
+                  <span className="rounded-full bg-amber-500/15 px-2.5 py-1 text-[11px] font-semibold text-amber-300">Awaiting claim</span>
+                </div>
+              );
+            })}
           </div>
-          <button
-            onClick={() => remove.mutate(w.id)}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-rose-500/40 px-2.5 py-1.5 text-xs text-rose-300 hover:bg-rose-500/10"
-          >
-            <Trash2 className="h-3.5 w-3.5" /> Remove
-          </button>
-        </div>
-      ))}
+        </section>
+      )}
+
+      <section>
+        <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+          <Clock className="h-4 w-4" /> Waiting lists by book
+        </h2>
+        {grouped.length === 0 ? (
+          <p className="glass-card rounded-2xl p-8 text-center text-sm text-muted-foreground">No waitlist entries.</p>
+        ) : (
+          <div className="space-y-3">
+            {grouped.map(({ book, rows }) => (
+              <div key={book?.id ?? "u"} className="glass-card rounded-xl p-3">
+                <div className="mb-2 flex items-baseline justify-between gap-3">
+                  <Link to="/books/$id" params={{ id: book?.id ?? "" }} className="cursor-pointer text-sm font-semibold hover:text-primary">
+                    {book?.title ?? "Book"}
+                  </Link>
+                  <span className="text-xs text-muted-foreground">{rows.length} in queue</span>
+                </div>
+                <ol className="space-y-1.5">
+                  {rows.map((w: any, i: number) => (
+                    <li key={w.id} className="flex items-center justify-between gap-3 rounded-lg bg-surface/40 px-3 py-2 text-xs">
+                      <div className="flex items-center gap-2.5">
+                        <span className="grid h-6 w-6 place-items-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">{i + 1}</span>
+                        <button onClick={() => setViewingUser(w.user_id)} className="cursor-pointer text-primary hover:underline">
+                          Reader · joined {new Date(w.created_at).toLocaleDateString()}
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => remove.mutate(w.id)}
+                        className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-rose-500/40 px-2 py-0.5 text-[10px] text-rose-300 hover:bg-rose-500/10"
+                      >
+                        <Trash2 className="h-3 w-3" /> Remove
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
       {viewingUser && <UserDashboardModal userId={viewingUser} onClose={() => setViewingUser(null)} />}
     </div>
   );
