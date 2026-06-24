@@ -175,16 +175,12 @@ function HomePage() {
           <div className="mt-3 flex flex-wrap gap-2">
             {genres.slice(0, 30).map((info) => (
               <Link
-                key={info.key}
+                key={info.en}
                 to="/genres/$slug"
                 params={{ slug: slugify(info.key) }}
                 className="cursor-pointer rounded-full border border-border bg-surface/60 px-3 py-1.5 text-xs hover:border-primary/60 hover:text-primary"
               >
-                {(() => {
-                  const en = genreEnglish({ genre: info.key, genre_ml: info.ml ?? null });
-                  const ml = genreMalayalam({ genre: info.key, genre_ml: info.ml ?? null });
-                  return <>{en}{ml ? ` / ${ml}` : ""}</>;
-                })()} <span className="text-muted-foreground">· {info.count}</span>
+                {info.en}{info.ml && info.ml !== info.en ? ` / ${info.ml}` : ""} <span className="text-muted-foreground">· {info.count}</span>
               </Link>
             ))}
             <Link to="/genres" className="cursor-pointer rounded-full bg-primary/15 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/25">
