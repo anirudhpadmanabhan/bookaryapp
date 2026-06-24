@@ -347,7 +347,7 @@ function AdEditor({ initial, editingId, onClose }: { initial: FormState; editing
         </div>
 
         <div className="mb-4 flex flex-wrap gap-1 rounded-xl border border-border bg-surface/40 p-1">
-          {TABS.map((t) => {
+          {TABS.filter((t) => !t.hide).map((t) => {
             const active = tab === t.id;
             return (
               <button
