@@ -114,14 +114,14 @@ function HomePage() {
         </button>
         {genresOpen && (
           <div className="mt-3 flex flex-wrap gap-2">
-            {genres.slice(0, 30).map(([g, info]) => (
+            {genres.slice(0, 30).map((info) => (
               <Link
-                key={g}
+                key={info.key}
                 to="/genres/$slug"
-                params={{ slug: slugify(g) }}
+                params={{ slug: slugify(info.key) }}
                 className="cursor-pointer rounded-full border border-border bg-surface/60 px-3 py-1.5 text-xs hover:border-primary/60 hover:text-primary"
               >
-                {info.en}{info.ml ? ` / ${info.ml}` : ""} <span className="text-muted-foreground">· {info.count}</span>
+                {info.key}{info.ml ? ` / ${info.ml}` : ""} <span className="text-muted-foreground">· {info.count}</span>
               </Link>
             ))}
             <Link to="/genres" className="cursor-pointer rounded-full bg-primary/15 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/25">
