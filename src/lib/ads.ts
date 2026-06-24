@@ -101,7 +101,7 @@ export function useUpsertAd() {
       const { data: u } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from(TABLE)
-        .insert({ ...values, created_by: u.user?.id ?? null })
+        .insert({ ...(values as AdInput), created_by: u.user?.id ?? null } as any)
         .select("id")
         .single();
       if (error) throw error;
