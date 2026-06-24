@@ -237,6 +237,8 @@ function HomePage() {
         )}
       </section>
 
+      <AdBanner position="middle" />
+
       {/* All Books */}
       <section>
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
