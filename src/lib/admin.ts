@@ -139,15 +139,20 @@ export function useCreateBook() {
 
 // ===== RENTAL MANAGEMENT =====
 export function useAllRentals() {
+  const scope = useMyLibraryScope();
   return useQuery({
-    queryKey: ["admin-rentals"],
+    queryKey: ["admin-rentals", scope ? scope.join(",") : "all"],
     staleTime: 30_000,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("rentals")
-        .select("*, books(id, title, author, shelf_code, library_id)")
+        .select("*, books!inner(id, title, author, shelf_code, library_id)")
         .order("rented_at", { ascending: false })
         .limit(500);
+      if (scope !== null) {
+        query = query.in("books.library_id", scope.length ? scope : ["00000000-0000-0000-0000-000000000000"]);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       const rows = (data ?? []) as any[];
       const userIds = [...new Set(rows.map((r) => r.user_id))];
@@ -165,6 +170,7 @@ export function useAllRentals() {
     },
   });
 }
+
 
 export function useUpdateRentalStatus() {
   const qc = useQueryClient();
