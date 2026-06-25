@@ -565,12 +565,14 @@ export type BookImportRow = {
   rent_price?: number;
 };
 
-export type ImportMode = "append" | "overwrite";
+export type ImportMode = "append" | "overwrite" | "upsert";
+
+export type BulkImportResult = { inserted: number; updated: number; deleted: number };
 
 export function useBulkImportBooks() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ rows, libraryId, mode = "append" }: { rows: BookImportRow[]; libraryId: string | null; mode?: ImportMode }) => {
+    mutationFn: async ({ rows, libraryId, mode = "append" }: { rows: BookImportRow[]; libraryId: string | null; mode?: ImportMode }): Promise<BulkImportResult> => {
       if (rows.length === 0) throw new Error("No rows to import");
       const payload = rows.map((r) => ({
         title: String(r.title).trim(),
@@ -584,33 +586,82 @@ export function useBulkImportBooks() {
         library_id: libraryId,
       }));
 
+      let inserted = 0;
+      let updated = 0;
+      let deleted = 0;
+      const chunkSize = 200;
+
       if (mode === "overwrite") {
         const codes = Array.from(new Set(payload.map((p) => p.shelf_code).filter((c): c is string => !!c)));
-        const chunk = 200;
-        for (let i = 0; i < codes.length; i += chunk) {
-          const slice = codes.slice(i, i + chunk);
+        for (let i = 0; i < codes.length; i += chunkSize) {
+          const slice = codes.slice(i, i + chunkSize);
           let q = supabase.from("books").delete().in("shelf_code", slice);
           q = libraryId ? q.eq("library_id", libraryId) : q.is("library_id", null);
-          const { error: delErr } = await q;
+          const { error: delErr, count } = await q.select("id", { count: "exact", head: true } as any);
           if (delErr) throw new Error(`Overwrite step failed: ${delErr.message}`);
+          deleted += count ?? 0;
         }
       }
 
-      const chunkSize = 200;
-      let inserted = 0;
-      for (let i = 0; i < payload.length; i += chunkSize) {
-        const chunk = payload.slice(i, i + chunkSize);
-        const { error } = await supabase.from("books").insert(chunk as any);
-        if (error) throw new Error(`Row ${i + 1}: ${error.message}`);
-        inserted += chunk.length;
+      if (mode === "upsert") {
+        // Look up existing book ids by (library_id, shelf_code) so we UPDATE in place
+        // — this preserves rentals, reviews, waitlist, diary, favourites references.
+        const codes = Array.from(new Set(payload.map((p) => p.shelf_code).filter((c): c is string => !!c)));
+        const existing = new Map<string, string>(); // shelf_code -> book id
+        for (let i = 0; i < codes.length; i += chunkSize) {
+          const slice = codes.slice(i, i + chunkSize);
+          let q = supabase.from("books").select("id, shelf_code").in("shelf_code", slice);
+          q = libraryId ? q.eq("library_id", libraryId) : q.is("library_id", null);
+          const { data, error } = await q;
+          if (error) throw new Error(`Lookup failed: ${error.message}`);
+          for (const row of data ?? []) {
+            if (row.shelf_code) existing.set(row.shelf_code, row.id);
+          }
+        }
+
+        const toUpdate: { id: string; patch: Record<string, any> }[] = [];
+        const toInsert: typeof payload = [];
+        for (const p of payload) {
+          const id = p.shelf_code ? existing.get(p.shelf_code) : undefined;
+          if (id) {
+            const { library_id: _omit, ...patch } = p;
+            toUpdate.push({ id, patch });
+          } else {
+            toInsert.push(p);
+          }
+        }
+
+        for (const { id, patch } of toUpdate) {
+          const { error } = await supabase.from("books").update(patch as any).eq("id", id);
+          if (error) throw new Error(`Update ${patch.shelf_code ?? id}: ${error.message}`);
+          updated++;
+        }
+
+        for (let i = 0; i < toInsert.length; i += chunkSize) {
+          const chunk = toInsert.slice(i, i + chunkSize);
+          const { error } = await supabase.from("books").insert(chunk as any);
+          if (error) throw new Error(`Insert row ${i + 1}: ${error.message}`);
+          inserted += chunk.length;
+        }
+      } else {
+        for (let i = 0; i < payload.length; i += chunkSize) {
+          const chunk = payload.slice(i, i + chunkSize);
+          const { error } = await supabase.from("books").insert(chunk as any);
+          if (error) throw new Error(`Row ${i + 1}: ${error.message}`);
+          inserted += chunk.length;
+        }
       }
-      return inserted;
+      return { inserted, updated, deleted };
     },
-    onSuccess: (count) => {
+    onSuccess: ({ inserted, updated, deleted }) => {
       qc.invalidateQueries({ queryKey: ["books"] });
       qc.invalidateQueries({ queryKey: ["new-arrivals"] });
       qc.invalidateQueries({ queryKey: ["admin-library-book-counts"] });
-      toast.success(`${count} books imported`);
+      const parts = [];
+      if (updated) parts.push(`${updated} updated`);
+      if (inserted) parts.push(`${inserted} added`);
+      if (deleted) parts.push(`${deleted} replaced`);
+      toast.success(parts.length ? parts.join(" · ") : "Import complete");
     },
     onError: (e: Error) => toast.error(e.message),
   });
