@@ -1042,9 +1042,9 @@ function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; 
                     </div>
                   ))}
                 </div>
-                {!Object.values(mapping).includes("shelf_code") && (
+                {!Object.values(mapping).includes("shelf_code") && mode !== "append" && (
                   <div className="mt-2 rounded bg-amber-500/10 px-2 py-1 text-[11px] text-amber-300">
-                    ⚠ No column is mapped to <code>Rack / Shelf code</code>. Overwrite mode needs this to match existing books.
+                    ⚠ No column is mapped to <code>Rack / Shelf code</code>. {mode === "upsert" ? "Update + add" : "Overwrite"} mode needs this to match existing books.
                   </div>
                 )}
                 {(!Object.values(mapping).includes("title") || !Object.values(mapping).includes("author")) && (
