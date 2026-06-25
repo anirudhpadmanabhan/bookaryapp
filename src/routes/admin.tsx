@@ -954,24 +954,33 @@ function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; 
               <button
                 type="button"
                 onClick={() => setMode("append")}
-                className={`flex-1 cursor-pointer rounded-md px-2 py-1.5 text-xs font-medium ${mode === "append" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                className={`flex-1 cursor-pointer rounded-md px-2 py-1 text-[11px] font-medium ${mode === "append" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
               >
-                Append (insert all)
+                Append
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("upsert")}
+                className={`flex-1 cursor-pointer rounded-md px-2 py-1 text-[11px] font-medium ${mode === "upsert" ? "bg-emerald-500 text-emerald-950" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Update + add
               </button>
               <button
                 type="button"
                 onClick={() => setMode("overwrite")}
-                className={`flex-1 cursor-pointer rounded-md px-2 py-1.5 text-xs font-medium ${mode === "overwrite" ? "bg-amber-500 text-amber-950" : "text-muted-foreground hover:text-foreground"}`}
+                className={`flex-1 cursor-pointer rounded-md px-2 py-1 text-[11px] font-medium ${mode === "overwrite" ? "bg-amber-500 text-amber-950" : "text-muted-foreground hover:text-foreground"}`}
               >
-                Overwrite by rack code
+                Overwrite
               </button>
             </div>
           </div>
         </div>
         <p className="mb-3 text-[11px] text-muted-foreground">
           {mode === "append"
-            ? "Append: every CSV row becomes a new book row. Existing books are untouched."
-            : `Overwrite: rows in ${libName} whose rack code appears in the CSV will be replaced; other racks stay untouched.`}
+            ? "Append: every row becomes a new book. Existing books are untouched. Use this for a separate CSV of new books only."
+            : mode === "upsert"
+            ? `Update + add: rows with a rack code that already exists in ${libName} are updated in place (preserves rentals, reviews, waitlist, diary). Rows with new or missing rack codes are inserted.`
+            : `Overwrite: existing books in ${libName} with matching rack codes are deleted and re-created. ⚠ This breaks links from past rentals/reviews to those books — use Update + add instead unless you really want fresh ids.`}
         </p>
 
         <div className="rounded-xl border border-dashed border-border bg-surface/30 p-6 text-center">
@@ -1033,9 +1042,9 @@ function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; 
                     </div>
                   ))}
                 </div>
-                {!Object.values(mapping).includes("shelf_code") && (
+                {!Object.values(mapping).includes("shelf_code") && mode !== "append" && (
                   <div className="mt-2 rounded bg-amber-500/10 px-2 py-1 text-[11px] text-amber-300">
-                    ⚠ No column is mapped to <code>Rack / Shelf code</code>. Overwrite mode needs this to match existing books.
+                    ⚠ No column is mapped to <code>Rack / Shelf code</code>. {mode === "upsert" ? "Update + add" : "Overwrite"} mode needs this to match existing books.
                   </div>
                 )}
                 {(!Object.values(mapping).includes("title") || !Object.values(mapping).includes("author")) && (
@@ -1050,6 +1059,7 @@ function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; 
             <div className="text-xs text-muted-foreground">
               {rows.length.toLocaleString()} ready to import{skipped > 0 && ` · ${skipped} skipped (missing title/author)`} · target: <span className="font-semibold text-primary">{libName}</span>
               {mode === "overwrite" && overwriteCount > 0 && ` · will replace up to ${overwriteCount} existing rack codes`}
+              {mode === "upsert" && overwriteCount > 0 && ` · ${overwriteCount} rows have a rack code (existing → update, new → insert)`}
             </div>
             {rows.length > 0 && (
               <div className="mt-2 max-h-40 overflow-y-auto rounded-md border border-border/50 text-xs">
@@ -1078,14 +1088,15 @@ function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; 
           <button
             disabled={importMut.isPending || rows.length === 0}
             onClick={() => {
-              if (mode === "overwrite" && !confirm(`Overwrite books with matching rack codes in ${libName}? Books not in the CSV are untouched.`)) return;
+              if (mode === "overwrite" && !confirm(`Overwrite books with matching rack codes in ${libName}? This DELETES and re-creates them, breaking links from past rentals/reviews. Continue?`)) return;
               importMut.mutate({ rows, libraryId: libraryId || null, mode }, { onSuccess: onClose });
             }}
-            className={`cursor-pointer rounded-lg px-4 py-2 text-sm font-semibold shadow-lg disabled:opacity-50 ${mode === "overwrite" ? "bg-amber-500 text-amber-950 shadow-amber-500/20 hover:opacity-90" : "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-primary/20 hover:opacity-90"}`}
+            className={`cursor-pointer rounded-lg px-4 py-2 text-sm font-semibold shadow-lg disabled:opacity-50 ${mode === "overwrite" ? "bg-amber-500 text-amber-950 shadow-amber-500/20 hover:opacity-90" : mode === "upsert" ? "bg-emerald-500 text-emerald-950 shadow-emerald-500/20 hover:opacity-90" : "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-primary/20 hover:opacity-90"}`}
           >
-            {importMut.isPending ? "Importing…" : `${mode === "overwrite" ? "Overwrite" : "Import"} ${rows.length.toLocaleString()} books`}
+            {importMut.isPending ? "Importing…" : `${mode === "overwrite" ? "Overwrite" : mode === "upsert" ? "Update + add" : "Import"} ${rows.length.toLocaleString()} books`}
           </button>
         </div>
+
       </div>
     </div>
   );
