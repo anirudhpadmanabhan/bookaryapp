@@ -1059,6 +1059,7 @@ function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; 
             <div className="text-xs text-muted-foreground">
               {rows.length.toLocaleString()} ready to import{skipped > 0 && ` · ${skipped} skipped (missing title/author)`} · target: <span className="font-semibold text-primary">{libName}</span>
               {mode === "overwrite" && overwriteCount > 0 && ` · will replace up to ${overwriteCount} existing rack codes`}
+              {mode === "upsert" && overwriteCount > 0 && ` · ${overwriteCount} rows have a rack code (existing → update, new → insert)`}
             </div>
             {rows.length > 0 && (
               <div className="mt-2 max-h-40 overflow-y-auto rounded-md border border-border/50 text-xs">
@@ -1087,14 +1088,15 @@ function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; 
           <button
             disabled={importMut.isPending || rows.length === 0}
             onClick={() => {
-              if (mode === "overwrite" && !confirm(`Overwrite books with matching rack codes in ${libName}? Books not in the CSV are untouched.`)) return;
+              if (mode === "overwrite" && !confirm(`Overwrite books with matching rack codes in ${libName}? This DELETES and re-creates them, breaking links from past rentals/reviews. Continue?`)) return;
               importMut.mutate({ rows, libraryId: libraryId || null, mode }, { onSuccess: onClose });
             }}
-            className={`cursor-pointer rounded-lg px-4 py-2 text-sm font-semibold shadow-lg disabled:opacity-50 ${mode === "overwrite" ? "bg-amber-500 text-amber-950 shadow-amber-500/20 hover:opacity-90" : "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-primary/20 hover:opacity-90"}`}
+            className={`cursor-pointer rounded-lg px-4 py-2 text-sm font-semibold shadow-lg disabled:opacity-50 ${mode === "overwrite" ? "bg-amber-500 text-amber-950 shadow-amber-500/20 hover:opacity-90" : mode === "upsert" ? "bg-emerald-500 text-emerald-950 shadow-emerald-500/20 hover:opacity-90" : "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-primary/20 hover:opacity-90"}`}
           >
-            {importMut.isPending ? "Importing…" : `${mode === "overwrite" ? "Overwrite" : "Import"} ${rows.length.toLocaleString()} books`}
+            {importMut.isPending ? "Importing…" : `${mode === "overwrite" ? "Overwrite" : mode === "upsert" ? "Update + add" : "Import"} ${rows.length.toLocaleString()} books`}
           </button>
         </div>
+
       </div>
     </div>
   );
