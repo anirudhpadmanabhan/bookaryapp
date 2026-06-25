@@ -954,24 +954,33 @@ function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; 
               <button
                 type="button"
                 onClick={() => setMode("append")}
-                className={`flex-1 cursor-pointer rounded-md px-2 py-1.5 text-xs font-medium ${mode === "append" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                className={`flex-1 cursor-pointer rounded-md px-2 py-1 text-[11px] font-medium ${mode === "append" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
               >
-                Append (insert all)
+                Append
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("upsert")}
+                className={`flex-1 cursor-pointer rounded-md px-2 py-1 text-[11px] font-medium ${mode === "upsert" ? "bg-emerald-500 text-emerald-950" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Update + add
               </button>
               <button
                 type="button"
                 onClick={() => setMode("overwrite")}
-                className={`flex-1 cursor-pointer rounded-md px-2 py-1.5 text-xs font-medium ${mode === "overwrite" ? "bg-amber-500 text-amber-950" : "text-muted-foreground hover:text-foreground"}`}
+                className={`flex-1 cursor-pointer rounded-md px-2 py-1 text-[11px] font-medium ${mode === "overwrite" ? "bg-amber-500 text-amber-950" : "text-muted-foreground hover:text-foreground"}`}
               >
-                Overwrite by rack code
+                Overwrite
               </button>
             </div>
           </div>
         </div>
         <p className="mb-3 text-[11px] text-muted-foreground">
           {mode === "append"
-            ? "Append: every CSV row becomes a new book row. Existing books are untouched."
-            : `Overwrite: rows in ${libName} whose rack code appears in the CSV will be replaced; other racks stay untouched.`}
+            ? "Append: every row becomes a new book. Existing books are untouched. Use this for a separate CSV of new books only."
+            : mode === "upsert"
+            ? `Update + add: rows with a rack code that already exists in ${libName} are updated in place (preserves rentals, reviews, waitlist, diary). Rows with new or missing rack codes are inserted.`
+            : `Overwrite: existing books in ${libName} with matching rack codes are deleted and re-created. ⚠ This breaks links from past rentals/reviews to those books — use Update + add instead unless you really want fresh ids.`}
         </p>
 
         <div className="rounded-xl border border-dashed border-border bg-surface/30 p-6 text-center">
