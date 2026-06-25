@@ -597,7 +597,7 @@ export function useBulkImportBooks() {
           const slice = codes.slice(i, i + chunkSize);
           let q = supabase.from("books").delete().in("shelf_code", slice);
           q = libraryId ? q.eq("library_id", libraryId) : q.is("library_id", null);
-          const { error: delErr, count } = await q.select("id", { count: "exact", head: true } as any);
+          const { error: delErr, count } = await q;
           if (delErr) throw new Error(`Overwrite step failed: ${delErr.message}`);
           deleted += count ?? 0;
         }
