@@ -18,7 +18,7 @@ import { useLibrary } from "@/lib/library";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useState, useRef } from "react";
 import Papa from "papaparse";
-import * as XLSX from "xlsx";
+import * as XLSX from "@e965/xlsx";
 import { toast } from "sonner";
 import {
   Shield, Library as LibIcon, Package, Clock, Lightbulb,
