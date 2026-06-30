@@ -192,13 +192,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-2 px-3 md:gap-4 md:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <Link to="/" className="flex cursor-pointer items-center gap-2.5">
-              <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/30">
-                <BookMarked className="h-5 w-5 text-white" />
-              </div>
-              <div className="leading-tight">
-                <div className="text-base font-bold tracking-tight">BOOKARY</div>
-                <div className="hidden text-[10px] uppercase tracking-[0.2em] text-muted-foreground sm:block">Reading library</div>
-              </div>
+              <img src={bookaryLogo.url} alt="Bookary" className="h-10 w-auto" />
             </Link>
             <div className="hidden w-64 sm:block">
               <LibrarySwitcher />
