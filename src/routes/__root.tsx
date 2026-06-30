@@ -18,6 +18,7 @@ import { Toaster } from "sonner";
 import { LibraryProvider } from "@/lib/library";
 import { AdPopup } from "@/components/AdPopup";
 import { AdBottomBanner } from "@/components/AdBottomBanner";
+import { registerServiceWorker } from "@/lib/register-sw";
 
 function NotFoundComponent() {
   return (
@@ -70,7 +71,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      { name: "theme-color", content: "#1e1b4b" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "Bookary" },
       { title: "Bookary — A Malayalam Reading Library" },
       { name: "description", content: "Rent and read beloved Malayalam novels, stories, poetry and more from a curated digital library." },
       { property: "og:title", content: "Bookary — A Malayalam Reading Library" },
@@ -87,6 +93,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Serif+Malayalam:wght@500;700&display=swap" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      { rel: "icon", type: "image/png", sizes: "192x192", href: "/pwa-192.png" },
+      { rel: "icon", type: "image/png", sizes: "512x512", href: "/pwa-512.png" },
+      // iOS PWA splash screens (apple-touch-startup-image)
+      { rel: "apple-touch-startup-image", href: "/splash-1290x2796.png", media: "(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)" },
+      { rel: "apple-touch-startup-image", href: "/splash-1179x2556.png", media: "(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)" },
+      { rel: "apple-touch-startup-image", href: "/splash-1284x2778.png", media: "(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3)" },
+      { rel: "apple-touch-startup-image", href: "/splash-1170x2532.png", media: "(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" },
+      { rel: "apple-touch-startup-image", href: "/splash-1125x2436.png", media: "(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" },
+      { rel: "apple-touch-startup-image", href: "/splash-828x1792.png", media: "(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)" },
+      { rel: "apple-touch-startup-image", href: "/splash-750x1334.png", media: "(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" },
+      { rel: "apple-touch-startup-image", href: "/splash-1640x2360.png", media: "(device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2)" },
+      { rel: "apple-touch-startup-image", href: "/splash-2048x2732.png", media: "(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)" },
     ],
   }),
   shellComponent: RootShell,
@@ -119,6 +139,9 @@ function RootComponent() {
     });
     return () => sub.subscription.unsubscribe();
   }, [queryClient]);
+
+  // Register the service worker (guarded — production only, not in preview/iframe).
+  useEffect(() => { registerServiceWorker(); }, []);
 
   // Persist catalog queries to localStorage so search works offline & boots instantly.
   useEffect(() => {
