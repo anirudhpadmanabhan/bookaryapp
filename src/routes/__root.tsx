@@ -18,6 +18,7 @@ import { Toaster } from "sonner";
 import { LibraryProvider } from "@/lib/library";
 import { AdPopup } from "@/components/AdPopup";
 import { AdBottomBanner } from "@/components/AdBottomBanner";
+import { registerServiceWorker } from "@/lib/register-sw";
 
 function NotFoundComponent() {
   return (
@@ -87,6 +88,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Serif+Malayalam:wght@500;700&display=swap" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      { rel: "icon", type: "image/png", sizes: "192x192", href: "/pwa-192.png" },
+      { rel: "icon", type: "image/png", sizes: "512x512", href: "/pwa-512.png" },
     ],
   }),
   shellComponent: RootShell,
