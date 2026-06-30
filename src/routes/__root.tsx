@@ -140,6 +140,9 @@ function RootComponent() {
     return () => sub.subscription.unsubscribe();
   }, [queryClient]);
 
+  // Register the service worker (guarded — production only, not in preview/iframe).
+  useEffect(() => { registerServiceWorker(); }, []);
+
   // Persist catalog queries to localStorage so search works offline & boots instantly.
   useEffect(() => {
     if (typeof window === "undefined") return;
