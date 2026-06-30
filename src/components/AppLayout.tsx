@@ -355,7 +355,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   </Link>
                 )}
 
-                <InstallButton className="hidden sm:inline-flex" />
+                <InstallButton />
 
                 {/* Profile circle with dropdown menu (includes logout) */}
                 <div ref={menuRef} className="relative">
