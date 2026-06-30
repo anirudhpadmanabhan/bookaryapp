@@ -12,7 +12,9 @@ import { Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LibrarySwitcher } from "@/components/LibrarySwitcher";
+import { InstallButton } from "@/components/InstallButton";
 import { fetchBooks, type Book } from "@/lib/books";
+import bookaryLogo from "@/assets/bookary-logo.png.asset.json";
 
 const navMain = [
   { to: "/", label: "Home", icon: Home },
