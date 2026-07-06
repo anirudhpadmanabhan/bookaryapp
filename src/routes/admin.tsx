@@ -812,7 +812,7 @@ function AddBookModal({ onClose, defaultLibraryId }: { onClose: () => void; defa
             onClick={() => create.mutate(
               {
                 title, author, genre,
-                title_ml: titleMl, author_ml: authorMl, original_author: null, genre_ml: genreMl,
+                title_ml: titleMl, author_ml: authorMl, genre_ml: genreMl,
                 shelf_code: shelf, publisher, library_id: libraryId || undefined,
                 language, rent_price: Number(rentPrice) > 0 ? Number(rentPrice) : 10,
                 pages: pages.trim() ? Number(pages) : null,
