@@ -84,7 +84,9 @@ function ProfilePage() {
 
   const [sTitle, setSTitle] = useState("");
   const [sAuthor, setSAuthor] = useState("");
+  const [sPublisher, setSPublisher] = useState("");
   const [sNote, setSNote] = useState("");
+
 
   const [editingIdentity, setEditingIdentity] = useState(false);
   const [displayName, setDisplayName] = useState("");
