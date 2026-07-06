@@ -47,7 +47,7 @@ function HomePage() {
 
 
   const { data, isLoading } = useQuery({
-    queryKey: ["home-data"],
+    queryKey: ["home-data", selectedId],
     queryFn: () => fetchHomeData(HOME_LIMIT, 5),
     staleTime: 5 * 60_000,
   });
