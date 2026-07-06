@@ -1365,7 +1365,7 @@ function LogRentalDialog({ onClose, onCreated }: { onClose: () => void; onCreate
 
 // Groups rentals into month sections newest-first with a collapsible <details> wrapper.
 function RentalsByMonth({
-  rentals, STATUSES, setViewingUser, setReturnDate, onStatus, onReturn, SortableTh,
+  rentals, STATUSES, setViewingUser, setReturnDate, onStatus, onReturn, onMarkRented, SortableTh,
 }: {
   rentals: any[];
   STATUSES: string[];
@@ -1373,6 +1373,7 @@ function RentalsByMonth({
   setReturnDate: (id: string, iso: string | null) => void;
   onStatus: (id: string, status: string) => void;
   onReturn: (r: any) => void;
+  onMarkRented: (id: string) => void;
   SortableTh: any;
 }) {
   const groups = useMemo(() => {
