@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 // Simple localStorage-backed UI preferences (member side).
 const KEYS = {
   hideBrowse: "bookary.ui.hide_browse",
-  hideMoney: "bookary.ui.hide_money",
 } as const;
 
 function read(k: string, fallback: boolean): boolean {
@@ -33,7 +32,5 @@ function useBoolPref(k: string, fallback: boolean) {
   return [v, (nv: boolean) => write(k, nv)] as const;
 }
 
-// Money-related UI (wallet balance, price, fine) is hidden by default per project rules.
-export const useHideMoney = () => useBoolPref(KEYS.hideMoney, true);
 // Browse section is shown by default; user can hide via sidebar gear.
 export const useHideBrowse = () => useBoolPref(KEYS.hideBrowse, false);

@@ -2,14 +2,14 @@ import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/re
 import { AppLayout } from "@/components/AppLayout";
 import { useSession } from "@/lib/auth";
 import {
-  useProfile, useRentals, useTopUpWallet, useSuggestions, useSuggestBook,
+  useProfile, useRentals, useSuggestions, useSuggestBook,
   useReadingInsights, useFavorites, useDueSoonRentals, useUpdateProfile,
   useWaitlist, useLeaveWaitlist, useClaimReservation, useDeclineReservation,
   useAvatarUrl,
 } from "@/lib/userdata";
 import {
-  Wallet, BookOpen, CheckCircle2, Lightbulb, Clock, Flame, Heart, NotebookPen,
-  Trophy, BookMarked, AlertTriangle, BellRing, Pencil, X, Tag, Smartphone, Check, ChevronDown, Camera, Trash2,
+  BookOpen, CheckCircle2, Lightbulb, Clock, Flame, Heart, NotebookPen,
+  Trophy, BookMarked, AlertTriangle, BellRing, Pencil, Tag, Check, ChevronDown, Camera, Trash2,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -76,7 +76,6 @@ function ProfilePage() {
   const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
   const insights = useReadingInsights();
   const dueSoon = useDueSoonRentals();
-  const topUp = useTopUpWallet();
   const suggest = useSuggestBook();
   const updateProfile = useUpdateProfile();
   const leaveWait = useLeaveWaitlist();
@@ -94,7 +93,6 @@ function ProfilePage() {
   const [editingDetails, setEditingDetails] = useState(false);
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
-  const [showUPI, setShowUPI] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -125,7 +123,6 @@ function ProfilePage() {
   const reservations = (rentals as any[]).filter((r) => r.tracking_status === "reserved" && !r.returned_at);
   const active = (rentals as any[]).filter((r) => !r.returned_at && r.tracking_status !== "reserved");
   const past = (rentals as any[]).filter((r) => r.returned_at);
-  const totalSpent = (rentals as any[]).reduce((s, r) => s + Number(r.price_paid ?? 0), 0);
   const claim = useClaimReservation();
   const decline = useDeclineReservation();
 
@@ -230,26 +227,13 @@ function ProfilePage() {
           )}
         </div>
 
-        <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-4 text-emerald-300">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-wider"><Wallet className="h-3.5 w-3.5" />Wallet</div>
-          <div className="text-2xl font-bold">₹{Number(profile.wallet_balance).toFixed(0)}</div>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            <button type="button" onClick={() => topUp.mutate(100)} className="cursor-pointer rounded-lg bg-emerald-400/20 px-2.5 py-1 text-xs hover:bg-emerald-400/30">+ ₹100</button>
-            <button type="button" onClick={() => setShowUPI(true)} className="inline-flex cursor-pointer items-center gap-1 rounded-lg bg-primary/20 px-2.5 py-1 text-xs text-primary hover:bg-primary/30">
-              <Smartphone className="h-3 w-3" /> UPI
-            </button>
-          </div>
-        </div>
       </div>
-
-      {showUPI && <UPIModal onClose={() => setShowUPI(false)} onSuccess={(amt) => { topUp.mutate(amt); setShowUPI(false); }} />}
 
       {/* In-page nav: hidden on mobile (sections are collapsible accordions there) */}
       <nav className="glass-card mb-8 hidden flex-wrap items-center gap-1 rounded-2xl p-1.5 text-xs md:flex">
         {[
           { id: "insights", label: "Insights", icon: Trophy },
           { id: "due", label: "Due soon", icon: AlertTriangle },
-          { id: "ledger", label: "Wallet & ledger", icon: Wallet },
           { id: "rentals", label: "Active rentals", icon: BookOpen },
           { id: "waitlist", label: "Waitlist", icon: Clock },
           { id: "suggest", label: "Suggestions", icon: Lightbulb },
@@ -311,16 +295,6 @@ function ProfilePage() {
         </Section>
       )}
 
-      {/* Ledger */}
-      <Section id="ledger" title="Wallet & ledger" icon={Wallet}>
-        <div className="glass-card grid grid-cols-2 gap-4 rounded-2xl p-5 sm:grid-cols-4">
-          <Stat icon={Wallet} tint="emerald" label="Balance" value={`₹${Number(profile.wallet_balance).toFixed(0)}`} sub="Available to rent" />
-          <Stat icon={Coins} tint="amber"   label="Total spent" value={`₹${totalSpent.toFixed(0)}`} sub={`${rentals.length} rental${rentals.length === 1 ? "" : "s"}`} />
-          <Stat icon={BookOpen} tint="primary" label="Active rentals" value={active.length} sub="Out right now" />
-          <Stat icon={CheckCircle2} tint="emerald" label="Returned" value={past.length} sub="Completed" />
-        </div>
-      </Section>
-
       {/* Active rentals + Tracking */}
       <Section id="rentals" title={`Active rentals & tracking (${active.length})`} icon={BookOpen}>
         {active.length === 0 ? (
@@ -358,7 +332,6 @@ function ProfilePage() {
                         <Clock className="h-3 w-3" />
                         {overdue ? `${Math.abs(daysLeft)}d overdue` : `${daysLeft}d left`}
                       </span>
-                      <span className="text-muted-foreground">· Paid ₹{r.price_paid}</span>
                     </p>
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                       <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-primary">
@@ -394,7 +367,7 @@ function ProfilePage() {
                   <div className="min-w-0">
                     <Link to="/books/$id" params={{ id: r.book_id }} className="text-sm font-semibold hover:underline">{r.books?.title ?? "Your reserved book"}</Link>
                     <div className="text-xs text-amber-300">
-                      {hoursLeft !== null ? `Claim within ${hoursLeft}h` : "Claim within 24h"} or it passes to the next reader. ₹10 will be charged on claim.
+                      {hoursLeft !== null ? `Claim within ${hoursLeft}h` : "Claim within 24h"} or it passes to the next reader.
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -402,7 +375,7 @@ function ProfilePage() {
                       onClick={() => claim.mutate(r.id)}
                       disabled={claim.isPending}
                       className="cursor-pointer rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-emerald-950 hover:opacity-90 disabled:opacity-60"
-                    >Claim · ₹10</button>
+                    >Claim</button>
                     <button
                       onClick={() => decline.mutate(r.id)}
                       disabled={decline.isPending}
@@ -471,7 +444,7 @@ function ProfilePage() {
                     <span className="ml-2 text-muted-foreground">by {r.books?.author}</span>
                   </div>
                 </div>
-                <span className="text-xs text-muted-foreground">returned {new Date(r.returned_at).toLocaleDateString()} · ₹{r.price_paid}</span>
+                <span className="text-xs text-muted-foreground">returned {new Date(r.returned_at).toLocaleDateString()}</span>
               </Link>
             ))}
           </div>
@@ -566,71 +539,6 @@ function AvatarTile({ profile }: { profile: any }) {
   );
 }
 
-function UPIModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (amount: number) => void }) {
-  const [upi, setUpi] = useState("");
-  const [amount, setAmount] = useState(100);
-  const [step, setStep] = useState<"input" | "approving" | "done">("input");
-
-  const approve = () => {
-    if (!/^[\w.\-]+@[\w.\-]+$/.test(upi)) return toast.error("Enter a valid UPI ID like name@bank");
-    if (amount <= 0) return toast.error("Enter an amount");
-    setStep("approving");
-    // Mock approval delay
-    setTimeout(() => {
-      setStep("done");
-      setTimeout(() => onSuccess(amount), 600);
-    }, 1400);
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm rounded-2xl border border-border bg-popover p-6 shadow-2xl">
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-bold flex items-center gap-2"><Smartphone className="h-4 w-4 text-primary" /> Recharge via UPI</h2>
-            <p className="text-xs text-muted-foreground">Mock UPI — wallet credits instantly.</p>
-          </div>
-          <button onClick={onClose} className="cursor-pointer text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
-        </div>
-
-        {step === "input" && (
-          <>
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">UPI ID</label>
-            <input value={upi} onChange={(e) => setUpi(e.target.value)} placeholder="yourname@okhdfcbank" className="mb-3 w-full rounded-xl border border-border bg-background/60 px-3 py-2.5 text-sm outline-none focus:border-primary" />
-            <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Amount (₹)</label>
-            <input type="number" min={10} value={amount} onChange={(e) => setAmount(Number(e.target.value))} className="mb-3 w-full rounded-xl border border-border bg-background/60 px-3 py-2.5 text-sm outline-none focus:border-primary" />
-            <div className="mb-4 flex flex-wrap gap-1.5">
-              {[50, 100, 200, 500].map((a) => (
-                <button key={a} type="button" onClick={() => setAmount(a)} className="cursor-pointer rounded-lg border border-border bg-surface/60 px-3 py-1 text-xs hover:border-primary/60">
-                  ₹{a}
-                </button>
-              ))}
-            </div>
-            <button onClick={approve} className="w-full cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90">
-              Connect UPI & Pay ₹{amount}
-            </button>
-          </>
-        )}
-
-        {step === "approving" && (
-          <div className="py-10 text-center">
-            <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <p className="text-sm">Approve in your UPI app…</p>
-            <p className="text-xs text-muted-foreground">{upi}</p>
-          </div>
-        )}
-
-        {step === "done" && (
-          <div className="py-10 text-center text-emerald-300">
-            <Check className="mx-auto mb-2 h-10 w-10" />
-            <p className="text-sm font-semibold">₹{amount} credited</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 const TINTS: Record<string, string> = {
   rose:    "bg-rose-500/10 text-rose-300 border-rose-500/20",
   primary: "bg-primary/10 text-primary border-primary/20",
@@ -649,6 +557,3 @@ function Stat({ icon: Icon, tint, label, value, sub }: { icon: any; tint: keyof 
   );
 }
 
-function Coins(props: any) {
-  return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></svg>;
-}

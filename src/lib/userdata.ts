@@ -17,7 +17,7 @@ export function useProfile() {
       const displayName = user.user_metadata?.display_name || user.email?.split("@")[0] || "Reader";
       const { data: created, error: createError } = await supabase
         .from("profiles")
-        .insert({ id: user.id, display_name: displayName, wallet_balance: 100 } as any)
+        .insert({ id: user.id, display_name: displayName, wallet_balance: 0 } as any)
         .select("*")
         .single();
       if (createError) throw createError;
@@ -126,7 +126,7 @@ export function useRentBook() {
   const qc = useQueryClient();
   const { user } = useSession();
   return useMutation({
-    mutationFn: async ({ bookId, address, phone }: { bookId: string; price?: number; address?: string; phone?: string }) => {
+    mutationFn: async ({ bookId, address, phone }: { bookId: string; address?: string; phone?: string }) => {
       if (!user) throw new Error("Sign in to rent");
       const { error } = await supabase.rpc("rent_book" as any, {
         _book_id: bookId,
@@ -223,7 +223,7 @@ export function useClaimReservation() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["rentals"] });
       qc.invalidateQueries({ queryKey: ["profile"] });
-      toast.success("Claimed — ₹10 charged, rental confirmed.");
+      toast.success("Claimed — rental confirmed.");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -516,23 +516,6 @@ export function useDeleteReview() {
   });
 }
 
-export function useTopUpWallet() {
-  const qc = useQueryClient();
-  const { user } = useSession();
-  return useMutation({
-    mutationFn: async (amount: number) => {
-      if (!user) throw new Error("Sign in");
-      const { error } = await supabase.rpc("top_up_wallet" as any, { _amount: amount });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["profile"] });
-      toast.success("Wallet topped up");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-}
-
 // BOOK SUGGESTIONS
 export function useSuggestions() {
   const { user } = useSession();
@@ -606,8 +589,6 @@ export function useReadingInsights() {
   const topGenre = [...genreCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
   const topAuthor = [...authorCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
 
-  const totalSpent = (rentals as any[]).reduce((s, r) => s + Number(r.price_paid ?? 0), 0);
-
   return {
     streak,
     diaryCount: diary.length,
@@ -616,6 +597,5 @@ export function useReadingInsights() {
     activeRentals: (rentals as any[]).filter((r) => !r.returned_at).length,
     topGenre,
     topAuthor,
-    totalSpent,
   };
 }

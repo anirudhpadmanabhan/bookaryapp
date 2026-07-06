@@ -96,7 +96,7 @@ function AuthPage() {
         <div className="w-full max-w-md">
           <h1 className="text-2xl font-bold">{mode === "signup" ? "Create your account" : "Welcome back"}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {mode === "signup" ? "Get ₹100 wallet credit to start renting." : "Sign in to continue reading."}
+            {mode === "signup" ? "Create a free reader account to start renting." : "Sign in to continue reading."}
             {redirect && redirect !== "/" && (
               <span className="ml-1 text-xs text-primary">You'll return to {redirect} after signing in.</span>
             )}
