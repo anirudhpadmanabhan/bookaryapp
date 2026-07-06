@@ -1153,6 +1153,16 @@ function RentalsTab() {
   const [viewingUser, setViewingUser] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<RentalSort>("rented_at");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [logOpen, setLogOpen] = useState(false);
+  const qc = useQueryClient();
+
+  const setReturnDate = async (rentalId: string, iso: string | null) => {
+    const { error } = await supabase.rpc("librarian_set_return", { _rental_id: rentalId, _returned_at: iso });
+    if (error) { toast.error(error.message); return; }
+    toast.success("Return date updated");
+    qc.invalidateQueries({ queryKey: ["admin-rentals"] });
+    qc.invalidateQueries({ queryKey: ["all-rentals"] });
+  };
 
   const shown = useMemo(() => {
     const filtered = (rentals as any[]).filter((r) => {
