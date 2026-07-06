@@ -1322,11 +1322,11 @@ function WaitlistTab() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, display_name, email")
+        .select("id, display_name")
         .in("id", userIds);
       if (error) throw error;
-      const map: Record<string, { display_name: string | null; email: string | null }> = {};
-      for (const p of data ?? []) map[p.id] = { display_name: (p as any).display_name, email: (p as any).email };
+      const map: Record<string, { display_name: string | null }> = {};
+      for (const p of data ?? []) map[p.id] = { display_name: (p as any).display_name };
       return map;
     },
   });
