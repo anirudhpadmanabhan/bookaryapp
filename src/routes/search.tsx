@@ -37,6 +37,7 @@ function SearchPage() {
   const { user } = useSession();
   const suggest = useSuggestBook();
   const [suggestAuthor, setSuggestAuthor] = useState("");
+  const [suggestPublisher, setSuggestPublisher] = useState("");
   const [suggestNote, setSuggestNote] = useState("");
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
