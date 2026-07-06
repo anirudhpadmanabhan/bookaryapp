@@ -277,14 +277,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-1.5 md:gap-3">
             {user && profile ? (
               <>
-                <Link
-                  to="/profile"
-                  className="flex cursor-pointer items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1.5 text-xs text-emerald-400 transition hover:bg-emerald-500/25 sm:px-3 sm:text-sm"
-                  title="Manage wallet"
-                >
-                  <Wallet className="h-3.5 w-3.5" />
-                  ₹{Number(profile.wallet_balance).toFixed(0)}
-                </Link>
+                {!hideMoney && (
+                  <Link
+                    to="/profile"
+                    className="flex cursor-pointer items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1.5 text-xs text-emerald-400 transition hover:bg-emerald-500/25 sm:px-3 sm:text-sm"
+                    title="Manage wallet"
+                  >
+                    <Wallet className="h-3.5 w-3.5" />
+                    ₹{Number(profile.wallet_balance).toFixed(0)}
+                  </Link>
+                )}
 
                 {/* Notification bell — unified inbox */}
                 <div ref={bellRef} className="relative">
