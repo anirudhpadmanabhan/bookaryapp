@@ -407,11 +407,22 @@ function BooksTab() {
 
   return (
     <div>
+      {/* Prominent full-width catalog search */}
+      <div className="mb-3 flex items-center gap-3 rounded-2xl border-2 border-primary/30 bg-surface/60 px-5 py-4 shadow-lg shadow-primary/5 focus-within:border-primary/60">
+        <SearchIcon className="h-5 w-5 text-primary" />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search title, author, rack, publisher…"
+          className="w-full bg-transparent text-base outline-none placeholder:text-muted-foreground"
+        />
+        {q && <button onClick={() => setQ("")} className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">Clear</button>}
+      </div>
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <select
           value={libFilter}
           onChange={(e) => setLibFilter(e.target.value)}
-          className="cursor-pointer rounded-xl border border-border bg-surface/50 px-3 py-2.5 text-sm font-medium"
+          className="cursor-pointer rounded-lg border border-border bg-surface/50 px-2.5 py-1.5 text-xs font-medium max-w-[220px] truncate"
           title="Filter by library"
         >
           <option value="all">All libraries</option>
@@ -420,15 +431,6 @@ function BooksTab() {
           ))}
           {scope === null && <option value="__unassigned">Unassigned</option>}
         </select>
-        <div className="flex flex-1 min-w-[200px] items-center gap-2 rounded-xl border border-border bg-surface/50 px-4 py-2.5">
-          <SearchIcon className="h-4 w-4 text-muted-foreground" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search title / author / rack / publisher…"
-            className="w-full bg-transparent text-sm outline-none"
-          />
-        </div>
         <select
           value={`${sortKey}:${sortDir}`}
           onChange={(e) => {
