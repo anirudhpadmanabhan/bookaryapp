@@ -1336,6 +1336,92 @@ function RentalsTab() {
   );
 }
 
+function LogRentalDialog({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const [email, setEmail] = useState("");
+  const [bookQuery, setBookQuery] = useState("");
+  const [bookId, setBookId] = useState<string | null>(null);
+  const [rentedAt, setRentedAt] = useState(new Date().toISOString().slice(0, 10));
+  const [dueAt, setDueAt] = useState("");
+  const [returnedAt, setReturnedAt] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  // Look up books by title so staff can pick without knowing the id.
+  const { data: bookMatches = [] } = useQuery({
+    queryKey: ["log-rental-book-search", bookQuery],
+    enabled: bookQuery.trim().length >= 2,
+    queryFn: async () => {
+      const q = bookQuery.trim();
+      const { data } = await supabase.from("books").select("id,title,author,shelf_code").ilike("title", `%${q}%`).limit(8);
+      return data ?? [];
+    },
+  });
+
+  const submit = async () => {
+    if (!email.trim() || !bookId) { toast.error("Email and book are required"); return; }
+    setBusy(true);
+    // Look up the member by email (must have signed in at least once).
+    const { data: userRow, error: uerr } = await supabase.rpc("librarian_add_member", { _email: email.trim() });
+    if (uerr) { setBusy(false); toast.error(uerr.message); return; }
+    const res = userRow as any;
+    if (!res?.ok) { setBusy(false); toast.error(res?.error ?? "Could not find member"); return; }
+    const { error } = await supabase.rpc("librarian_log_rental", {
+      _user_id: res.user_id,
+      _book_id: bookId,
+      _rented_at: new Date(rentedAt + "T12:00:00Z").toISOString(),
+      _due_at: dueAt ? new Date(dueAt + "T12:00:00Z").toISOString() : (null as any),
+      _returned_at: returnedAt ? new Date(returnedAt + "T12:00:00Z").toISOString() : (null as any),
+    });
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Rental logged");
+    onCreated();
+    onClose();
+  };
+
+  const fld = "w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm";
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="glass-card w-full max-w-lg rounded-2xl p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold">Log a rental</h2>
+          <button onClick={onClose} className="cursor-pointer text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+        </div>
+        <div className="space-y-3">
+          <label className="block text-xs">
+            <span className="mb-1 block text-muted-foreground">Member email</span>
+            <input value={email} onChange={(e) => setEmail(e.target.value)} className={fld} placeholder="reader@example.com" />
+          </label>
+          <label className="block text-xs">
+            <span className="mb-1 block text-muted-foreground">Book</span>
+            <input value={bookQuery} onChange={(e) => { setBookQuery(e.target.value); setBookId(null); }} className={fld} placeholder="Search by title…" />
+            {bookMatches.length > 0 && !bookId && (
+              <div className="mt-1 max-h-40 overflow-auto rounded-lg border border-border bg-surface">
+                {(bookMatches as any[]).map((b) => (
+                  <button key={b.id} type="button" onClick={() => { setBookId(b.id); setBookQuery(b.title); }} className="block w-full cursor-pointer px-3 py-1.5 text-left text-xs hover:bg-surface-elevated">
+                    {b.title} <span className="text-muted-foreground">· {b.author} · Rack {b.shelf_code ?? "—"}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            <label className="block text-xs"><span className="mb-1 block text-muted-foreground">Rented</span><input type="date" value={rentedAt} onChange={(e) => setRentedAt(e.target.value)} className={fld} /></label>
+            <label className="block text-xs"><span className="mb-1 block text-muted-foreground">Due</span><input type="date" value={dueAt} onChange={(e) => setDueAt(e.target.value)} className={fld} /></label>
+            <label className="block text-xs"><span className="mb-1 block text-muted-foreground">Returned</span><input type="date" value={returnedAt} onChange={(e) => setReturnedAt(e.target.value)} className={fld} /></label>
+          </div>
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button onClick={onClose} className="cursor-pointer rounded-lg border border-border px-4 py-2 text-sm hover:bg-surface-elevated">Cancel</button>
+          <button disabled={busy} onClick={submit} className="cursor-pointer rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50">
+            {busy ? "Saving…" : "Log rental"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 // ===== WAITLIST =====
 function WaitlistTab() {
   const { data: list = [], isLoading } = useAllWaitlist();
