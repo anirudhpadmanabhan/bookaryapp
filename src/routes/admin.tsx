@@ -541,7 +541,7 @@ function BooksTable({ books, editing, setEditing, sortKey, sortDir, setSort, lib
             <SortableHeader label="Title (ML)" k="title_ml" sortKey={sortKey} sortDir={sortDir} setSort={setSort} />
             <SortableHeader label="Author" k="author" sortKey={sortKey} sortDir={sortDir} setSort={setSort} />
             <SortableHeader label="Author (ML)" k="author_ml" sortKey={sortKey} sortDir={sortDir} setSort={setSort} />
-            <SortableHeader label="Orig. Author" k="original_author" sortKey={sortKey} sortDir={sortDir} setSort={setSort} />
+            
             <SortableHeader label="Genre" k="genre" sortKey={sortKey} sortDir={sortDir} setSort={setSort} />
             <SortableHeader label="Genre (ML)" k="genre_ml" sortKey={sortKey} sortDir={sortDir} setSort={setSort} />
             <SortableHeader label="Lang" k="language" sortKey={sortKey} sortDir={sortDir} setSort={setSort} className="w-20" />
