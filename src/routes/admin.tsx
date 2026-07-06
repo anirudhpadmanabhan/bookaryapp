@@ -1157,7 +1157,7 @@ function RentalsTab() {
   const qc = useQueryClient();
 
   const setReturnDate = async (rentalId: string, iso: string | null) => {
-    const { error } = await supabase.rpc("librarian_set_return", { _rental_id: rentalId, _returned_at: iso });
+    const { error } = await supabase.rpc("librarian_set_return", { _rental_id: rentalId, _returned_at: iso as any });
     if (error) { toast.error(error.message); return; }
     toast.success("Return date updated");
     qc.invalidateQueries({ queryKey: ["admin-rentals"] });
