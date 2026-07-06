@@ -564,7 +564,7 @@ function BooksTable({ books, editing, setEditing, sortKey, sortDir, setSort, lib
   );
 }
 
-function EditableRow({ book, isEditing, onEdit, onClose, libName }: { book: any; isEditing: boolean; onEdit: () => void; onClose: () => void; libName?: string }) {
+function EditableRow({ book, isEditing, onEdit, onClose, libName, isOut }: { book: any; isEditing: boolean; onEdit: () => void; onClose: () => void; libName?: string; isOut?: boolean }) {
   if (isEditing) {
     // Use full modal for editing all fields
     return (
@@ -576,14 +576,19 @@ function EditableRow({ book, isEditing, onEdit, onClose, libName }: { book: any;
 
   return (
     <tr className="border-t border-border/40 hover:bg-surface/40" onDoubleClick={onEdit}>
-      <td className="px-2 py-2 text-xs font-bold text-primary">{book.shelf_code ?? "—"}</td>
+      <td className="px-2 py-2 text-xs font-bold text-primary">
+        <span className="inline-flex items-center gap-1.5">
+          <span title={isOut ? "Rented / unavailable" : "Available"} className={`inline-block h-2 w-2 rounded-full ${isOut ? "bg-rose-500" : "bg-emerald-500"}`} />
+          {book.shelf_code ?? "—"}
+        </span>
+      </td>
       <td className="px-2 py-2">
         <Link to="/books/$id" params={{ id: book.id }} className="cursor-pointer font-medium hover:text-primary">{book.title}</Link>
       </td>
       <td className="px-2 py-2 font-mal text-accent">{book.title_ml ?? "—"}</td>
       <td className="px-2 py-2 text-foreground/80">{book.author}</td>
       <td className="px-2 py-2 font-mal text-foreground/70">{book.author_ml ?? "—"}</td>
-      <td className="px-2 py-2 text-muted-foreground">{book.original_author ?? "—"}</td>
+
       <td className="px-2 py-2 text-muted-foreground">{book.genre}</td>
       <td className="px-2 py-2 font-mal text-muted-foreground">{book.genre_ml ?? "—"}</td>
       <td className="px-2 py-2 text-muted-foreground">{book.language ?? "—"}</td>
