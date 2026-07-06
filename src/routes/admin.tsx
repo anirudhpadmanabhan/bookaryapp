@@ -1275,7 +1275,8 @@ function RentalsTab() {
 }
 
 function LogRentalDialog({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
-  const [email, setEmail] = useState("");
+  const [memberQuery, setMemberQuery] = useState("");
+  const [member, setMember] = useState<{ user_id: string; email: string; display_name: string | null } | null>(null);
   const [bookQuery, setBookQuery] = useState("");
   const [bookId, setBookId] = useState<string | null>(null);
   const [rentedAt, setRentedAt] = useState(new Date().toISOString().slice(0, 10));
@@ -1283,27 +1284,35 @@ function LogRentalDialog({ onClose, onCreated }: { onClose: () => void; onCreate
   const [returnedAt, setReturnedAt] = useState("");
   const [busy, setBusy] = useState(false);
 
-  // Look up books by title so staff can pick without knowing the id.
+  const { data: memberMatches = [] } = useQuery({
+    queryKey: ["log-rental-member-search", memberQuery],
+    enabled: memberQuery.trim().length >= 2 && !member,
+    queryFn: async () => {
+      const { data } = await supabase.rpc("staff_search_members" as any, { _query: memberQuery.trim(), _limit: 8 });
+      return (data ?? []) as Array<{ user_id: string; email: string; display_name: string | null; phone: string | null }>;
+    },
+  });
+
+  // Search books by title, author, or shelf code (client-side OR filter).
   const { data: bookMatches = [] } = useQuery({
     queryKey: ["log-rental-book-search", bookQuery],
     enabled: bookQuery.trim().length >= 2,
     queryFn: async () => {
       const q = bookQuery.trim();
-      const { data } = await supabase.from("books").select("id,title,author,shelf_code").ilike("title", `%${q}%`).limit(8);
+      const { data } = await supabase
+        .from("books")
+        .select("id,title,author,shelf_code")
+        .or(`title.ilike.%${q}%,author.ilike.%${q}%,shelf_code.ilike.%${q}%`)
+        .limit(10);
       return data ?? [];
     },
   });
 
   const submit = async () => {
-    if (!email.trim() || !bookId) { toast.error("Email and book are required"); return; }
+    if (!member || !bookId) { toast.error("Member and book are required"); return; }
     setBusy(true);
-    // Look up the member by email (must have signed in at least once).
-    const { data: userRow, error: uerr } = await supabase.rpc("librarian_add_member", { _email: email.trim() });
-    if (uerr) { setBusy(false); toast.error(uerr.message); return; }
-    const res = userRow as any;
-    if (!res?.ok) { setBusy(false); toast.error(res?.error ?? "Could not find member"); return; }
     const { error } = await supabase.rpc("librarian_log_rental", {
-      _user_id: res.user_id,
+      _user_id: member.user_id,
       _book_id: bookId,
       _rented_at: new Date(rentedAt + "T12:00:00Z").toISOString(),
       _due_at: dueAt ? new Date(dueAt + "T12:00:00Z").toISOString() : (null as any),
@@ -1326,12 +1335,32 @@ function LogRentalDialog({ onClose, onCreated }: { onClose: () => void; onCreate
         </div>
         <div className="space-y-3">
           <label className="block text-xs">
-            <span className="mb-1 block text-muted-foreground">Member email</span>
-            <input value={email} onChange={(e) => setEmail(e.target.value)} className={fld} placeholder="reader@example.com" />
+            <span className="mb-1 block text-muted-foreground">Member (search by name or email)</span>
+            <input
+              value={member ? (member.display_name ?? member.email) : memberQuery}
+              onChange={(e) => { setMember(null); setMemberQuery(e.target.value); }}
+              className={fld}
+              placeholder="Type a member's name…"
+            />
+            {memberMatches.length > 0 && !member && (
+              <div className="mt-1 max-h-40 overflow-auto rounded-lg border border-border bg-surface">
+                {memberMatches.map((m: any) => (
+                  <button
+                    key={m.user_id}
+                    type="button"
+                    onClick={() => { setMember({ user_id: m.user_id, email: m.email, display_name: m.display_name }); setMemberQuery(""); }}
+                    className="block w-full cursor-pointer px-3 py-1.5 text-left text-xs hover:bg-surface-elevated"
+                  >
+                    <span className="font-semibold">{m.display_name ?? m.email}</span>
+                    {m.display_name && <span className="text-muted-foreground"> · {m.email}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
           </label>
           <label className="block text-xs">
-            <span className="mb-1 block text-muted-foreground">Book</span>
-            <input value={bookQuery} onChange={(e) => { setBookQuery(e.target.value); setBookId(null); }} className={fld} placeholder="Search by title…" />
+            <span className="mb-1 block text-muted-foreground">Book (search by title, author, or rack code)</span>
+            <input value={bookQuery} onChange={(e) => { setBookQuery(e.target.value); setBookId(null); }} className={fld} placeholder="Search title / author / rack…" />
             {bookMatches.length > 0 && !bookId && (
               <div className="mt-1 max-h-40 overflow-auto rounded-lg border border-border bg-surface">
                 {(bookMatches as any[]).map((b) => (
