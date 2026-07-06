@@ -32,7 +32,7 @@ const PAGE_SIZE = 30;
 const ONBOARDING_KEY = "bookary.onboarding_done";
 
 function HomePage() {
-  const { libraries, selectedId, setSelectedId } = useLibrary();
+  const { libraries, selected, selectedId, setSelectedId } = useLibrary();
   const [showPicker, setShowPicker] = useState(false);
   useEffect(() => {
     if (typeof window === "undefined") return;
