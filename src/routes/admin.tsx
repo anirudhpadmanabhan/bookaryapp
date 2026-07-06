@@ -367,7 +367,7 @@ function BooksTab() {
     { header: "Title (ML)", get: (b: any) => b.title_ml ?? "" },
     { header: "Author (EN)", get: (b: any) => b.author ?? "" },
     { header: "Author (ML)", get: (b: any) => b.author_ml ?? "" },
-    { header: "Original Author", get: (b: any) => b.original_author ?? "" },
+    
     { header: "Genre (EN)", get: (b: any) => b.genre ?? "" },
     { header: "Genre (ML)", get: (b: any) => b.genre_ml ?? "" },
     { header: "Language", get: (b: any) => b.language ?? "" },
