@@ -59,6 +59,7 @@ function AdminPage() {
   const isStaff = useIsStaff();
   const isAdmin = useIsAdmin();
   const [tab, setTab] = useState<Tab>("overview");
+  const [addMemberOpen, setAddMemberOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth", search: { redirect: pathname } });
