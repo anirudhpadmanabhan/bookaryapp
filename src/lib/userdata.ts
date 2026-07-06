@@ -17,7 +17,7 @@ export function useProfile() {
       const displayName = user.user_metadata?.display_name || user.email?.split("@")[0] || "Reader";
       const { data: created, error: createError } = await supabase
         .from("profiles")
-        .insert({ id: user.id, display_name: displayName, wallet_balance: 100 } as any)
+        .insert({ id: user.id, display_name: displayName, wallet_balance: 0 } as any)
         .select("*")
         .single();
       if (createError) throw createError;
