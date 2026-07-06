@@ -1407,6 +1407,7 @@ function RentalsByMonth({
             <table className="w-full text-sm">
               <thead className="bg-surface text-xs uppercase tracking-wider text-muted-foreground">
                 <tr>
+                  <th className="px-2 py-2.5 text-left">In / Out</th>
                   <SortableTh k="member">Member</SortableTh>
                   <SortableTh k="book">Book</SortableTh>
                   <SortableTh k="rented_at">Rented</SortableTh>
