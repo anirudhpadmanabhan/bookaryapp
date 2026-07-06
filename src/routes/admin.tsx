@@ -285,6 +285,7 @@ type BookSortKey =
 function BooksTab() {
   const { data: books = [], isLoading } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
   const { data: libs = [] } = useAdminLibraries();
+  const { data: allRentals = [] } = useAllRentals();
   const scope = useMyLibraryScope();
   const [q, setQ] = useState("");
   const [view, setView] = useState<BooksView>("table");
@@ -294,6 +295,15 @@ function BooksTab() {
   const [libFilter, setLibFilter] = useState<string>("all");
   const [sortKey, setSortKey] = useState<BookSortKey>("shelf_code");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  const outIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const r of allRentals as any[]) {
+      if (!r.returned_at && r.tracking_status !== "reserved") s.add(r.book_id);
+    }
+    return s;
+  }, [allRentals]);
+
 
   const rackCompare = (a: string | null | undefined, b: string | null | undefined) => {
     if (!a && !b) return 0;
@@ -367,7 +377,7 @@ function BooksTab() {
     { header: "Title (ML)", get: (b: any) => b.title_ml ?? "" },
     { header: "Author (EN)", get: (b: any) => b.author ?? "" },
     { header: "Author (ML)", get: (b: any) => b.author_ml ?? "" },
-    { header: "Original Author", get: (b: any) => b.original_author ?? "" },
+    
     { header: "Genre (EN)", get: (b: any) => b.genre ?? "" },
     { header: "Genre (ML)", get: (b: any) => b.genre_ml ?? "" },
     { header: "Language", get: (b: any) => b.language ?? "" },
@@ -490,9 +500,9 @@ function BooksTab() {
             Showing {shown.length.toLocaleString()} of {filtered.length.toLocaleString()} matched · {totalForScope.toLocaleString()} total{q && ` · search "${q}"`} · sort: {sortKey} {sortDir === "asc" ? "↑" : "↓"}.
           </p>
           {view === "table" ? (
-            <BooksTable books={shown} editing={editing} setEditing={setEditing} sortKey={sortKey} sortDir={sortDir} setSort={(k) => { if (k === sortKey) setSortDir((d) => d === "asc" ? "desc" : "asc"); else { setSortKey(k); setSortDir("asc"); } }} libNameById={libNameById} />
+            <BooksTable books={shown} editing={editing} setEditing={setEditing} sortKey={sortKey} sortDir={sortDir} setSort={(k) => { if (k === sortKey) setSortDir((d) => d === "asc" ? "desc" : "asc"); else { setSortKey(k); setSortDir("asc"); } }} libNameById={libNameById} outIds={outIds} />
           ) : (
-            <BooksGridAdmin books={shown} setEditing={setEditing} />
+            <BooksGridAdmin books={shown} setEditing={setEditing} outIds={outIds} />
           )}
         </>
       )}
@@ -520,7 +530,7 @@ function SortableHeader({ label, k, sortKey, sortDir, setSort, className = "" }:
   );
 }
 
-function BooksTable({ books, editing, setEditing, sortKey, sortDir, setSort, libNameById }: { books: any[]; editing: string | null; setEditing: (id: string | null) => void; sortKey: BookSortKey; sortDir: "asc" | "desc"; setSort: (k: BookSortKey) => void; libNameById: Map<string, string> }) {
+function BooksTable({ books, editing, setEditing, sortKey, sortDir, setSort, libNameById, outIds }: { books: any[]; editing: string | null; setEditing: (id: string | null) => void; sortKey: BookSortKey; sortDir: "asc" | "desc"; setSort: (k: BookSortKey) => void; libNameById: Map<string, string>; outIds: Set<string> }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-border">
       <table className="w-full text-xs">
@@ -531,7 +541,7 @@ function BooksTable({ books, editing, setEditing, sortKey, sortDir, setSort, lib
             <SortableHeader label="Title (ML)" k="title_ml" sortKey={sortKey} sortDir={sortDir} setSort={setSort} />
             <SortableHeader label="Author" k="author" sortKey={sortKey} sortDir={sortDir} setSort={setSort} />
             <SortableHeader label="Author (ML)" k="author_ml" sortKey={sortKey} sortDir={sortDir} setSort={setSort} />
-            <SortableHeader label="Orig. Author" k="original_author" sortKey={sortKey} sortDir={sortDir} setSort={setSort} />
+            
             <SortableHeader label="Genre" k="genre" sortKey={sortKey} sortDir={sortDir} setSort={setSort} />
             <SortableHeader label="Genre (ML)" k="genre_ml" sortKey={sortKey} sortDir={sortDir} setSort={setSort} />
             <SortableHeader label="Lang" k="language" sortKey={sortKey} sortDir={sortDir} setSort={setSort} className="w-20" />
@@ -546,7 +556,7 @@ function BooksTable({ books, editing, setEditing, sortKey, sortDir, setSort, lib
         </thead>
         <tbody>
           {books.map((b) => (
-            <EditableRow key={b.id} book={b} isEditing={editing === b.id} onEdit={() => setEditing(b.id)} onClose={() => setEditing(null)} libName={b.library_id ? libNameById.get(b.library_id) : undefined} />
+            <EditableRow key={b.id} book={b} isEditing={editing === b.id} onEdit={() => setEditing(b.id)} onClose={() => setEditing(null)} libName={b.library_id ? libNameById.get(b.library_id) : undefined} isOut={outIds.has(b.id)} />
           ))}
         </tbody>
       </table>
@@ -554,7 +564,7 @@ function BooksTable({ books, editing, setEditing, sortKey, sortDir, setSort, lib
   );
 }
 
-function EditableRow({ book, isEditing, onEdit, onClose, libName }: { book: any; isEditing: boolean; onEdit: () => void; onClose: () => void; libName?: string }) {
+function EditableRow({ book, isEditing, onEdit, onClose, libName, isOut }: { book: any; isEditing: boolean; onEdit: () => void; onClose: () => void; libName?: string; isOut?: boolean }) {
   if (isEditing) {
     // Use full modal for editing all fields
     return (
@@ -566,14 +576,19 @@ function EditableRow({ book, isEditing, onEdit, onClose, libName }: { book: any;
 
   return (
     <tr className="border-t border-border/40 hover:bg-surface/40" onDoubleClick={onEdit}>
-      <td className="px-2 py-2 text-xs font-bold text-primary">{book.shelf_code ?? "—"}</td>
+      <td className="px-2 py-2 text-xs font-bold text-primary">
+        <span className="inline-flex items-center gap-1.5">
+          <span title={isOut ? "Rented / unavailable" : "Available"} className={`inline-block h-2 w-2 rounded-full ${isOut ? "bg-rose-500" : "bg-emerald-500"}`} />
+          {book.shelf_code ?? "—"}
+        </span>
+      </td>
       <td className="px-2 py-2">
         <Link to="/books/$id" params={{ id: book.id }} className="cursor-pointer font-medium hover:text-primary">{book.title}</Link>
       </td>
       <td className="px-2 py-2 font-mal text-accent">{book.title_ml ?? "—"}</td>
       <td className="px-2 py-2 text-foreground/80">{book.author}</td>
       <td className="px-2 py-2 font-mal text-foreground/70">{book.author_ml ?? "—"}</td>
-      <td className="px-2 py-2 text-muted-foreground">{book.original_author ?? "—"}</td>
+
       <td className="px-2 py-2 text-muted-foreground">{book.genre}</td>
       <td className="px-2 py-2 font-mal text-muted-foreground">{book.genre_ml ?? "—"}</td>
       <td className="px-2 py-2 text-muted-foreground">{book.language ?? "—"}</td>
@@ -597,13 +612,16 @@ function EditableRow({ book, isEditing, onEdit, onClose, libName }: { book: any;
   );
 }
 
-function BooksGridAdmin({ books, setEditing }: { books: any[]; setEditing: (id: string) => void }) {
+function BooksGridAdmin({ books, setEditing, outIds }: { books: any[]; setEditing: (id: string) => void; outIds: Set<string> }) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-      {books.map((b) => (
+      {books.map((b) => {
+        const isOut = outIds.has(b.id);
+        return (
         <div key={b.id} className="glass-card flex flex-col gap-1.5 rounded-xl p-3">
           <div className="flex items-start justify-between gap-2">
-            <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold text-primary">
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold text-primary">
+              <span title={isOut ? "Rented / unavailable" : "Available"} className={`inline-block h-1.5 w-1.5 rounded-full ${isOut ? "bg-rose-500" : "bg-emerald-500"}`} />
               {b.shelf_code ?? "—"}
             </span>
             <button
@@ -620,7 +638,7 @@ function BooksGridAdmin({ books, setEditing }: { books: any[]; setEditing: (id: 
           </Link>
           <div className="line-clamp-1 text-[11px] text-foreground/80">{b.author}</div>
           {b.author_ml && <div className="line-clamp-1 font-mal text-[11px] text-foreground/60">{b.author_ml}</div>}
-          {b.original_author && <div className="line-clamp-1 text-[10px] text-muted-foreground">orig. {b.original_author}</div>}
+
           <div className="line-clamp-1 text-[10px] uppercase tracking-wider text-muted-foreground/80">
             {b.genre}{b.genre_ml ? <span className="font-mal normal-case"> · {b.genre_ml}</span> : null}
           </div>
@@ -633,7 +651,8 @@ function BooksGridAdmin({ books, setEditing }: { books: any[]; setEditing: (id: 
           </div>
           {b.publisher && <div className="line-clamp-1 text-[10px] text-muted-foreground/70">{b.publisher}</div>}
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
