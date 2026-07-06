@@ -393,6 +393,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                             <Wallet className="h-3 w-3" /> ₹{Number(profile.wallet_balance).toFixed(0)}
                           </div>
                         )}
+                      </div>
                       <Link to="/profile" onClick={() => setMenuOpen(false)} className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-surface-elevated">
                         <UserRound className="h-4 w-4" /> Profile
                       </Link>
