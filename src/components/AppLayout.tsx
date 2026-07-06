@@ -2,12 +2,14 @@ import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   Home, Search, BookMarked, PenLine, Heart, UserRound,
   Library, NotebookPen, Wallet, LogOut, Sparkles, Bell, X, Truck, Languages as LangIcon,
+  EyeOff, Eye,
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo, type ReactNode } from "react";
 import { useSession } from "@/lib/auth";
 import { useProfile, useDueSoonRentals, useNotifications, useMarkNotificationsRead, useRentals } from "@/lib/userdata";
 import { useIsStaff } from "@/lib/admin";
 import { Shield } from "lucide-react";
+import { useHideBrowse, useHideMoney } from "@/lib/ui-prefs";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -58,6 +60,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const isStaff = useIsStaff();
   const [bellOpen, setBellOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [hideBrowse, setHideBrowse] = useHideBrowse();
+  const [hideMoney, setHideMoney] = useHideMoney();
   const [searchValue, setSearchValue] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement | null>(null);
@@ -273,14 +277,16 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-1.5 md:gap-3">
             {user && profile ? (
               <>
-                <Link
-                  to="/profile"
-                  className="flex cursor-pointer items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1.5 text-xs text-emerald-400 transition hover:bg-emerald-500/25 sm:px-3 sm:text-sm"
-                  title="Manage wallet"
-                >
-                  <Wallet className="h-3.5 w-3.5" />
-                  ₹{Number(profile.wallet_balance).toFixed(0)}
-                </Link>
+                {!hideMoney && (
+                  <Link
+                    to="/profile"
+                    className="flex cursor-pointer items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1.5 text-xs text-emerald-400 transition hover:bg-emerald-500/25 sm:px-3 sm:text-sm"
+                    title="Manage wallet"
+                  >
+                    <Wallet className="h-3.5 w-3.5" />
+                    ₹{Number(profile.wallet_balance).toFixed(0)}
+                  </Link>
+                )}
 
                 {/* Notification bell — unified inbox */}
                 <div ref={bellRef} className="relative">
@@ -382,9 +388,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
                           </div>
                         )}
                         <div className="mt-1 truncate text-xs text-muted-foreground">{user.email}</div>
-                        <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs text-emerald-300">
-                          <Wallet className="h-3 w-3" /> ₹{Number(profile.wallet_balance).toFixed(0)}
-                        </div>
+                        {!hideMoney && (
+                          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs text-emerald-300">
+                            <Wallet className="h-3 w-3" /> ₹{Number(profile.wallet_balance).toFixed(0)}
+                          </div>
+                        )}
                       </div>
                       <Link to="/profile" onClick={() => setMenuOpen(false)} className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-surface-elevated">
                         <UserRound className="h-4 w-4" /> Profile
@@ -434,8 +442,18 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <div className="mx-auto flex max-w-[1400px] gap-6 px-4 py-6 md:px-6">
         <aside className="sticky top-20 hidden h-fit w-60 shrink-0 flex-col gap-6 self-start md:flex">
           <nav className="glass-card flex flex-col gap-1 rounded-2xl p-3">
-            <div className="px-3 pb-1 pt-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Browse</div>
-            {navMain.map((n) => {
+            <div className="flex items-center justify-between px-3 pb-1 pt-2">
+              <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Browse</span>
+              <button
+                type="button"
+                onClick={() => setHideBrowse(!hideBrowse)}
+                title={hideBrowse ? "Show Browse links" : "Hide Browse links"}
+                className="cursor-pointer rounded p-1 text-muted-foreground hover:bg-surface-elevated hover:text-foreground"
+              >
+                {hideBrowse ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+              </button>
+            </div>
+            {!hideBrowse && navMain.map((n) => {
               const active = pathname === n.to;
               return (
                 <Link

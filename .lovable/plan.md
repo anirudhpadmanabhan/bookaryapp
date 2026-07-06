@@ -1,68 +1,67 @@
 ## Scope
 
-Single batch implementing every item from your message. Grouped by area below.
+You picked all four groups, so I'll ship them in order across several turns. This is intentionally sequenced so each slice lands working before the next starts.
 
-## 1. Languages, Genres, Writers, Home
+### Turn 1 — Rental workflow + Hide money & Browse (this turn)
 
-- New `languages.$slug.tsx` listing books of that language (mirror of `genres.$slug.tsx`). `/languages` index shows language tiles like Genres/Writers.
-- Fix current behavior: clicking a language no longer routes to search.
-- Home (`index.tsx`): add a "Browse by language" rail next to Genres/Writers.
+Rental workflow (librarian)
+- When status = `delivered`, action becomes **Mark Rented** (transitions to `rented` state — treated as an active checkout).
+- New action **Waiting for Return** (`awaiting_return`) — yellow chip.
+- **Return** action → row turns green, status becomes `returned`, `returned_at` set.
+- Librarian can **edit `returned_at`** inline on the row.
+- Librarian can **log a manual rental entry** (member + book + dates, no wallet charge).
+- Rent Now flow becomes **free** (`price_paid = 0`, no wallet debit) — server RPC `rent_book` updated.
+- Admin/library-admin rentals page: **grouped by month** (collapsible sections, newest first).
 
-## 2. Diary
+Hide money + browse
+- Hide `price_paid`, `fine_amount`, `wallet_balance` UI on member and admin surfaces (columns, cards, badges). DB columns stay; just no rendering.
+- Left tab "Browse" gets a hide toggle stored in `localStorage` (per-user preference), togglable from a small gear in the sidebar.
+- Cover URL bug: fix `book #4012 AADUJEEVITHAM` — audit `BookCover` `cover_url` handling + verify the row's `cover_url` value is present and reachable.
 
-- Remove the "All" filter from the poster view (keep status filters Read/Reading/Want).
-- Rename remaining "Watched" references to "Read" (audit pass).
+### Turn 2 — Librarian dashboard polish
 
-## 3. Rentals (member side)
+- Prominent search bar; library name shrinks to a compact horizontal chip (responsive).
+- Prefix-priority search ranking: exact-prefix > word-start > substring; e.g. "aad" ranks "Aadujeevitham" above "Kaadu".
+- Suggestion click → navigate straight to book page (no intermediate search results).
+- Hide "Orig. Author" column in admin book tables.
+- Availability dot: small round indicator — green (available), red (rented/out).
+- Status setter dropdown: available / out_of_stock / rented (writes to `books.availability`).
+- Waitlist rows show reader `display_name` + email.
+- Suggestions list shows suggester's member details (name, email, active rentals count).
+- Suggestions form: publisher name input under existing publisher details.
 
-- Rent-now form: optional `phone` field. On submit, save to `profiles.phone` (private) if user has none, prefill next time.
-- Show rented date + due date + return date on the rental card and in profile.
-- Status changes (confirmed → packed → shipped → delivered → returned) trigger a notification to both member and the library's librarians.
-- Column header in tracking/admin table renamed from "Rent" to "Price".
+### Turn 3 — New surfaces
 
-## 4. Fines
-
-- ₹1/day after day 20. Computed as `GREATEST(0, days_between(returned_at, due_at)) * 1`.
-- On librarian "Mark returned" RPC: compute fine, debit `profiles.wallet_balance`, write a `transaction_log` row, send notification to member with breakdown.
-
-## 5. Admin / Library Admin dashboard
-
-- Rename role label: `librarian` → "Library Admin" everywhere in UI (DB enum stays `librarian`). `admin` stays "Admin".
-- Hide role switcher for non-staff; only Admin can grant via email (existing RPC).
-- Rentals table columns: Member (name + email prominent) · Book · Library · Rented · Due · Returned · Price · Fine · Status · Actions.
-- Sortable headers on every admin/library-admin table (books, rentals, users, suggestions, activity).
-- Library Admin sees only their library's books/rentals/users/suggestions. Admin sees all + per-library filter.
-- "Users who rented from this library" tab for Library Admin.
-- Suggestions panel: Approve / Reject / Mark Available buttons; each writes status + notifies the suggester.
-- Editable books table: inline edit (title, author, shelf_code, rent_price, available, language, genre). Saves per-row.
-- CSV import shows the parsed rows as an editable preview table before commit.
-- Export buttons: CSV (existing) + PDF (new) for Books, Rentals, Users, Activity Log.
-
-## 6. Activity log
-
-- Rename "Actor" column to "User" (display actor name).
-- Remove "Subject" column (merge subject into the action sentence).
-- Add columns: Return time, Amount (price_paid or fine).
-
-## 7. Profile (public `u.$id`)
-
-- Reading insights card: total read, currently reading, want-to-read, favorite genre, reading streak (consecutive days with diary activity).
-
-## 8. Notifications
-
-- Librarian + member get notified on: rental created, status update, return + fine, suggestion decision, waitlist assignment (existing).
-- Real-time via existing notifications channel.
+- **Reports tab** (admin + library admin): builders for Members, Books, Rentals, Memberships with sortable columns + filters (date range, library, status). CSV + PDF export.
+- **Add Member** flow for librarian: create/invite user, attach to library.
+- **Library picker on first screen** (onboarding) + retain top switcher.
+- Library data scoping: a library only sees its own data from the point a member first rents there (already enforced by `books.library_id` + `has_role_in_library` — verify).
+- **Total user data** aggregated view → Admin only (already gated by `admin_list_users`).
+- **Library profile page** (`/libraries/$slug`): library posts activities with photos; members can like + comment. New tables: `library_posts`, `library_post_likes`, `library_post_comments`.
 
 ## Technical notes
 
-- **Migration**: add `profiles.phone text`; add `rentals.fine_amount numeric default 0`; extend `transaction_log` action enum-by-text with `fine_charged`, `suggestion_decided`; new RPCs: `member_set_phone(text)`, `librarian_mark_returned(rental_id)` (computes fine, debits wallet, logs), `librarian_decide_suggestion(id, decision)`, `library_admin_list_members(library_id)`, `reading_insights(user_id)`.
-- **RLS**: phone column readable only by self + staff; fine_amount staff-write.
-- **Frontend libs**: use `jspdf` + `jspdf-autotable` for PDF export, `@tanstack/react-table` already implied — if absent, add minimal sortable wrapper.
-- **No DB role rename** — only UI label changes; `has_role(..., 'librarian')` unchanged.
-- **Routes added**: `languages.$slug.tsx`, possibly `admin.suggestions.tsx`, `admin.users.tsx` sections; reuse existing `admin.tsx` tabs where possible.
+Migration (turn 1):
+- `alter type rental_status add value 'rented'` and `'awaiting_return'` (or reuse `tracking_status` text — check current values).
+- `books.availability text default 'available'` with check-in enum ('available','out_of_stock','rented').
+- New RPC `librarian_log_rental(_user_id, _book_id, _rented_at, _due_at, _returned_at)` — staff-only, no wallet.
+- Update `rent_book`: `price := 0`, skip wallet debit + transaction_log wallet_debit row.
+- New RPC `librarian_set_return(_rental_id, _returned_at)` — staff-only edit of return date.
+
+Migration (turn 3):
+- `library_posts(library_id, author_id, body, image_url, created_at)` + likes + comments tables with proper GRANTs + RLS.
+
+UI locations:
+- Rentals table lives in `src/routes/admin.tsx` and `src/routes/tracking.tsx`.
+- Left tab hide → `src/components/AppLayout.tsx`.
+- Cover audit → `src/components/BookCover.tsx` + DB row for book 4012.
 
 ## Out of scope
 
-- No design overhaul; reuse existing tokens/components.
-- No payment integration for fines beyond wallet debit.
-- No SMS — phone is stored for librarian contact only.
+- No design overhaul.
+- No SMS/email; notifications keep using existing `notifications` table.
+- No payment provider; "free" just means price=0.
+
+---
+
+Reply **"go"** and I'll start Turn 1. If you want me to reorder or drop items, tell me which.

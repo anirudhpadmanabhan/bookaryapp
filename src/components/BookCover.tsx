@@ -2,6 +2,23 @@ import type { Book } from "@/lib/books";
 import { colorForBook } from "@/lib/books";
 import { cn } from "@/lib/utils";
 
+/**
+ * Normalize a cover URL. Google Drive share links (`/file/d/<id>/view...`
+ * or `open?id=<id>`) are not directly embeddable — rewrite them to the
+ * `lh3.googleusercontent.com` thumbnail endpoint so <img> can render them.
+ */
+function normalizeCoverUrl(url: string): string {
+  try {
+    const m1 = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (m1) return `https://lh3.googleusercontent.com/d/${m1[1]}=w800`;
+    const m2 = url.match(/drive\.google\.com\/(?:open|uc)\?[^ ]*id=([a-zA-Z0-9_-]+)/);
+    if (m2) return `https://lh3.googleusercontent.com/d/${m2[1]}=w800`;
+    return url;
+  } catch {
+    return url;
+  }
+}
+
 export function BookCover({
   book,
   className,
@@ -13,13 +30,15 @@ export function BookCover({
 }) {
   const color = colorOverride ?? colorForBook(book.id);
   if (book.cover_url) {
+    const src = normalizeCoverUrl(book.cover_url);
     return (
       <div className={cn("cover relative overflow-hidden !p-0", `cover-${color}`, className)}>
         <img
-          src={book.cover_url}
+          src={src}
           alt={`Cover for ${book.title}`}
           loading="lazy"
           decoding="async"
+          referrerPolicy="no-referrer"
           className="absolute inset-0 h-full w-full object-cover"
         />
       </div>
