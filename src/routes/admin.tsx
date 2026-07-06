@@ -1147,6 +1147,7 @@ function RentalsTab() {
   const [sortKey, setSortKey] = useState<RentalSort>("rented_at");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [logOpen, setLogOpen] = useState(false);
+  const [q, setQ] = useState("");
   const qc = useQueryClient();
 
   const setReturnDate = async (rentalId: string, iso: string | null) => {
@@ -1157,11 +1158,22 @@ function RentalsTab() {
     qc.invalidateQueries({ queryKey: ["all-rentals"] });
   };
 
+  const markRented = async (rentalId: string) => {
+    const { error } = await supabase.rpc("librarian_mark_rented" as any, { _rental_id: rentalId });
+    if (error) { toast.error(error.message); return; }
+    toast.success("Marked as rented / out");
+    qc.invalidateQueries({ queryKey: ["admin-rentals"] });
+    qc.invalidateQueries({ queryKey: ["all-rentals"] });
+  };
+
   const shown = useMemo(() => {
+    const needle = q.trim().toLowerCase();
     const filtered = (rentals as any[]).filter((r) => {
-      if (filter === "active") return !r.returned_at;
-      if (filter === "returned") return !!r.returned_at;
-      return true;
+      if (filter === "active" && r.returned_at) return false;
+      if (filter === "returned" && !r.returned_at) return false;
+      if (!needle) return true;
+      const hay = `${r.member_name ?? ""} ${r.member_phone ?? ""} ${r.books?.title ?? ""} ${r.books?.author ?? ""} ${r.books?.shelf_code ?? ""}`.toLowerCase();
+      return hay.includes(needle);
     });
     const dir = sortDir === "asc" ? 1 : -1;
     const get = (r: any): any => {
@@ -1175,7 +1187,7 @@ function RentalsTab() {
       if (typeof va === "number" && typeof vb === "number") return (va - vb) * dir;
       return String(va).localeCompare(String(vb)) * dir;
     });
-  }, [rentals, filter, sortKey, sortDir]);
+  }, [rentals, filter, q, sortKey, sortDir]);
 
   const exportColumns = [
     { header: "Member", get: (r: any) => r.member_name ?? r.user_id },
@@ -1189,7 +1201,7 @@ function RentalsTab() {
     { header: "Status", get: (r: any) => r.tracking_status ?? "" },
   ];
 
-  const STATUSES = ["confirmed", "packed", "shipped", "out_for_delivery", "delivered"];
+  const STATUSES = ["confirmed", "packed", "shipped", "out_for_delivery", "delivered", "rented"];
 
   const SortableTh = ({ k, children, className = "" }: { k: RentalSort; children: any; className?: string }) => {
     const Icon = sortKey !== k ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
@@ -1217,6 +1229,10 @@ function RentalsTab() {
               {f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
           ))}
+        </div>
+        <div className="flex flex-1 min-w-[200px] max-w-md items-center gap-2 rounded-lg border border-border bg-surface/50 px-3 py-1.5">
+          <SearchIcon className="h-3.5 w-3.5 text-muted-foreground" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search member / book / rack…" className="w-full bg-transparent text-xs outline-none" />
         </div>
         <div className="flex gap-2">
           <button
@@ -1248,6 +1264,7 @@ function RentalsTab() {
           setReturnDate={setReturnDate}
           onStatus={(id: string, status: string) => update.mutate({ id, status })}
           onReturn={(r: any) => { if (confirm(`Mark "${r.books?.title}" as returned?`)) markReturned.mutate(r.id); }}
+          onMarkRented={markRented}
           SortableTh={SortableTh}
         />
       )}
@@ -1258,7 +1275,8 @@ function RentalsTab() {
 }
 
 function LogRentalDialog({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
-  const [email, setEmail] = useState("");
+  const [memberQuery, setMemberQuery] = useState("");
+  const [member, setMember] = useState<{ user_id: string; email: string; display_name: string | null } | null>(null);
   const [bookQuery, setBookQuery] = useState("");
   const [bookId, setBookId] = useState<string | null>(null);
   const [rentedAt, setRentedAt] = useState(new Date().toISOString().slice(0, 10));
@@ -1266,27 +1284,35 @@ function LogRentalDialog({ onClose, onCreated }: { onClose: () => void; onCreate
   const [returnedAt, setReturnedAt] = useState("");
   const [busy, setBusy] = useState(false);
 
-  // Look up books by title so staff can pick without knowing the id.
+  const { data: memberMatches = [] } = useQuery({
+    queryKey: ["log-rental-member-search", memberQuery],
+    enabled: memberQuery.trim().length >= 2 && !member,
+    queryFn: async () => {
+      const { data } = await supabase.rpc("staff_search_members" as any, { _query: memberQuery.trim(), _limit: 8 });
+      return (data ?? []) as Array<{ user_id: string; email: string; display_name: string | null; phone: string | null }>;
+    },
+  });
+
+  // Search books by title, author, or shelf code (client-side OR filter).
   const { data: bookMatches = [] } = useQuery({
     queryKey: ["log-rental-book-search", bookQuery],
     enabled: bookQuery.trim().length >= 2,
     queryFn: async () => {
       const q = bookQuery.trim();
-      const { data } = await supabase.from("books").select("id,title,author,shelf_code").ilike("title", `%${q}%`).limit(8);
+      const { data } = await supabase
+        .from("books")
+        .select("id,title,author,shelf_code")
+        .or(`title.ilike.%${q}%,author.ilike.%${q}%,shelf_code.ilike.%${q}%`)
+        .limit(10);
       return data ?? [];
     },
   });
 
   const submit = async () => {
-    if (!email.trim() || !bookId) { toast.error("Email and book are required"); return; }
+    if (!member || !bookId) { toast.error("Member and book are required"); return; }
     setBusy(true);
-    // Look up the member by email (must have signed in at least once).
-    const { data: userRow, error: uerr } = await supabase.rpc("librarian_add_member", { _email: email.trim() });
-    if (uerr) { setBusy(false); toast.error(uerr.message); return; }
-    const res = userRow as any;
-    if (!res?.ok) { setBusy(false); toast.error(res?.error ?? "Could not find member"); return; }
     const { error } = await supabase.rpc("librarian_log_rental", {
-      _user_id: res.user_id,
+      _user_id: member.user_id,
       _book_id: bookId,
       _rented_at: new Date(rentedAt + "T12:00:00Z").toISOString(),
       _due_at: dueAt ? new Date(dueAt + "T12:00:00Z").toISOString() : (null as any),
@@ -1309,12 +1335,32 @@ function LogRentalDialog({ onClose, onCreated }: { onClose: () => void; onCreate
         </div>
         <div className="space-y-3">
           <label className="block text-xs">
-            <span className="mb-1 block text-muted-foreground">Member email</span>
-            <input value={email} onChange={(e) => setEmail(e.target.value)} className={fld} placeholder="reader@example.com" />
+            <span className="mb-1 block text-muted-foreground">Member (search by name or email)</span>
+            <input
+              value={member ? (member.display_name ?? member.email) : memberQuery}
+              onChange={(e) => { setMember(null); setMemberQuery(e.target.value); }}
+              className={fld}
+              placeholder="Type a member's name…"
+            />
+            {memberMatches.length > 0 && !member && (
+              <div className="mt-1 max-h-40 overflow-auto rounded-lg border border-border bg-surface">
+                {memberMatches.map((m: any) => (
+                  <button
+                    key={m.user_id}
+                    type="button"
+                    onClick={() => { setMember({ user_id: m.user_id, email: m.email, display_name: m.display_name }); setMemberQuery(""); }}
+                    className="block w-full cursor-pointer px-3 py-1.5 text-left text-xs hover:bg-surface-elevated"
+                  >
+                    <span className="font-semibold">{m.display_name ?? m.email}</span>
+                    {m.display_name && <span className="text-muted-foreground"> · {m.email}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
           </label>
           <label className="block text-xs">
-            <span className="mb-1 block text-muted-foreground">Book</span>
-            <input value={bookQuery} onChange={(e) => { setBookQuery(e.target.value); setBookId(null); }} className={fld} placeholder="Search by title…" />
+            <span className="mb-1 block text-muted-foreground">Book (search by title, author, or rack code)</span>
+            <input value={bookQuery} onChange={(e) => { setBookQuery(e.target.value); setBookId(null); }} className={fld} placeholder="Search title / author / rack…" />
             {bookMatches.length > 0 && !bookId && (
               <div className="mt-1 max-h-40 overflow-auto rounded-lg border border-border bg-surface">
                 {(bookMatches as any[]).map((b) => (
@@ -1348,7 +1394,7 @@ function LogRentalDialog({ onClose, onCreated }: { onClose: () => void; onCreate
 
 // Groups rentals into month sections newest-first with a collapsible <details> wrapper.
 function RentalsByMonth({
-  rentals, STATUSES, setViewingUser, setReturnDate, onStatus, onReturn, SortableTh,
+  rentals, STATUSES, setViewingUser, setReturnDate, onStatus, onReturn, onMarkRented, SortableTh,
 }: {
   rentals: any[];
   STATUSES: string[];
@@ -1356,6 +1402,7 @@ function RentalsByMonth({
   setReturnDate: (id: string, iso: string | null) => void;
   onStatus: (id: string, status: string) => void;
   onReturn: (r: any) => void;
+  onMarkRented: (id: string) => void;
   SortableTh: any;
 }) {
   const groups = useMemo(() => {
@@ -1389,6 +1436,7 @@ function RentalsByMonth({
             <table className="w-full text-sm">
               <thead className="bg-surface text-xs uppercase tracking-wider text-muted-foreground">
                 <tr>
+                  <th className="px-2 py-2.5 text-left">In / Out</th>
                   <SortableTh k="member">Member</SortableTh>
                   <SortableTh k="book">Book</SortableTh>
                   <SortableTh k="rented_at">Rented</SortableTh>
@@ -1399,8 +1447,21 @@ function RentalsByMonth({
                 </tr>
               </thead>
               <tbody>
-                {g.rows.map((r: any) => (
+                {g.rows.map((r: any) => {
+                  const isOut = !r.returned_at;
+                  return (
                   <tr key={r.id} className="border-t border-border/40 hover:bg-surface/40">
+                    <td className="px-2 py-2">
+                      {isOut ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-semibold text-rose-300">
+                          <span className="h-1.5 w-1.5 rounded-full bg-rose-400" /> Out
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> In
+                        </span>
+                      )}
+                    </td>
                     <td className="px-2 py-2">
                       <button onClick={() => setViewingUser(r.user_id)} className="cursor-pointer text-left font-semibold hover:text-primary">
                         {r.member_name ?? "—"}
@@ -1426,7 +1487,11 @@ function RentalsByMonth({
                           }}
                           className="cursor-pointer rounded-md border border-border bg-surface px-1.5 py-0.5 text-[11px]"
                         />
-                      ) : "—"}
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-semibold text-rose-300">
+                          Waiting for return
+                        </span>
+                      )}
                     </td>
                     <td className="px-2 py-2">
                       {!r.returned_at ? (
@@ -1439,22 +1504,33 @@ function RentalsByMonth({
                         </select>
                       ) : (
                         <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/15 px-2 py-0.5 text-[11px] text-emerald-300">
-                          <CheckCircle2 className="h-3 w-3" /> returned
+                          <CheckCircle2 className="h-3 w-3" /> Returned
                         </span>
                       )}
                     </td>
                     <td className="px-2 py-2 text-right">
                       {!r.returned_at && (
-                        <button
-                          onClick={() => onReturn(r)}
-                          className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-emerald-500 px-2 py-1 text-[11px] font-semibold text-emerald-950 hover:opacity-90"
-                        >
-                          <CheckCircle2 className="h-3 w-3" /> Return
-                        </button>
+                        <div className="flex justify-end gap-1">
+                          {r.tracking_status === "delivered" && (
+                            <button
+                              onClick={() => onMarkRented(r.id)}
+                              className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-amber-500 px-2 py-1 text-[11px] font-semibold text-amber-950 hover:opacity-90"
+                              title="Mark as currently rented / out"
+                            >
+                              Rented
+                            </button>
+                          )}
+                          <button
+                            onClick={() => onReturn(r)}
+                            className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-emerald-500 px-2 py-1 text-[11px] font-semibold text-emerald-950 hover:opacity-90"
+                          >
+                            <CheckCircle2 className="h-3 w-3" /> Return
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
-                ))}
+                );})}
               </tbody>
             </table>
           </div>

@@ -1,67 +1,75 @@
-## Scope
+Big batch of fixes grouped by area. I'll ship them all in one build pass.
 
-You picked all four groups, so I'll ship them in order across several turns. This is intentionally sequenced so each slice lands working before the next starts.
+## 1. Rental status flow (admin/librarian)
 
-### Turn 1 — Rental workflow + Hide money & Browse (this turn)
+- On a `delivered` rental, add a "Mark as rented / out" option → sets `tracking_status = 'rented'` and keeps the book flagged out.
+- Status pills in the rentals action column:
+  - Green pill "Returned" (current) when returned.
+  - Red pill "Waiting for return" while active (delivered/rented/confirmed) with a **Mark returned** action inline.
+  - Show clear In / Out indicator per row (red dot = out with member, green = in).
+- Fix returned_at not reflecting: after `librarian_mark_returned` / `librarian_set_return`, refetch admin rentals query + invalidate book availability. Show the actual `returned_at` date in the row.
+- Librarian can edit the returned date (date picker → `librarian_set_return`).
 
-Rental workflow (librarian)
-- When status = `delivered`, action becomes **Mark Rented** (transitions to `rented` state — treated as an active checkout).
-- New action **Waiting for Return** (`awaiting_return`) — yellow chip.
-- **Return** action → row turns green, status becomes `returned`, `returned_at` set.
-- Librarian can **edit `returned_at`** inline on the row.
-- Librarian can **log a manual rental entry** (member + book + dates, no wallet charge).
-- Rent Now flow becomes **free** (`price_paid = 0`, no wallet debit) — server RPC `rent_book` updated.
-- Admin/library-admin rentals page: **grouped by month** (collapsible sections, newest first).
+## 2. "Log a rental" form
 
-Hide money + browse
-- Hide `price_paid`, `fine_amount`, `wallet_balance` UI on member and admin surfaces (columns, cards, badges). DB columns stay; just no rendering.
-- Left tab "Browse" gets a hide toggle stored in `localStorage` (per-user preference), togglable from a small gear in the sidebar.
-- Cover URL bug: fix `book #4012 AADUJEEVITHAM` — audit `BookCover` `cover_url` handling + verify the row's `cover_url` value is present and reachable.
+- Member field: autocomplete by **display name** (email hidden, shown as small subtitle).
+- Book field: search by title, **author**, and **shelf_code**.
+- Uses existing `librarian_log_rental`.
 
-### Turn 2 — Librarian dashboard polish
+## 3. User insights & reports
 
-- Prominent search bar; library name shrinks to a compact horizontal chip (responsive).
-- Prefix-priority search ranking: exact-prefix > word-start > substring; e.g. "aad" ranks "Aadujeevitham" above "Kaadu".
-- Suggestion click → navigate straight to book page (no intermediate search results).
-- Hide "Orig. Author" column in admin book tables.
-- Availability dot: small round indicator — green (available), red (rented/out).
-- Status setter dropdown: available / out_of_stock / rented (writes to `books.availability`).
-- Waitlist rows show reader `display_name` + email.
-- Suggestions list shows suggester's member details (name, email, active rentals count).
-- Suggestions form: publisher name input under existing publisher details.
+- New RPC `library_user_insights(_library_id)` returning per-user rental_count, favorite genre, review_count, diary read_count.
+- Admin → Users tab: filter/rentals-of-particular-user drill-in (click user → rental history modal).
+- Reports tab: add "Top readers" CSV/PDF export using the new RPC.
 
-### Turn 3 — New surfaces
+## 4. Library picker & switcher
 
-- **Reports tab** (admin + library admin): builders for Members, Books, Rentals, Memberships with sortable columns + filters (date range, library, status). CSV + PDF export.
-- **Add Member** flow for librarian: create/invite user, attach to library.
-- **Library picker on first screen** (onboarding) + retain top switcher.
-- Library data scoping: a library only sees its own data from the point a member first rents there (already enforced by `books.library_id` + `has_role_in_library` — verify).
-- **Total user data** aggregated view → Admin only (already gated by `admin_list_users`).
-- **Library profile page** (`/libraries/$slug`): library posts activities with photos; members can like + comment. New tables: `library_posts`, `library_post_likes`, `library_post_comments`.
+- Onboarding library picker already exists on `/`; ensure last selected library persists (localStorage key already there) and defaults to it on next visit.
+- Add library switcher entry point to the top location tab in `AppLayout` (mobile/desktop header) so users can change library from anywhere.
+- Rentals page: add search box (title/author).
+
+## 5. Suggestions
+
+- Add a dedicated **Publisher** input in the suggestions form, positioned below publisher details. Stored into suggestion note or new column.
+
+## 6. Admin books tab
+
+- Prominent full-width search input at top.
+- Library name chip: small, horizontal, responsive (truncate on mobile).
+- **Fix**: Safdar Hashmi library books not visible → verify admin queries filter by selected library correctly; ensure admin books query respects `library_id` from `useLibrary()` rather than a stale/default value. Fix genre_ml mislabels for Safdar's books (data patch).
+- **Fix**: Availability dropdown (available / out_of_stock / rented) not saving → wire `librarian_set_availability` correctly with mutation + toast; ensure select onChange fires.
+
+## 7. Per-library branding
+
+- Home top banner reads the currently selected library's name/name_ml — remove hardcoded "Cherukad Smaraka Vayanasala" copy so Safdar Hashmi shows its own name.
+- Distinct banner per library (library-specific title, ml name, location).
+
+## 8. Data scoping
+
+- Libraries only see rentals whose book belongs to them (already via `library_id` on books; audit `admin_list_users`, rentals queries, reports). New librarian-scoped rental fetcher.
+- Total-users KPI: show only to `admin` role (hide from librarians).
+
+## 9. Library profile page (`/libraries/$slug`)
+
+- Route already exists. Add:
+  - Header shows library-specific branding.
+  - Staff can post activity with title/body/image (already present).
+  - Public feed: readers see posts, can like + comment (already present).
+- Add a Link/entry point from home banner → library profile.
+- Sanity-check RLS on `library_posts`, `library_post_likes`, `library_post_comments` (public read, staff write, authed like/comment).
+
+## 10. Book cover URL fix
+
+- `BookCover.normalizeCoverUrl` already handles `/file/d/<id>` and `open?id=`. Extend to also handle:
+  - `drive.google.com/uc?export=view&id=<id>`
+  - Shared `usercontent.google.com` links
+  - Trim whitespace / trailing params.
+- Still fall back to text cover on img error.
 
 ## Technical notes
 
-Migration (turn 1):
-- `alter type rental_status add value 'rented'` and `'awaiting_return'` (or reuse `tracking_status` text — check current values).
-- `books.availability text default 'available'` with check-in enum ('available','out_of_stock','rented').
-- New RPC `librarian_log_rental(_user_id, _book_id, _rented_at, _due_at, _returned_at)` — staff-only, no wallet.
-- Update `rent_book`: `price := 0`, skip wallet debit + transaction_log wallet_debit row.
-- New RPC `librarian_set_return(_rental_id, _returned_at)` — staff-only edit of return date.
+- **Migrations**: new `librarian_mark_rented(_rental_id)` RPC, new `library_user_insights(_library_id)` RPC, small data patch for Safdar genre_ml.
+- **Frontend**: touches `src/routes/admin.tsx` (rentals table, books tab, log rental modal, reports), `src/routes/index.tsx` (banner), `src/components/AppLayout.tsx` (header switcher), `src/routes/profile.tsx` or new rentals search, `src/components/BookCover.tsx` (URL normalizer), `src/routes/libraries.$slug.tsx` (branding entry).
+- No wallet/price logic re-introduced — system remains fully free.
 
-Migration (turn 3):
-- `library_posts(library_id, author_id, body, image_url, created_at)` + likes + comments tables with proper GRANTs + RLS.
-
-UI locations:
-- Rentals table lives in `src/routes/admin.tsx` and `src/routes/tracking.tsx`.
-- Left tab hide → `src/components/AppLayout.tsx`.
-- Cover audit → `src/components/BookCover.tsx` + DB row for book 4012.
-
-## Out of scope
-
-- No design overhaul.
-- No SMS/email; notifications keep using existing `notifications` table.
-- No payment provider; "free" just means price=0.
-
----
-
-Reply **"go"** and I'll start Turn 1. If you want me to reorder or drop items, tell me which.
+Say **go** to implement.

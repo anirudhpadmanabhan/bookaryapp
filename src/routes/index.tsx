@@ -19,8 +19,8 @@ export const Route = createFileRoute("/")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Bookary — Cherukad Smaraka Vayanasala" },
-      { name: "description", content: "Browse 4,650+ Malayalam books from Cherukad Smaraka Vayanasala & Grandhalayam, Naduvil." },
+      { title: "Bookary — Library catalogue" },
+      { name: "description", content: "Browse Malayalam books available from your local reading library." },
     ],
   }),
   component: HomePage,
@@ -32,7 +32,7 @@ const PAGE_SIZE = 30;
 const ONBOARDING_KEY = "bookary.onboarding_done";
 
 function HomePage() {
-  const { libraries, selectedId, setSelectedId } = useLibrary();
+  const { libraries, selected, selectedId, setSelectedId } = useLibrary();
   const [showPicker, setShowPicker] = useState(false);
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -47,7 +47,7 @@ function HomePage() {
 
 
   const { data, isLoading } = useQuery({
-    queryKey: ["home-data"],
+    queryKey: ["home-data", selectedId],
     queryFn: () => fetchHomeData(HOME_LIMIT, 5),
     staleTime: 5 * 60_000,
   });
@@ -71,7 +71,7 @@ function HomePage() {
 
   // Server-paginated "All Published Books" — only fetches the current page.
   const { data: pageData, isLoading: pageLoading, isFetching: pageFetching } = useQuery({
-    queryKey: ["books-page", { page, sort, direction, pageSize: PAGE_SIZE }],
+    queryKey: ["books-page", { page, sort, direction, pageSize: PAGE_SIZE, libraryId: selectedId }],
     queryFn: () => fetchBooksPage({ page, pageSize: PAGE_SIZE, sort, direction }),
     staleTime: 5 * 60_000,
     placeholderData: keepPreviousData,
@@ -155,24 +155,37 @@ function HomePage() {
         </div>
       )}
 
-      {/* Hero */}
+      {/* Hero — dynamic per selected library */}
       <section className="glass-card relative mb-8 overflow-hidden rounded-3xl p-6 md:p-10">
         <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-primary/30 blur-3xl" />
         <div className="absolute -bottom-24 -left-10 h-64 w-64 rounded-full bg-accent/20 blur-3xl" />
         <div className="relative max-w-2xl">
           <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] uppercase tracking-wider text-white/80 backdrop-blur">
-            <Sparkles className="h-3 w-3" /> Cherukad Smaraka Vayanasala
+            <Sparkles className="h-3 w-3" /> {selected?.name ?? "Bookary"}
           </div>
           <h1 className="text-3xl font-bold leading-tight md:text-5xl">
-            <span className="font-mal text-accent">ചെറുകാട്</span> reading library — every book on every rack.
+            {selected?.name_ml ? (
+              <>
+                <span className="font-mal text-accent">{selected.name_ml}</span>
+                <span className="block text-xl font-semibold text-foreground/80 mt-2 md:text-2xl">{selected.name}</span>
+              </>
+            ) : (
+              <span>{selected?.name ?? "Reading library"}</span>
+            )}
           </h1>
           <p className="mt-4 text-base text-foreground/80 md:text-lg">
-            Uploaded catalogue: {total.toLocaleString()} books · {genres.length} genres · {writers.length} writers.
+            {selected?.location ? <span className="mr-2 text-muted-foreground">📍 {selected.location} ·</span> : null}
+            {total.toLocaleString()} books · {genres.length} genres · {writers.length} writers.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link to="/search" className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90">
               Browse the catalog <ArrowRight className="h-4 w-4" />
             </Link>
+            {selected?.slug && (
+              <Link to="/libraries/$slug" params={{ slug: selected.slug }} className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface/50 px-5 py-3 text-sm font-semibold hover:bg-surface">
+                <Building2 className="h-4 w-4" /> Library profile
+              </Link>
+            )}
             <Link to="/genres" className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface/50 px-5 py-3 text-sm font-semibold hover:bg-surface">
               <Library className="h-4 w-4" /> Explore genres
             </Link>

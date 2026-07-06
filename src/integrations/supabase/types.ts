@@ -918,6 +918,7 @@ export type Database = {
         }
         Returns: Json
       }
+      librarian_mark_rented: { Args: { _rental_id: string }; Returns: Json }
       librarian_mark_returned: { Args: { _rental_id: string }; Returns: Json }
       librarian_set_availability: {
         Args: { _availability: string; _book_id: string }
@@ -950,6 +951,15 @@ export type Database = {
         Returns: Json
       }
       set_my_phone: { Args: { _phone: string }; Returns: undefined }
+      staff_search_members: {
+        Args: { _limit?: number; _query: string }
+        Returns: {
+          display_name: string
+          email: string
+          phone: string
+          user_id: string
+        }[]
+      }
       staff_user_summary: { Args: { _user_id: string }; Returns: Json }
       staff_users_by_ids: {
         Args: { _ids: string[] }

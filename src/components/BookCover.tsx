@@ -10,11 +10,16 @@ import { cn } from "@/lib/utils";
  */
 function normalizeCoverUrl(url: string): string {
   try {
-    const m1 = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+    const clean = url.trim();
+    const m1 = clean.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
     if (m1) return `https://lh3.googleusercontent.com/d/${m1[1]}=w800`;
-    const m2 = url.match(/drive\.google\.com\/(?:open|uc)\?[^ ]*id=([a-zA-Z0-9_-]+)/);
+    const m2 = clean.match(/drive\.google\.com\/(?:open|uc)\?[^ ]*id=([a-zA-Z0-9_-]+)/);
     if (m2) return `https://lh3.googleusercontent.com/d/${m2[1]}=w800`;
-    return url;
+    const m3 = clean.match(/docs\.google\.com\/uc\?[^ ]*id=([a-zA-Z0-9_-]+)/);
+    if (m3) return `https://lh3.googleusercontent.com/d/${m3[1]}=w800`;
+    const m4 = clean.match(/drive\.usercontent\.google\.com\/download\?id=([a-zA-Z0-9_-]+)/);
+    if (m4) return `https://lh3.googleusercontent.com/d/${m4[1]}=w800`;
+    return clean;
   } catch {
     return url;
   }
