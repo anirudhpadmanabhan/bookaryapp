@@ -29,7 +29,22 @@ export const Route = createFileRoute("/")({
 const HOME_LIMIT = 60;
 const PAGE_SIZE = 30;
 
+const ONBOARDING_KEY = "bookary.onboarding_done";
+
 function HomePage() {
+  const { libraries, selectedId, setSelectedId } = useLibrary();
+  const [showPicker, setShowPicker] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const done = window.localStorage.getItem(ONBOARDING_KEY);
+    if (!done && libraries.length > 1) setShowPicker(true);
+  }, [libraries.length]);
+  const confirmLibrary = (id: string) => {
+    setSelectedId(id);
+    window.localStorage.setItem(ONBOARDING_KEY, "1");
+    setShowPicker(false);
+  };
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["home-data"],
