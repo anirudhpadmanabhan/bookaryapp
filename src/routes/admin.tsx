@@ -530,7 +530,7 @@ function SortableHeader({ label, k, sortKey, sortDir, setSort, className = "" }:
   );
 }
 
-function BooksTable({ books, editing, setEditing, sortKey, sortDir, setSort, libNameById }: { books: any[]; editing: string | null; setEditing: (id: string | null) => void; sortKey: BookSortKey; sortDir: "asc" | "desc"; setSort: (k: BookSortKey) => void; libNameById: Map<string, string> }) {
+function BooksTable({ books, editing, setEditing, sortKey, sortDir, setSort, libNameById, outIds }: { books: any[]; editing: string | null; setEditing: (id: string | null) => void; sortKey: BookSortKey; sortDir: "asc" | "desc"; setSort: (k: BookSortKey) => void; libNameById: Map<string, string>; outIds: Set<string> }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-border">
       <table className="w-full text-xs">
