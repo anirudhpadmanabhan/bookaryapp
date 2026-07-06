@@ -612,13 +612,16 @@ function EditableRow({ book, isEditing, onEdit, onClose, libName, isOut }: { boo
   );
 }
 
-function BooksGridAdmin({ books, setEditing }: { books: any[]; setEditing: (id: string) => void }) {
+function BooksGridAdmin({ books, setEditing, outIds }: { books: any[]; setEditing: (id: string) => void; outIds: Set<string> }) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-      {books.map((b) => (
+      {books.map((b) => {
+        const isOut = outIds.has(b.id);
+        return (
         <div key={b.id} className="glass-card flex flex-col gap-1.5 rounded-xl p-3">
           <div className="flex items-start justify-between gap-2">
-            <span className="rounded-md bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold text-primary">
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold text-primary">
+              <span title={isOut ? "Rented / unavailable" : "Available"} className={`inline-block h-1.5 w-1.5 rounded-full ${isOut ? "bg-rose-500" : "bg-emerald-500"}`} />
               {b.shelf_code ?? "—"}
             </span>
             <button
@@ -635,7 +638,7 @@ function BooksGridAdmin({ books, setEditing }: { books: any[]; setEditing: (id: 
           </Link>
           <div className="line-clamp-1 text-[11px] text-foreground/80">{b.author}</div>
           {b.author_ml && <div className="line-clamp-1 font-mal text-[11px] text-foreground/60">{b.author_ml}</div>}
-          {b.original_author && <div className="line-clamp-1 text-[10px] text-muted-foreground">orig. {b.original_author}</div>}
+
           <div className="line-clamp-1 text-[10px] uppercase tracking-wider text-muted-foreground/80">
             {b.genre}{b.genre_ml ? <span className="font-mal normal-case"> · {b.genre_ml}</span> : null}
           </div>
