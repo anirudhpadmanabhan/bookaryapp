@@ -2589,6 +2589,14 @@ function ReportsTab() {
     { header: "Total rentals", get: (u: any) => Number(u.total_rentals ?? 0) },
     { header: "Joined", get: (u: any) => new Date(u.created_at).toLocaleDateString() },
   ];
+  const topReaderCols = [
+    { header: "Reader", get: (u: any) => u.display_name ?? (u.email?.split("@")[0] ?? "") },
+    { header: "Email", get: (u: any) => u.email ?? "" },
+    { header: "Rentals", get: (u: any) => Number(u.rental_count ?? 0) },
+    { header: "Books read", get: (u: any) => Number(u.books_read ?? 0) },
+    { header: "Reviews", get: (u: any) => Number(u.reviews_count ?? 0) },
+    { header: "Favorite genre", get: (u: any) => u.favorite_genre ?? "" },
+  ];
 
   const Card = ({ title, count, onCsv, onPdf, extra }: { title: string; count: number; onCsv: () => void; onPdf: () => void; extra?: React.ReactNode }) => (
     <div className="glass-card rounded-2xl p-5">
