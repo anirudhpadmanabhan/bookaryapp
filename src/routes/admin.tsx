@@ -2195,9 +2195,9 @@ function AddMemberDialog({ onClose }: { onClose: () => void }) {
     setBusy(true);
     const { data, error } = await supabase.rpc("librarian_add_member", {
       _email: email.trim(),
-      _display_name: displayName.trim() || null,
-      _phone: phone.trim() || null,
-      _address: address.trim() || null,
+      _display_name: displayName.trim() || undefined,
+      _phone: phone.trim() || undefined,
+      _address: address.trim() || undefined,
     });
     setBusy(false);
     if (error) { toast.error(error.message); return; }
