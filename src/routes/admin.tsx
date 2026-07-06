@@ -684,6 +684,7 @@ function EditBookModal({ book, onClose }: { book: any; onClose: () => void }) {
   const [year, setYear] = useState(book.published_year != null ? String(book.published_year) : "");
   const [coverUrl, setCoverUrl] = useState(book.cover_url ?? "");
   const [description, setDescription] = useState(book.description ?? "");
+  const [availability, setAvailability] = useState<string>(book.availability ?? "available");
 
   const save = () => {
     update.mutate(
