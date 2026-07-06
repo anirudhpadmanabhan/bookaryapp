@@ -59,6 +59,7 @@ function AdminPage() {
   const isStaff = useIsStaff();
   const isAdmin = useIsAdmin();
   const [tab, setTab] = useState<Tab>("overview");
+  const [addMemberOpen, setAddMemberOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth", search: { redirect: pathname } });
@@ -110,7 +111,15 @@ function AdminPage() {
             Role: <span className="font-semibold text-accent">{roles.map((r) => r === "admin" ? "Admin" : r === "librarian" ? "Library Admin" : r).join(" · ") || "staff"}</span>
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => setAddMemberOpen(true)}
+          className="ml-auto inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+        >
+          <Users className="h-4 w-4" /> Add member
+        </button>
       </div>
+      {addMemberOpen && <AddMemberDialog onClose={() => setAddMemberOpen(false)} />}
 
       <div className="mb-5 flex flex-wrap gap-1.5 rounded-xl border border-border bg-surface/40 p-1.5">
         {tabs.filter((t) => !t.adminOnly || isAdmin).map((t) => {
@@ -2171,4 +2180,54 @@ function RealtimeStaffToasts({ enabled }: { enabled: boolean }) {
     return () => { supabase.removeChannel(ch); };
   }, [enabled, qc]);
   return null;
+}
+
+// ===== ADD MEMBER DIALOG =====
+function AddMemberDialog({ onClose }: { onClose: () => void }) {
+  const [email, setEmail] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    if (!email.trim()) return;
+    setBusy(true);
+    const { data, error } = await supabase.rpc("librarian_add_member", {
+      _email: email.trim(),
+      _display_name: displayName.trim() || undefined,
+      _phone: phone.trim() || undefined,
+      _address: address.trim() || undefined,
+    });
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    const r = data as any;
+    if (!r?.ok) { toast.error(r?.error ?? "Could not add member"); return; }
+    toast.success("Member added");
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4" onClick={onClose}>
+      <div className="glass-card w-full max-w-md rounded-2xl p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-bold">Add member</h3>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground cursor-pointer"><X className="h-4 w-4" /></button>
+        </div>
+        <p className="mb-3 text-xs text-muted-foreground">The person must sign in once with this email before you can attach them.</p>
+        <div className="space-y-3">
+          <input type="email" placeholder="Email *" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm" />
+          <input placeholder="Display name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm" />
+          <input placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm" />
+          <textarea placeholder="Address" value={address} onChange={(e) => setAddress(e.target.value)} rows={2} className="w-full rounded-lg border border-border bg-transparent px-3 py-2 text-sm" />
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button onClick={onClose} className="cursor-pointer rounded-lg px-4 py-2 text-sm text-muted-foreground hover:text-foreground">Cancel</button>
+          <button onClick={submit} disabled={busy || !email.trim()} className="cursor-pointer rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
+            {busy ? "Adding…" : "Add member"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
