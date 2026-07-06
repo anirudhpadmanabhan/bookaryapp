@@ -1434,6 +1434,24 @@ function SuggestionsTab() {
   const decide = useDecideSuggestion();
   const [viewingUser, setViewingUser] = useState<string | null>(null);
 
+  const userIds = Array.from(new Set((list as any[]).map((s) => s.user_id).filter(Boolean)));
+  const { data: readers = {} } = useQuery({
+    queryKey: ["suggestion-readers", userIds.sort().join(",")],
+    enabled: userIds.length > 0,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const [{ data: profs }, { data: rents }] = await Promise.all([
+        supabase.from("profiles").select("id, display_name").in("id", userIds),
+        supabase.from("rentals").select("user_id").in("user_id", userIds).is("returned_at", null),
+      ]);
+      const counts: Record<string, number> = {};
+      (rents ?? []).forEach((r: any) => { counts[r.user_id] = (counts[r.user_id] ?? 0) + 1; });
+      const map: Record<string, { name: string; active: number }> = {};
+      (profs ?? []).forEach((p: any) => { map[p.id] = { name: p.display_name ?? "Reader", active: counts[p.id] ?? 0 }; });
+      return map;
+    },
+  });
+
   if (isLoading) return <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-16 animate-pulse rounded-xl bg-surface/60" />)}</div>;
   if (list.length === 0) return <p className="glass-card rounded-2xl p-8 text-center text-sm text-muted-foreground">No suggestions yet.</p>;
 
