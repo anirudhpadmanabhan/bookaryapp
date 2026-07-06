@@ -1499,6 +1499,12 @@ function SuggestionsTab() {
           {s.decision_note && (
             <p className="mt-1 rounded-md bg-surface/60 px-2 py-1 text-xs text-muted-foreground">Librarian note: {s.decision_note}</p>
           )}
+          {(readers as any)[s.user_id] && (
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Reader: <span className="text-foreground/80">{(readers as any)[s.user_id].name}</span>
+              {" · "}{(readers as any)[s.user_id].active} active rental{(readers as any)[s.user_id].active === 1 ? "" : "s"}
+            </p>
+          )}
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <button onClick={() => setViewingUser(s.user_id)} className="cursor-pointer text-[11px] text-primary hover:underline">View reader →</button>
             {(s.status ?? "pending") === "pending" && (
