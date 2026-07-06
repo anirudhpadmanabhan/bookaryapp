@@ -1405,8 +1405,8 @@ function WaitlistTab() {
                     <li key={w.id} className="flex items-center justify-between gap-3 rounded-lg bg-surface/40 px-3 py-2 text-xs">
                       <div className="flex items-center gap-2.5">
                         <span className="grid h-6 w-6 place-items-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">{i + 1}</span>
-                        <button onClick={() => setViewingUser(w.user_id)} className="cursor-pointer text-primary hover:underline">
-                          Reader · joined {new Date(w.created_at).toLocaleDateString()}
+                        <button onClick={() => setViewingUser(w.user_id)} className="cursor-pointer text-left text-primary hover:underline">
+                          {profileMap[w.user_id]?.display_name ?? "Reader"} <span className="text-muted-foreground">· joined {new Date(w.created_at).toLocaleDateString()}</span>
                         </button>
                       </div>
                       <button
