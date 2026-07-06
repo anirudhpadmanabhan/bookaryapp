@@ -759,7 +759,7 @@ function AddBookModal({ onClose, defaultLibraryId }: { onClose: () => void; defa
   const [titleMl, setTitleMl] = useState("");
   const [author, setAuthor] = useState("");
   const [authorMl, setAuthorMl] = useState("");
-  const [originalAuthor, setOriginalAuthor] = useState("");
+  
   const [genre, setGenre] = useState("");
   const [genreMl, setGenreMl] = useState("");
   const [shelf, setShelf] = useState("");
