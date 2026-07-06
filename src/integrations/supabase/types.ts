@@ -163,6 +163,7 @@ export type Database = {
         Row: {
           author: string
           author_ml: string | null
+          availability: string
           cover_color: string
           cover_url: string | null
           created_at: string
@@ -187,6 +188,7 @@ export type Database = {
         Insert: {
           author: string
           author_ml?: string | null
+          availability?: string
           cover_color?: string
           cover_url?: string | null
           created_at?: string
@@ -211,6 +213,7 @@ export type Database = {
         Update: {
           author?: string
           author_ml?: string | null
+          availability?: string
           cover_color?: string
           cover_url?: string | null
           created_at?: string
@@ -300,6 +303,105 @@ export type Database = {
           slug?: string
         }
         Relationships: []
+      }
+      library_post_comments: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_post_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "library_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      library_post_likes: {
+        Row: {
+          created_at: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_post_likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "library_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      library_posts: {
+        Row: {
+          author_id: string
+          body: string | null
+          created_at: string
+          id: string
+          image_url: string | null
+          library_id: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          body?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          library_id: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          body?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          library_id?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_posts_library_id_fkey"
+            columns: ["library_id"]
+            isOneToOne: false
+            referencedRelation: "libraries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -793,11 +895,38 @@ export type Database = {
         }
         Returns: Json
       }
+      librarian_add_member: {
+        Args: {
+          _address?: string
+          _display_name?: string
+          _email: string
+          _phone?: string
+        }
+        Returns: Json
+      }
       librarian_decide_suggestion: {
         Args: { _decision: string; _id: string; _note?: string }
         Returns: Json
       }
+      librarian_log_rental: {
+        Args: {
+          _book_id: string
+          _due_at?: string
+          _rented_at?: string
+          _returned_at?: string
+          _user_id: string
+        }
+        Returns: Json
+      }
       librarian_mark_returned: { Args: { _rental_id: string }; Returns: Json }
+      librarian_set_availability: {
+        Args: { _availability: string; _book_id: string }
+        Returns: Json
+      }
+      librarian_set_return: {
+        Args: { _rental_id: string; _returned_at: string }
+        Returns: Json
+      }
       library_members: {
         Args: { _library_id: string }
         Returns: {
