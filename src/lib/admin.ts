@@ -272,7 +272,7 @@ export function useAllWaitlist() {
     queryFn: async () => {
       let q = supabase
         .from("waitlist")
-        .select("*, books!inner(id, title, author, library_id)")
+        .select("*, books!inner(id, title, author, library_id), profiles:user_id(display_name, email)")
         .order("created_at", { ascending: true })
         .limit(200);
       if (scope !== null) {
