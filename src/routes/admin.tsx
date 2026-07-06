@@ -686,7 +686,12 @@ function EditBookModal({ book, onClose }: { book: any; onClose: () => void }) {
   const [description, setDescription] = useState(book.description ?? "");
   const [availability, setAvailability] = useState<string>(book.availability ?? "available");
 
-  const save = () => {
+  const save = async () => {
+    // Update availability via staff RPC (writes books.availability with the check-in enum).
+    if (availability !== (book.availability ?? "available")) {
+      const { error } = await supabase.rpc("librarian_set_availability", { _book_id: book.id, _availability: availability });
+      if (error) { toast.error(error.message); return; }
+    }
     update.mutate(
       {
         id: book.id,
