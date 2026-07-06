@@ -1231,6 +1231,10 @@ function RentalsTab() {
         </div>
         <div className="flex gap-2">
           <button
+            onClick={() => setLogOpen(true)}
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90"
+          ><Plus className="h-3.5 w-3.5" /> Log rental</button>
+          <button
             onClick={() => exportCsv({ filename: `rentals-${Date.now()}.csv`, columns: exportColumns, rows: shown })}
             className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-surface/50 px-2.5 py-1.5 text-xs hover:bg-surface-elevated"
           ><FileDown className="h-3.5 w-3.5" /> CSV</button>
@@ -1240,6 +1244,8 @@ function RentalsTab() {
           ><FileText className="h-3.5 w-3.5" /> PDF</button>
         </div>
       </div>
+
+      {logOpen && <LogRentalDialog onClose={() => setLogOpen(false)} onCreated={() => { qc.invalidateQueries({ queryKey: ["admin-rentals"] }); qc.invalidateQueries({ queryKey: ["all-rentals"] }); }} />}
 
       {isLoading ? (
         <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-12 animate-pulse rounded-xl bg-surface/60" />)}</div>
