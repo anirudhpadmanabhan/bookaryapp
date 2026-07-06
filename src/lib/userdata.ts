@@ -223,7 +223,7 @@ export function useClaimReservation() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["rentals"] });
       qc.invalidateQueries({ queryKey: ["profile"] });
-      toast.success("Claimed — ₹10 charged, rental confirmed.");
+      toast.success("Claimed — rental confirmed.");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -606,8 +606,6 @@ export function useReadingInsights() {
   const topGenre = [...genreCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
   const topAuthor = [...authorCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
 
-  const totalSpent = (rentals as any[]).reduce((s, r) => s + Number(r.price_paid ?? 0), 0);
-
   return {
     streak,
     diaryCount: diary.length,
@@ -616,6 +614,5 @@ export function useReadingInsights() {
     activeRentals: (rentals as any[]).filter((r) => !r.returned_at).length,
     topGenre,
     topAuthor,
-    totalSpent,
   };
 }

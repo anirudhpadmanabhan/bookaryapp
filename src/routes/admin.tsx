@@ -1157,7 +1157,7 @@ function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; 
 }
 
 // ===== RENTALS =====
-type RentalSort = "rented_at" | "due_at" | "returned_at" | "member" | "book" | "price_paid" | "fine_amount" | "tracking_status";
+type RentalSort = "rented_at" | "due_at" | "returned_at" | "member" | "book" | "tracking_status";
 function RentalsTab() {
   const { data: rentals = [], isLoading } = useAllRentals();
   const update = useUpdateRentalStatus();

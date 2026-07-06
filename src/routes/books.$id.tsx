@@ -66,10 +66,6 @@ function BookPage() {
   const displayRating = avgRating ?? catalogRating(book);
   const enGenre = genreEnglish(book);
   const mlGenre = genreMalayalam(book);
-  // Flat ₹10 covers the first 20 days for every book. After 20 days the book's
-  // own rent_price applies as a late fee per cycle.
-  const rentPrice = 10;
-
   const requireSignIn = (msg: string) => {
     toast.error(msg);
     navigate({ to: "/auth", search: { redirect: pathname } });
@@ -292,15 +288,13 @@ function BookPage() {
       {/* Rent confirmation modal */}
       {showRent && user && profile && (
         <RentModal
-          price={rentPrice}
-          balance={Number(profile.wallet_balance)}
           defaultAddress={(profile as any).address ?? ""}
           defaultPhone={(profile as any).phone ?? ""}
           title={book.title}
           onClose={() => setShowRent(false)}
           onConfirm={(addr, phone) => {
             rent.mutate(
-              { bookId: book.id, price: rentPrice, address: addr, phone },
+              { bookId: book.id, address: addr, phone },
               {
                 onSuccess: () => {
                   setShowRent(false);
@@ -415,15 +409,14 @@ function useGeolocateAddress(setAddress: (a: string) => void) {
 }
 
 function RentModal({
-  price, balance, defaultAddress, defaultPhone, title, onClose, onConfirm, pending,
+  defaultAddress, defaultPhone, title, onClose, onConfirm, pending,
 }: {
-  price: number; balance: number; defaultAddress: string; defaultPhone: string; title: string;
+  defaultAddress: string; defaultPhone: string; title: string;
   onClose: () => void; onConfirm: (addr: string, phone: string) => void; pending: boolean;
 }) {
   const [address, setAddress] = useState(defaultAddress);
   const [phone, setPhone] = useState(defaultPhone);
   const { detect, busy } = useGeolocateAddress(setAddress);
-  const insufficient = balance < price;
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-2xl border border-border bg-popover p-6 shadow-2xl">
@@ -435,20 +428,9 @@ function RentModal({
           <button onClick={onClose} aria-label="Close" className="cursor-pointer text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
         </div>
 
-        <div className="mb-4 grid grid-cols-2 gap-3 text-sm">
-          <div className="rounded-xl bg-surface/60 p-3">
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Rental fee · 20 days</div>
-            <div className="text-lg font-bold">₹{price.toFixed(0)}</div>
-          </div>
-          <div className={`rounded-xl p-3 ${insufficient ? "bg-rose-500/15 text-rose-300" : "bg-emerald-500/10 text-emerald-300"}`}>
-            <div className="text-[10px] uppercase tracking-wider opacity-80">Wallet</div>
-            <div className="text-lg font-bold">₹{balance.toFixed(0)}</div>
-          </div>
-        </div>
-
         <div className="mb-4 grid grid-cols-3 gap-2 text-center text-[11px]">
           <div className="rounded-lg bg-primary/15 px-2 py-2 text-primary">1. Address</div>
-          <div className="rounded-lg bg-emerald-500/10 px-2 py-2 text-emerald-300">2. Wallet</div>
+          <div className="rounded-lg bg-emerald-500/10 px-2 py-2 text-emerald-300">2. Free rental</div>
           <div className="rounded-lg bg-accent/10 px-2 py-2 text-accent">3. Tracking</div>
         </div>
 
@@ -486,17 +468,17 @@ function RentModal({
         </div>
 
         <div className="mt-4 rounded-xl border border-border/60 bg-surface/40 px-3 py-2.5 text-xs text-muted-foreground">
-          Return window: <span className="font-medium text-foreground">20 days</span> at flat ₹10. After day 20 a <span className="font-medium text-rose-300">₹1/day late fine</span> is auto-deducted from your wallet on return.
+          Return window: <span className="font-medium text-foreground">20 days</span>. Staff can update due and return status from the admin panel.
         </div>
 
         <div className="mt-5 flex gap-2">
           <button onClick={onClose} className="flex-1 cursor-pointer rounded-xl border border-border px-4 py-2.5 text-sm hover:bg-surface-elevated">Cancel</button>
           <button
             onClick={() => onConfirm(address, phone)}
-            disabled={pending || insufficient || !address.trim()}
+            disabled={pending || !address.trim()}
             className="flex-1 cursor-pointer rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {insufficient ? "Top up wallet first" : pending ? "Confirming…" : `Confirm · ₹${price.toFixed(0)}`}
+            {pending ? "Confirming…" : "Confirm free rental"}
           </button>
         </div>
       </div>
@@ -523,7 +505,7 @@ function WaitlistModal({
           <button onClick={onClose} aria-label="Close" className="cursor-pointer text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
         </div>
         <p className="mb-3 rounded-xl bg-amber-500/10 px-3 py-2.5 text-xs text-amber-200">
-          When the current reader returns this book, you'll be automatically assigned a rental and the wallet will be charged.
+          When the current reader returns this book, you'll be automatically assigned a free rental.
         </p>
         <div className="mb-1 flex items-center justify-between">
           <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Delivery address</label>
