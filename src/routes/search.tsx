@@ -249,6 +249,12 @@ function SearchPage() {
               placeholder="Author (optional)"
               className="rounded-xl border border-border bg-background/50 px-4 py-2.5 text-sm outline-none focus:border-primary"
             />
+            <input
+              value={suggestPublisher}
+              onChange={(e) => setSuggestPublisher(e.target.value)}
+              placeholder="Publisher (optional)"
+              className="rounded-xl border border-border bg-background/50 px-4 py-2.5 text-sm outline-none focus:border-primary sm:col-span-2"
+            />
             <textarea
               value={suggestNote}
               onChange={(e) => setSuggestNote(e.target.value)}
