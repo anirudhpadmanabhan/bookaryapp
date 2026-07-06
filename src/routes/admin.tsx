@@ -1372,7 +1372,7 @@ function WaitlistTab() {
                       {r.books?.title ?? "Book"}
                     </Link>
                     <p className="text-xs text-muted-foreground">
-                      Offered {new Date(r.created_at).toLocaleString()} · {left !== null ? `${left}h left` : "no expiry"}
+                      Reader: <span className="font-medium text-foreground/80">{profileMap[r.user_id]?.display_name ?? "Unknown"}</span> · Offered {new Date(r.created_at).toLocaleString()} · {left !== null ? `${left}h left` : "no expiry"}
                     </p>
                     <button onClick={() => setViewingUser(r.user_id)} className="cursor-pointer text-[11px] text-primary hover:underline">View reader →</button>
                   </div>
