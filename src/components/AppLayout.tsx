@@ -2,7 +2,7 @@ import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   Home, Search, BookMarked, PenLine, Heart, UserRound,
   Library, NotebookPen, LogOut, Sparkles, Bell, X, Truck, Languages as LangIcon,
-  EyeOff, Eye,
+  EyeOff, Eye, Building2,
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo, type ReactNode } from "react";
 import { useSession } from "@/lib/auth";
@@ -14,6 +14,7 @@ import { useHideBrowse } from "@/lib/ui-prefs";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LibrarySwitcher } from "@/components/LibrarySwitcher";
+import { useLibrary } from "@/lib/library";
 import { fetchBooks, type Book } from "@/lib/books";
 
 const navMain = [
@@ -58,6 +59,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { data: notifs = [] } = useNotifications();
   const markRead = useMarkNotificationsRead();
   const isStaff = useIsStaff();
+  const { selected } = useLibrary();
   const [bellOpen, setBellOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [hideBrowse, setHideBrowse] = useHideBrowse();
@@ -390,6 +392,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
                       <Link to="/loved" onClick={() => setMenuOpen(false)} className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-surface-elevated">
                         <Heart className="h-4 w-4" /> Loved books
                       </Link>
+                      {selected?.slug && (
+                        <Link to="/libraries/$slug" params={{ slug: selected.slug }} onClick={() => setMenuOpen(false)} className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-surface-elevated">
+                          <Building2 className="h-4 w-4" /> Library profile
+                        </Link>
+                      )}
                       {isStaff && (
                         <Link
                           to="/admin"
@@ -452,6 +459,18 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 </Link>
               );
             })}
+            {!hideBrowse && selected?.slug && (
+              <Link
+                to="/libraries/$slug"
+                params={{ slug: selected.slug }}
+                className={`flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${
+                  pathname.startsWith("/libraries/") ? "bg-primary/15 text-primary" : "text-foreground/80 hover:bg-surface-elevated hover:text-foreground"
+                }`}
+              >
+                <Building2 className="h-4 w-4" />
+                Library profile
+              </Link>
+            )}
             <div className="px-3 pb-1 pt-3 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Your shelf</div>
             {navMine.map((n) => {
               const active = pathname === n.to;

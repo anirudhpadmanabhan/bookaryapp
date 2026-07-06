@@ -62,6 +62,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     qc.invalidateQueries({ queryKey: ["home-data"] });
     qc.invalidateQueries({ queryKey: ["books-page"] });
     qc.invalidateQueries({ queryKey: ["new-arrivals"] });
+    qc.invalidateQueries({ queryKey: ["genre-facets"] });
   };
 
   const selected = libraries.find((l) => l.id === selectedId) ?? null;

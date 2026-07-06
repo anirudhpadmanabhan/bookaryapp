@@ -24,7 +24,7 @@ import {
   Shield, Library as LibIcon, Package, Clock, Lightbulb,
   Search as SearchIcon, Trash2, CheckCircle2, Plus, Pencil, X, Save,
   Upload, Grid3x3, List as ListIcon, Building2, Users, Mail, Star, Activity,
-  FileText, FileDown, ArrowUpDown, ArrowUp, ArrowDown, LayoutDashboard, Megaphone,
+  FileText, FileDown, ArrowUpDown, ArrowUp, ArrowDown, LayoutDashboard, Megaphone, ExternalLink,
 } from "lucide-react";
 import { exportCsv, exportPdf } from "@/lib/pdf-export";
 import { AdsTab } from "@/components/admin/AdsTab";
@@ -291,6 +291,7 @@ function BooksTab() {
   const { data: books = [], isLoading } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
   const { data: libs = [] } = useAdminLibraries();
   const { data: allRentals = [] } = useAllRentals();
+  const { selected } = useLibrary();
   const scope = useMyLibraryScope();
   const [q, setQ] = useState("");
   const [view, setView] = useState<BooksView>("table");
@@ -499,6 +500,16 @@ function BooksTab() {
         >
           <Plus className="h-4 w-4" /> Add book
         </button>
+        {selected?.slug && (
+          <Link
+            to="/libraries/$slug"
+            params={{ slug: selected.slug }}
+            className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface/50 px-3 py-2.5 text-sm font-semibold hover:bg-surface-elevated"
+            title="Open photo and activity posts for this library"
+          >
+            <Building2 className="h-4 w-4" /> Library profile <ExternalLink className="h-3.5 w-3.5" />
+          </Link>
+        )}
       </div>
 
       {isLoading ? (
@@ -563,6 +574,7 @@ function BooksTable({ books, editing, setEditing, sortKey, sortDir, setSort, lib
             <SortableHeader label="Rating" k="rating" sortKey={sortKey} sortDir={sortDir} setSort={setSort} className="w-16" />
             <SortableHeader label="Publisher" k="publisher" sortKey={sortKey} sortDir={sortDir} setSort={setSort} />
             <th className="px-2 py-2.5 text-left">Library</th>
+            <th className="px-2 py-2.5 text-left">Stock</th>
             <th className="px-2 py-2.5 w-20"></th>
           </tr>
         </thead>
@@ -614,6 +626,7 @@ function EditableRow({ book, isEditing, onEdit, onClose, libName, isOut }: { boo
       </td>
       <td className="px-2 py-2 text-muted-foreground">{book.publisher ?? "—"}</td>
       <td className="px-2 py-2 text-[11px] text-muted-foreground/80">{libName ?? "—"}</td>
+      <td className="px-2 py-2"><AvailabilitySelect book={book} isOut={!!isOut} /></td>
       <td className="px-2 py-2 text-right">
         <button onClick={onEdit} className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border px-2 py-1 text-xs hover:bg-surface-elevated">
           <Pencil className="h-3 w-3" /> Edit
@@ -653,6 +666,7 @@ function BooksGridAdmin({ books, setEditing, outIds }: { books: any[]; setEditin
           <div className="line-clamp-1 text-[10px] uppercase tracking-wider text-muted-foreground/80">
             {b.genre}{b.genre_ml ? <span className="font-mal normal-case"> · {b.genre_ml}</span> : null}
           </div>
+          <AvailabilitySelect book={b} isOut={isOut} compact />
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
             {b.language && <span>{b.language}</span>}
             {b.published_year && <span>· {b.published_year}</span>}
@@ -664,6 +678,39 @@ function BooksGridAdmin({ books, setEditing, outIds }: { books: any[]; setEditin
         );
       })}
     </div>
+  );
+}
+
+function AvailabilitySelect({ book, isOut, compact = false }: { book: any; isOut?: boolean; compact?: boolean }) {
+  const qc = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  const value = book.availability ?? (isOut ? "rented" : "available");
+
+  const change = async (next: string) => {
+    if (next === value) return;
+    setBusy(true);
+    const { error } = await supabase.rpc("librarian_set_availability", { _book_id: book.id, _availability: next });
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Stock set to ${next.replace(/_/g, " ")}`);
+    qc.invalidateQueries({ queryKey: ["books"] });
+    qc.invalidateQueries({ queryKey: ["home-data"] });
+    qc.invalidateQueries({ queryKey: ["books-page"] });
+    qc.invalidateQueries({ queryKey: ["book", book.id] });
+  };
+
+  return (
+    <select
+      value={value}
+      disabled={busy}
+      onChange={(e) => change(e.target.value)}
+      className={`cursor-pointer rounded-md border border-border bg-surface px-1.5 py-1 text-[11px] disabled:opacity-60 ${compact ? "w-full" : "min-w-28"}`}
+      title="Change stock status"
+    >
+      <option value="available">Available</option>
+      <option value="out_of_stock">Out of stock</option>
+      <option value="rented">Rented</option>
+    </select>
   );
 }
 

@@ -55,7 +55,7 @@ function HomePage() {
   const writers = data?.writers ?? [];
   const languages = data?.languages ?? [];
   const { data: genreData } = useQuery({
-    queryKey: ["genre-facets"],
+    queryKey: ["genre-facets", selectedId],
     queryFn: fetchGenreFacets,
     staleTime: 5 * 60_000,
   });
