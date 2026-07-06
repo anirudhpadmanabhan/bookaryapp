@@ -685,7 +685,7 @@ function EditBookModal({ book, onClose }: { book: any; onClose: () => void }) {
           title_ml: titleMl.trim() || null,
           author: author.trim() || book.author,
           author_ml: authorMl.trim() || null,
-          original_author: originalAuthor.trim() || null,
+          original_author: null,
           genre: genre.trim() || book.genre,
           genre_ml: genreMl.trim() || null,
           shelf_code: shelf.trim() || null,
