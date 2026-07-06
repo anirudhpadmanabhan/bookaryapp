@@ -651,7 +651,8 @@ function BooksGridAdmin({ books, setEditing, outIds }: { books: any[]; setEditin
           </div>
           {b.publisher && <div className="line-clamp-1 text-[10px] text-muted-foreground/70">{b.publisher}</div>}
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
