@@ -71,7 +71,7 @@ function HomePage() {
 
   // Server-paginated "All Published Books" — only fetches the current page.
   const { data: pageData, isLoading: pageLoading, isFetching: pageFetching } = useQuery({
-    queryKey: ["books-page", { page, sort, direction, pageSize: PAGE_SIZE }],
+    queryKey: ["books-page", { page, sort, direction, pageSize: PAGE_SIZE, libraryId: selectedId }],
     queryFn: () => fetchBooksPage({ page, pageSize: PAGE_SIZE, sort, direction }),
     staleTime: 5 * 60_000,
     placeholderData: keepPreviousData,
