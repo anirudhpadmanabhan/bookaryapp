@@ -19,8 +19,8 @@ export const Route = createFileRoute("/")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Bookary — Cherukad Smaraka Vayanasala" },
-      { name: "description", content: "Browse 4,650+ Malayalam books from Cherukad Smaraka Vayanasala & Grandhalayam, Naduvil." },
+      { title: "Bookary — Library catalogue" },
+      { name: "description", content: "Browse Malayalam books available from your local reading library." },
     ],
   }),
   component: HomePage,
