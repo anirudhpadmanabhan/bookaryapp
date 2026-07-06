@@ -2287,7 +2287,6 @@ function ActivityLogTab() {
                 <th className="px-3 py-2.5 text-left">Action</th>
                 <th className="px-3 py-2.5 text-left">User</th>
                 <th className="px-3 py-2.5 text-left">Book</th>
-                <th className="px-3 py-2.5 text-left">Amount</th>
                 <th className="px-3 py-2.5 text-left">Details</th>
               </tr>
             </thead>
@@ -2295,7 +2294,6 @@ function ActivityLogTab() {
               {shown.map((row) => {
                 const style = ACTION_STYLE[row.action] ?? { label: row.action, cls: "bg-surface text-muted-foreground" };
                 const dt = new Date(row.created_at);
-                const amt = amount(row);
                 return (
                   <tr key={row.id} className="border-t border-border/40 hover:bg-surface/40">
                     <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
@@ -2310,7 +2308,6 @@ function ActivityLogTab() {
                         <span className="text-muted-foreground">—</span>
                       )}
                     </td>
-                    <td className={`px-3 py-2 text-xs font-semibold ${amt.startsWith("-") ? "text-rose-300" : "text-foreground/80"}`}>{amt || <span className="text-muted-foreground">—</span>}</td>
                     <td className="px-3 py-2 text-[11px] text-muted-foreground">
                       {row.metadata && Object.keys(row.metadata).length > 0
                         ? Object.entries(row.metadata).filter(([k]) => k !== "fine" && k !== "price_paid").map(([k, v]) => `${k}: ${String(v)}`).join(" · ")

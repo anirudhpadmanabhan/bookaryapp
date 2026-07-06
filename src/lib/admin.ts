@@ -218,18 +218,14 @@ export function useMarkReturned() {
     mutationFn: async (id: string) => {
       const { data, error } = await supabase.rpc("librarian_mark_returned" as any, { _rental_id: id });
       if (error) throw error;
-      return data as { ok: boolean; fine?: number; days_over?: number; error?: string };
+      return data as { ok: boolean; error?: string };
     },
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["admin-rentals"] });
       qc.invalidateQueries({ queryKey: ["rentals"] });
       qc.invalidateQueries({ queryKey: ["admin-waitlist"] });
       qc.invalidateQueries({ queryKey: ["admin-users"] });
-      if (res?.fine && res.fine > 0) {
-        toast.success(`Returned · ₹${res.fine} fine charged (${res.days_over}d late)`);
-      } else {
-        toast.success("Marked returned — next waitlist reader auto-assigned");
-      }
+      toast.success("Marked returned — next waitlist reader auto-assigned");
     },
     onError: (e: Error) => toast.error(e.message),
   });

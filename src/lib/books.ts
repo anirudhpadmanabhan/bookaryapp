@@ -39,7 +39,7 @@ export function colorAt(index: number): string {
   return COVER_PALETTE[(index * 5) % COVER_PALETTE.length];
 }
 
-// Price options removed per product decision (flat ₹10 / 20 days).
+// Rentals are free; the legacy rent_price field remains only for old rows/import compatibility.
 export type BookSort = "newest" | "title" | "rating" | "genre";
 export type SortDirection = "asc" | "desc";
 

@@ -126,7 +126,7 @@ export function useRentBook() {
   const qc = useQueryClient();
   const { user } = useSession();
   return useMutation({
-    mutationFn: async ({ bookId, address, phone }: { bookId: string; price?: number; address?: string; phone?: string }) => {
+    mutationFn: async ({ bookId, address, phone }: { bookId: string; address?: string; phone?: string }) => {
       if (!user) throw new Error("Sign in to rent");
       const { error } = await supabase.rpc("rent_book" as any, {
         _book_id: bookId,
@@ -511,23 +511,6 @@ export function useDeleteReview() {
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["reviews", vars.bookId] });
       toast.success("Review removed");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-}
-
-export function useTopUpWallet() {
-  const qc = useQueryClient();
-  const { user } = useSession();
-  return useMutation({
-    mutationFn: async (amount: number) => {
-      if (!user) throw new Error("Sign in");
-      const { error } = await supabase.rpc("top_up_wallet" as any, { _amount: amount });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["profile"] });
-      toast.success("Wallet topped up");
     },
     onError: (e: Error) => toast.error(e.message),
   });
