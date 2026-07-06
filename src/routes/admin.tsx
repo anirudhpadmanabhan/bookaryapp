@@ -178,7 +178,6 @@ function OverviewTab() {
       const returned = libRentals.filter((r) => r.returned_at);
       const overdue = active.filter((r) => r.due_at && new Date(r.due_at) < new Date());
       const wait = (waitlist as any[]).filter((w) => bookLib.get(w.book_id) === lib.id);
-      const revenue = libRentals.reduce((s, r) => s + Number(r.price_paid || 0), 0);
       return {
         id: lib.id,
         name: lib.name,
@@ -187,25 +186,23 @@ function OverviewTab() {
         overdue: overdue.length,
         returned: returned.length,
         waitlist: wait.length,
-        revenue,
       };
     }).filter((r) => r.books || r.active || r.returned || r.waitlist);
   }, [books, rentals, waitlist, libs]);
 
   const totals = useMemo(() => rows.reduce((a, r) => ({
     books: a.books + r.books, active: a.active + r.active, overdue: a.overdue + r.overdue,
-    returned: a.returned + r.returned, waitlist: a.waitlist + r.waitlist, revenue: a.revenue + r.revenue,
-  }), { books: 0, active: 0, overdue: 0, returned: 0, waitlist: 0, revenue: 0 }), [rows]);
+    returned: a.returned + r.returned, waitlist: a.waitlist + r.waitlist,
+  }), { books: 0, active: 0, overdue: 0, returned: 0, waitlist: 0 }), [rows]);
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <Stat label="Books" value={totals.books} />
         <Stat label="Active rentals" value={totals.active} />
         <Stat label="Overdue" value={totals.overdue} />
         <Stat label="Returned" value={totals.returned} />
         <Stat label="Waitlisted" value={totals.waitlist} />
-        <Stat label="Revenue (₹)" value={totals.revenue} />
       </div>
 
       <div>
@@ -227,7 +224,6 @@ function OverviewTab() {
                     <Mini label="Overdue" value={r.overdue} tone="rose" />
                     <Mini label="Returned" value={r.returned} />
                     <Mini label="Waitlist" value={r.waitlist} tone="amber" />
-                    <Mini label="₹" value={r.revenue} />
                   </div>
                 </div>
               ))}
@@ -243,7 +239,6 @@ function OverviewTab() {
                     <th className="px-3 py-2.5 text-right">Overdue</th>
                     <th className="px-3 py-2.5 text-right">Returned</th>
                     <th className="px-3 py-2.5 text-right">Waitlist</th>
-                    <th className="px-3 py-2.5 text-right">Revenue (₹)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -261,7 +256,6 @@ function OverviewTab() {
                       <td className="px-3 py-2.5 text-right">
                         {r.waitlist > 0 ? <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-300">{r.waitlist}</span> : <span className="text-muted-foreground">0</span>}
                       </td>
-                      <td className="px-3 py-2.5 text-right font-medium">{r.revenue.toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -290,7 +284,7 @@ type BooksView = "grid" | "table";
 
 type BookSortKey =
   | "shelf_code" | "title" | "title_ml" | "author" | "author_ml" | "original_author"
-  | "genre" | "genre_ml" | "language" | "publisher" | "rent_price" | "rating"
+  | "genre" | "genre_ml" | "language" | "publisher" | "rating"
   | "pages" | "published_year" | "created_at";
 
 function BooksTab() {
@@ -367,7 +361,7 @@ function BooksTab() {
     }
 
     const dir = sortDir === "asc" ? 1 : -1;
-    const numericKeys: BookSortKey[] = ["rent_price", "rating", "pages", "published_year"];
+    const numericKeys: BookSortKey[] = ["rating", "pages", "published_year"];
     pool = [...pool].sort((a, b) => {
       if (sortKey === "shelf_code") return rackCompare(a.shelf_code, b.shelf_code) * dir;
       if (sortKey === "created_at") {
@@ -406,7 +400,6 @@ function BooksTab() {
     { header: "Publisher", get: (b: any) => b.publisher ?? "" },
     { header: "Year", get: (b: any) => b.published_year ?? "" },
     { header: "Pages", get: (b: any) => b.pages ?? "" },
-    { header: "Price", get: (b: any) => Number(b.rent_price ?? 0) },
     { header: "Rating", get: (b: any) => Number(displayRating(b).toFixed(2)) },
     { header: "Library", get: (b: any) => (b.library_id ? libNameById.get(b.library_id) ?? "" : "") },
   ];
@@ -454,8 +447,6 @@ function BooksTab() {
           <option value="genre:desc">Genre Z→A</option>
           <option value="language:asc">Language A→Z</option>
           <option value="publisher:asc">Publisher A→Z</option>
-          <option value="rent_price:desc">Price ↓</option>
-          <option value="rent_price:asc">Price ↑</option>
           <option value="rating:desc">Rating ↓</option>
           <option value="published_year:desc">Year ↓</option>
           <option value="pages:desc">Pages ↓</option>
@@ -567,7 +558,6 @@ function BooksTable({ books, editing, setEditing, sortKey, sortDir, setSort, lib
             <SortableHeader label="Genre" k="genre" sortKey={sortKey} sortDir={sortDir} setSort={setSort} />
             <SortableHeader label="Genre (ML)" k="genre_ml" sortKey={sortKey} sortDir={sortDir} setSort={setSort} />
             <SortableHeader label="Lang" k="language" sortKey={sortKey} sortDir={sortDir} setSort={setSort} className="w-20" />
-            <SortableHeader label="Rs." k="rent_price" sortKey={sortKey} sortDir={sortDir} setSort={setSort} className="w-16" />
             <SortableHeader label="Year" k="published_year" sortKey={sortKey} sortDir={sortDir} setSort={setSort} className="w-16" />
             <SortableHeader label="Pages" k="pages" sortKey={sortKey} sortDir={sortDir} setSort={setSort} className="w-16" />
             <SortableHeader label="Rating" k="rating" sortKey={sortKey} sortDir={sortDir} setSort={setSort} className="w-16" />
@@ -614,7 +604,6 @@ function EditableRow({ book, isEditing, onEdit, onClose, libName, isOut }: { boo
       <td className="px-2 py-2 text-muted-foreground">{book.genre}</td>
       <td className="px-2 py-2 font-mal text-muted-foreground">{book.genre_ml ?? "—"}</td>
       <td className="px-2 py-2 text-muted-foreground">{book.language ?? "—"}</td>
-      <td className="px-2 py-2">₹{Number(book.rent_price ?? 10).toFixed(0)}</td>
       <td className="px-2 py-2 text-muted-foreground">{book.published_year ?? "—"}</td>
       <td className="px-2 py-2 text-muted-foreground">{book.pages ?? "—"}</td>
       <td className="px-2 py-2">
@@ -665,8 +654,7 @@ function BooksGridAdmin({ books, setEditing, outIds }: { books: any[]; setEditin
             {b.genre}{b.genre_ml ? <span className="font-mal normal-case"> · {b.genre_ml}</span> : null}
           </div>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground">
-            <span>₹{Number(b.rent_price ?? 10).toFixed(0)}</span>
-            {b.language && <span>· {b.language}</span>}
+            {b.language && <span>{b.language}</span>}
             {b.published_year && <span>· {b.published_year}</span>}
             {b.pages && <span>· {b.pages}p</span>}
             <span className="inline-flex items-center gap-0.5">· <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />{displayRating(b).toFixed(1)}</span>
@@ -692,7 +680,6 @@ function EditBookModal({ book, onClose }: { book: any; onClose: () => void }) {
   const [shelf, setShelf] = useState(book.shelf_code ?? "");
   const [publisher, setPublisher] = useState(book.publisher ?? "");
   const [language, setLanguage] = useState(book.language ?? "");
-  const [rentPrice, setRentPrice] = useState(String(book.rent_price ?? 10));
   const [pages, setPages] = useState(book.pages != null ? String(book.pages) : "");
   const [year, setYear] = useState(book.published_year != null ? String(book.published_year) : "");
   const [coverUrl, setCoverUrl] = useState(book.cover_url ?? "");
@@ -719,7 +706,6 @@ function EditBookModal({ book, onClose }: { book: any; onClose: () => void }) {
           shelf_code: shelf.trim() || null,
           publisher: publisher.trim() || null,
           language: language.trim() || null,
-          rent_price: Number(rentPrice) > 0 ? Number(rentPrice) : Number(book.rent_price ?? 10),
           pages: pages.trim() ? Number(pages) : null,
           published_year: year.trim() ? Number(year) : null,
           cover_url: coverUrl.trim() || null,
@@ -741,7 +727,6 @@ function EditBookModal({ book, onClose }: { book: any; onClose: () => void }) {
         </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <label className="text-xs"><span className="mb-1 block text-muted-foreground">Rack #</span><input value={shelf} onChange={(e) => setShelf(e.target.value)} className={fld} /></label>
-          <label className="text-xs"><span className="mb-1 block text-muted-foreground">Price (₹)</span><input type="number" value={rentPrice} onChange={(e) => setRentPrice(e.target.value)} className={fld} /></label>
           <label className="text-xs"><span className="mb-1 block text-muted-foreground">Title (English)</span><input value={title} onChange={(e) => setTitle(e.target.value)} className={fld} /></label>
           <label className="text-xs"><span className="mb-1 block text-muted-foreground">Title (Malayalam)</span><input value={titleMl} onChange={(e) => setTitleMl(e.target.value)} className={`${fld} font-mal`} /></label>
           <label className="text-xs"><span className="mb-1 block text-muted-foreground">Author (English)</span><input value={author} onChange={(e) => setAuthor(e.target.value)} className={fld} /></label>
@@ -801,7 +786,6 @@ function AddBookModal({ onClose, defaultLibraryId }: { onClose: () => void; defa
   const [shelf, setShelf] = useState("");
   const [publisher, setPublisher] = useState("");
   const [language, setLanguage] = useState("");
-  const [rentPrice, setRentPrice] = useState("10");
   const [pages, setPages] = useState("");
   const [year, setYear] = useState("");
   const [coverUrl, setCoverUrl] = useState("");
@@ -826,7 +810,6 @@ function AddBookModal({ onClose, defaultLibraryId }: { onClose: () => void; defa
             </select>
           </label>
           <label className="text-xs"><span className="mb-1 block text-muted-foreground">Rack #</span><input value={shelf} onChange={(e) => setShelf(e.target.value)} className={fld} /></label>
-          <label className="text-xs"><span className="mb-1 block text-muted-foreground">Price (₹)</span><input type="number" value={rentPrice} onChange={(e) => setRentPrice(e.target.value)} className={fld} /></label>
           <label className="text-xs"><span className="mb-1 block text-muted-foreground">Title (English)</span><input value={title} onChange={(e) => setTitle(e.target.value)} className={fld} /></label>
           <label className="text-xs"><span className="mb-1 block text-muted-foreground">Title (Malayalam)</span><input value={titleMl} onChange={(e) => setTitleMl(e.target.value)} className={`${fld} font-mal`} /></label>
           <label className="text-xs"><span className="mb-1 block text-muted-foreground">Author (English)</span><input value={author} onChange={(e) => setAuthor(e.target.value)} className={fld} /></label>
@@ -850,7 +833,7 @@ function AddBookModal({ onClose, defaultLibraryId }: { onClose: () => void; defa
                 title, author, genre,
                 title_ml: titleMl, author_ml: authorMl, genre_ml: genreMl,
                 shelf_code: shelf, publisher, library_id: libraryId || undefined,
-                language, rent_price: Number(rentPrice) > 0 ? Number(rentPrice) : 10,
+                language,
                 pages: pages.trim() ? Number(pages) : null,
                 published_year: year.trim() ? Number(year) : null,
                 cover_url: coverUrl, description,
@@ -900,8 +883,6 @@ const FIELD_MAP: Record<string, keyof BookImportRow> = {
   code: "shelf_code",
   // Publisher
   publisher: "publisher", publication: "publisher", publishers: "publisher",
-  // Price
-  price: "rent_price", rentprice: "rent_price", rent: "rent_price",
 };
 
 function mapRow(raw: Record<string, any>, mapping: Record<string, keyof BookImportRow | "">): BookImportRow | null {
@@ -926,7 +907,6 @@ const IMPORT_FIELDS: { value: keyof BookImportRow | ""; label: string }[] = [
   { value: "genre", label: "Genre" },
   { value: "shelf_code", label: "Rack / Shelf code" },
   { value: "publisher", label: "Publisher" },
-  { value: "rent_price", label: "Rent price" },
 ];
 
 function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; defaultLibraryId?: string }) {
@@ -1055,7 +1035,7 @@ function ImportBooksModal({ onClose, defaultLibraryId }: { onClose: () => void; 
             Choose file
           </button>
           <p className="mt-3 text-[11px] text-muted-foreground">
-            Recognized columns: <code>title, title_ml, author, author_ml, genre, shelf_code, publisher, rent_price</code>.
+            Recognized columns: <code>title, title_ml, author, author_ml, genre, shelf_code, publisher</code>.
             Synonyms like <em>Rack No, Writer, Category</em> also work.
           </p>
         </div>
@@ -1187,8 +1167,6 @@ function RentalsTab() {
     const get = (r: any): any => {
       if (sortKey === "member") return r.member_name ?? "";
       if (sortKey === "book") return r.books?.title ?? "";
-      if (sortKey === "fine_amount") return Number(r.fine_amount ?? 0);
-      if (sortKey === "price_paid") return Number(r.price_paid ?? 0);
       if (sortKey === "tracking_status") return r.tracking_status ?? "";
       const v = r[sortKey]; return v ? new Date(v).getTime() : 0;
     };
@@ -1208,8 +1186,6 @@ function RentalsTab() {
     { header: "Rented", get: (r: any) => new Date(r.rented_at).toLocaleString() },
     { header: "Due", get: (r: any) => new Date(r.due_at).toLocaleString() },
     { header: "Returned", get: (r: any) => r.returned_at ? new Date(r.returned_at).toLocaleString() : "" },
-    { header: "Price ₹", get: (r: any) => Number(r.price_paid ?? 0).toFixed(0) },
-    { header: "Fine ₹", get: (r: any) => Number(r.fine_amount ?? 0).toFixed(0) },
     { header: "Status", get: (r: any) => r.tracking_status ?? "" },
   ];
 
@@ -1271,7 +1247,7 @@ function RentalsTab() {
           setViewingUser={setViewingUser}
           setReturnDate={setReturnDate}
           onStatus={(id: string, status: string) => update.mutate({ id, status })}
-          onReturn={(r: any) => { if (confirm(`Mark "${r.books?.title}" as returned? Late fine (₹1/day after 20d) is auto-deducted.`)) markReturned.mutate(r.id); }}
+          onReturn={(r: any) => { if (confirm(`Mark "${r.books?.title}" as returned?`)) markReturned.mutate(r.id); }}
           SortableTh={SortableTh}
         />
       )}
@@ -2086,9 +2062,6 @@ function UserDashboardModal({ userId, onClose }: { userId: string; onClose: () =
                 {data.profile?.phone && <div className="text-xs text-muted-foreground">📞 {data.profile.phone}</div>}
                 {data.profile?.address && <div className="text-xs text-muted-foreground">📍 {data.profile.address}</div>}
               </div>
-              <div className="rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs text-emerald-300">
-                Wallet ₹{Number(data.profile?.wallet_balance ?? 0).toFixed(0)}
-              </div>
             </div>
 
             <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -2192,7 +2165,6 @@ function UsersTab() {
               <th className="px-3 py-2.5 text-left">Member</th>
               <th className="px-3 py-2.5 text-left">Email</th>
               <th className="px-3 py-2.5 text-left">Roles</th>
-              <th className="px-3 py-2.5 text-left">Wallet</th>
               <th className="px-3 py-2.5 text-left">Active</th>
               <th className="px-3 py-2.5 text-left">Total rentals</th>
               <th className="px-3 py-2.5 text-left">Joined</th>
@@ -2215,7 +2187,6 @@ function UsersTab() {
                     )}
                   </div>
                 </td>
-                <td className="px-3 py-2 text-xs">₹{Number(u.wallet_balance).toFixed(0)}</td>
                 <td className="px-3 py-2 text-xs">
                   {Number(u.active_rentals) > 0 ? (
                     <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-300">{u.active_rentals}</span>
@@ -2249,7 +2220,7 @@ const ACTION_STYLE: Record<string, { label: string; cls: string }> = {
   rental_created: { label: "Rented", cls: "bg-emerald-500/15 text-emerald-300" },
   rental_returned: { label: "Returned", cls: "bg-blue-500/15 text-blue-300" },
   rental_status: { label: "Tracking", cls: "bg-slate-500/15 text-slate-300" },
-  fine_charged: { label: "Fine", cls: "bg-rose-500/15 text-rose-300" },
+  fine_charged: { label: "Return note", cls: "bg-slate-500/15 text-slate-300" },
   suggestion_decided: { label: "Suggestion", cls: "bg-accent/15 text-accent" },
   waitlist_joined: { label: "Waitlisted", cls: "bg-amber-500/15 text-amber-300" },
   waitlist_cancelled: { label: "Wait cancel", cls: "bg-rose-500/15 text-rose-300" },
@@ -2270,18 +2241,11 @@ function ActivityLogTab() {
   const filtered = filter === "all" ? log : log.filter((l) => l.action === filter);
   const shown = [...filtered].sort((a, b) => (new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) * (sortDir === "asc" ? 1 : -1));
 
-  const amount = (row: any) => {
-    if (row.action === "fine_charged") return `-₹${row.metadata?.fine ?? 0}`;
-    if (row.action === "rental_created") return `₹${row.metadata?.price_paid ?? ""}`;
-    return "";
-  };
-
   const exportColumns = [
     { header: "When", get: (r: any) => new Date(r.created_at).toLocaleString() },
     { header: "Action", get: (r: any) => ACTION_STYLE[r.action]?.label ?? r.action },
     { header: "User", get: (r: any) => r.subject_user_name ?? r.actor_name ?? "system" },
     { header: "Book", get: (r: any) => r.book_title ?? "" },
-    { header: "Amount", get: (r: any) => amount(r) },
     { header: "Details", get: (r: any) => r.metadata ? Object.entries(r.metadata).map(([k, v]) => `${k}: ${v}`).join("; ") : "" },
   ];
 
