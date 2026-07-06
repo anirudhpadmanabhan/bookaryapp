@@ -664,7 +664,7 @@ function EditBookModal({ book, onClose }: { book: any; onClose: () => void }) {
   const [titleMl, setTitleMl] = useState(book.title_ml ?? "");
   const [author, setAuthor] = useState(book.author ?? "");
   const [authorMl, setAuthorMl] = useState(book.author_ml ?? "");
-  const [originalAuthor, setOriginalAuthor] = useState(book.original_author ?? "");
+  
   const [genre, setGenre] = useState(book.genre ?? "");
   const [genreMl, setGenreMl] = useState(book.genre_ml ?? "");
   const [shelf, setShelf] = useState(book.shelf_code ?? "");
