@@ -951,6 +951,15 @@ export type Database = {
       }
       set_my_phone: { Args: { _phone: string }; Returns: undefined }
       staff_user_summary: { Args: { _user_id: string }; Returns: Json }
+      staff_users_by_ids: {
+        Args: { _ids: string[] }
+        Returns: {
+          display_name: string
+          email: string
+          phone: string
+          user_id: string
+        }[]
+      }
       top_up_wallet: { Args: { _amount: number }; Returns: number }
       waitlist_position: { Args: { _book_id: string }; Returns: number }
     }

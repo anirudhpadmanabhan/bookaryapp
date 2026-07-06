@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Book } from "@/lib/books";
 import { colorForBook } from "@/lib/books";
 import { cn } from "@/lib/utils";
@@ -19,31 +20,7 @@ function normalizeCoverUrl(url: string): string {
   }
 }
 
-export function BookCover({
-  book,
-  className,
-  colorOverride,
-}: {
-  book: Pick<Book, "id" | "title" | "title_ml" | "author" | "author_ml" | "genre_ml" | "cover_color"> & { cover_url?: string | null };
-  className?: string;
-  colorOverride?: string;
-}) {
-  const color = colorOverride ?? colorForBook(book.id);
-  if (book.cover_url) {
-    const src = normalizeCoverUrl(book.cover_url);
-    return (
-      <div className={cn("cover relative overflow-hidden !p-0", `cover-${color}`, className)}>
-        <img
-          src={src}
-          alt={`Cover for ${book.title}`}
-          loading="lazy"
-          decoding="async"
-          referrerPolicy="no-referrer"
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-      </div>
-    );
-  }
+function TextCover({ book, color, className }: { book: any; color: string; className?: string }) {
   return (
     <div className={cn("cover", `cover-${color}`, className)}>
       <div className="relative z-10">
@@ -66,4 +43,34 @@ export function BookCover({
       </div>
     </div>
   );
+}
+
+export function BookCover({
+  book,
+  className,
+  colorOverride,
+}: {
+  book: Pick<Book, "id" | "title" | "title_ml" | "author" | "author_ml" | "genre_ml" | "cover_color"> & { cover_url?: string | null };
+  className?: string;
+  colorOverride?: string;
+}) {
+  const color = colorOverride ?? colorForBook(book.id);
+  const [failed, setFailed] = useState(false);
+  if (book.cover_url && !failed) {
+    const src = normalizeCoverUrl(book.cover_url);
+    return (
+      <div className={cn("cover relative overflow-hidden !p-0", `cover-${color}`, className)}>
+        <img
+          src={src}
+          alt={`Cover for ${book.title}`}
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          onError={() => setFailed(true)}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      </div>
+    );
+  }
+  return <TextCover book={book} color={color} className={className} />;
 }

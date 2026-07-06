@@ -204,13 +204,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 <div className="hidden text-[10px] uppercase tracking-[0.2em] text-muted-foreground sm:block">Reading library</div>
               </div>
             </Link>
-            <div className="hidden w-64 sm:block">
-              <LibrarySwitcher />
+            <div className="hidden max-w-[220px] sm:block">
+              <LibrarySwitcher compact />
             </div>
           </div>
 
           {pathname !== "/search" && (
-            <div ref={searchRef} className="relative hidden flex-1 max-w-md md:block">
+            <div ref={searchRef} className="relative hidden flex-1 max-w-2xl md:block">
               <form onSubmit={(e) => { e.preventDefault(); setSearchOpen(false); goSearch(searchValue); }}>
                 <div className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface/50 px-4 py-2.5 text-sm focus-within:border-primary/60">
                   <Search className="h-4 w-4 text-muted-foreground" />
