@@ -445,7 +445,9 @@ function ProfilePage() {
         <form onSubmit={submitSuggestion} className="glass-card grid gap-3 rounded-2xl p-5 sm:grid-cols-2">
           <input value={sTitle} onChange={(e) => setSTitle(e.target.value)} placeholder="Book title *" className="rounded-xl border border-border bg-background/50 px-4 py-2.5 text-sm outline-none focus:border-primary" />
           <input value={sAuthor} onChange={(e) => setSAuthor(e.target.value)} placeholder="Author (optional)" className="rounded-xl border border-border bg-background/50 px-4 py-2.5 text-sm outline-none focus:border-primary" />
+          <input value={sPublisher} onChange={(e) => setSPublisher(e.target.value)} placeholder="Publisher (optional)" className="rounded-xl border border-border bg-background/50 px-4 py-2.5 text-sm outline-none focus:border-primary sm:col-span-2" />
           <textarea value={sNote} onChange={(e) => setSNote(e.target.value)} placeholder="Why should we add it?" rows={2} className="rounded-xl border border-border bg-background/50 px-4 py-2.5 text-sm outline-none focus:border-primary sm:col-span-2" />
+
           <div className="flex items-center justify-between sm:col-span-2">
             <span className="text-xs text-muted-foreground">{suggestions.length} previous suggestion{suggestions.length !== 1 && "s"}</span>
             <button type="submit" disabled={suggest.isPending} className="cursor-pointer rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
