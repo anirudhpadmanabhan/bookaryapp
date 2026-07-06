@@ -32,13 +32,20 @@ export function BookCard({ book, minimal = false, coverColor, hideShelf = true }
           colorOverride={coverColor}
           className="!rounded-none !rounded-t-2xl"
         />
-        {/* Availability dot: green when the shelf copy is free, red when rented or out of stock. */}
-        <span
-          title={book.availability === "available" || !book.availability ? "Available" : book.availability === "rented" ? "Rented" : "Out of stock"}
-          className={`absolute right-2.5 bottom-2.5 z-10 h-2.5 w-2.5 rounded-full ring-2 ring-black/40 ${
-            !book.availability || book.availability === "available" ? "bg-emerald-400" : "bg-rose-500"
-          }`}
-        />
+        {/* Availability indicator: bright green dot when free, bold red round pill for out of stock / rented. */}
+        {!book.availability || book.availability === "available" ? (
+          <span
+            title="Available"
+            className="absolute right-2.5 bottom-2.5 z-10 h-3 w-3 rounded-full bg-emerald-400 ring-2 ring-black/50 shadow-[0_0_0_2px_rgba(16,185,129,0.35)]"
+          />
+        ) : (
+          <span
+            title={book.availability === "rented" ? "Rented" : "Out of stock"}
+            className="absolute right-2 bottom-2 z-10 grid h-7 w-7 place-items-center rounded-full bg-rose-600 text-[9px] font-black uppercase tracking-wider text-white ring-2 ring-black/50 shadow-[0_4px_12px_rgba(244,63,94,0.5)]"
+          >
+            {book.availability === "rented" ? "OUT" : "×"}
+          </span>
+        )}
         {!minimal && (
           <>
             {user ? (
