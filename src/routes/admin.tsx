@@ -556,7 +556,7 @@ function BooksTable({ books, editing, setEditing, sortKey, sortDir, setSort, lib
         </thead>
         <tbody>
           {books.map((b) => (
-            <EditableRow key={b.id} book={b} isEditing={editing === b.id} onEdit={() => setEditing(b.id)} onClose={() => setEditing(null)} libName={b.library_id ? libNameById.get(b.library_id) : undefined} />
+            <EditableRow key={b.id} book={b} isEditing={editing === b.id} onEdit={() => setEditing(b.id)} onClose={() => setEditing(null)} libName={b.library_id ? libNameById.get(b.library_id) : undefined} isOut={outIds.has(b.id)} />
           ))}
         </tbody>
       </table>
