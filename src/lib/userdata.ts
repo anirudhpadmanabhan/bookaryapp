@@ -537,14 +537,15 @@ export function useSuggestBook() {
   const qc = useQueryClient();
   const { user } = useSession();
   return useMutation({
-    mutationFn: async ({ title, author, note }: { title: string; author?: string; note?: string }) => {
+    mutationFn: async ({ title, author, note, publisher }: { title: string; author?: string; note?: string; publisher?: string }) => {
       if (!user) throw new Error("Sign in to suggest a book");
       const { error } = await supabase.from("book_suggestions").insert({
         user_id: user.id,
         title: title.trim(),
         author: author?.trim() || null,
         note: note?.trim() || null,
-      });
+        publisher: publisher?.trim() || null,
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {

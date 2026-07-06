@@ -407,11 +407,22 @@ function BooksTab() {
 
   return (
     <div>
+      {/* Prominent full-width catalog search */}
+      <div className="mb-3 flex items-center gap-3 rounded-2xl border-2 border-primary/30 bg-surface/60 px-5 py-4 shadow-lg shadow-primary/5 focus-within:border-primary/60">
+        <SearchIcon className="h-5 w-5 text-primary" />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search title, author, rack, publisher…"
+          className="w-full bg-transparent text-base outline-none placeholder:text-muted-foreground"
+        />
+        {q && <button onClick={() => setQ("")} className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">Clear</button>}
+      </div>
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <select
           value={libFilter}
           onChange={(e) => setLibFilter(e.target.value)}
-          className="cursor-pointer rounded-xl border border-border bg-surface/50 px-3 py-2.5 text-sm font-medium"
+          className="cursor-pointer rounded-lg border border-border bg-surface/50 px-2.5 py-1.5 text-xs font-medium max-w-[220px] truncate"
           title="Filter by library"
         >
           <option value="all">All libraries</option>
@@ -420,15 +431,6 @@ function BooksTab() {
           ))}
           {scope === null && <option value="__unassigned">Unassigned</option>}
         </select>
-        <div className="flex flex-1 min-w-[200px] items-center gap-2 rounded-xl border border-border bg-surface/50 px-4 py-2.5">
-          <SearchIcon className="h-4 w-4 text-muted-foreground" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search title / author / rack / publisher…"
-            className="w-full bg-transparent text-sm outline-none"
-          />
-        </div>
         <select
           value={`${sortKey}:${sortDir}`}
           onChange={(e) => {
@@ -2527,6 +2529,16 @@ function ReportsTab() {
   const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
   const { data: suggestions = [] } = useAllSuggestions();
   const { data: users = [] } = useAdminUsers();
+  const { selectedId } = useLibrary();
+  const { data: topReaders = [] } = useQuery({
+    queryKey: ["top-readers", selectedId],
+    enabled: !!selectedId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("library_top_readers" as any, { _library_id: selectedId, _limit: 200 });
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
 
   const [from, setFrom] = useState<string>(() => {
     const d = new Date(); d.setMonth(d.getMonth() - 3); return d.toISOString().slice(0, 10);
@@ -2578,6 +2590,14 @@ function ReportsTab() {
     { header: "Active rentals", get: (u: any) => Number(u.active_rentals ?? 0) },
     { header: "Total rentals", get: (u: any) => Number(u.total_rentals ?? 0) },
     { header: "Joined", get: (u: any) => new Date(u.created_at).toLocaleDateString() },
+  ];
+  const topReaderCols = [
+    { header: "Reader", get: (u: any) => u.display_name ?? (u.email?.split("@")[0] ?? "") },
+    { header: "Email", get: (u: any) => u.email ?? "" },
+    { header: "Rentals", get: (u: any) => Number(u.rental_count ?? 0) },
+    { header: "Books read", get: (u: any) => Number(u.books_read ?? 0) },
+    { header: "Reviews", get: (u: any) => Number(u.reviews_count ?? 0) },
+    { header: "Favorite genre", get: (u: any) => u.favorite_genre ?? "" },
   ];
 
   const Card = ({ title, count, onCsv, onPdf, extra }: { title: string; count: number; onCsv: () => void; onPdf: () => void; extra?: React.ReactNode }) => (
@@ -2632,6 +2652,13 @@ function ReportsTab() {
           count={(users as any[]).length}
           onCsv={() => exportCsv({ filename: `members-${Date.now()}.csv`, columns: memberCols, rows: users as any[] })}
           onPdf={() => exportPdf({ filename: `members-${Date.now()}.pdf`, title: "Members", subtitle: `${(users as any[]).length} readers`, columns: memberCols, rows: users as any[] })}
+        />
+        <Card
+          title="Top readers"
+          count={(topReaders as any[]).length}
+          extra={<p className="text-xs text-muted-foreground">Readers ranked by rentals, books read and reviews for this library.</p>}
+          onCsv={() => exportCsv({ filename: `top-readers-${Date.now()}.csv`, columns: topReaderCols, rows: topReaders as any[] })}
+          onPdf={() => exportPdf({ filename: `top-readers-${Date.now()}.pdf`, title: "Top readers", subtitle: `${(topReaders as any[]).length} readers`, columns: topReaderCols, rows: topReaders as any[] })}
         />
       </div>
     </div>

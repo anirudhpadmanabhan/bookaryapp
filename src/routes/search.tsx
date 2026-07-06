@@ -37,6 +37,7 @@ function SearchPage() {
   const { user } = useSession();
   const suggest = useSuggestBook();
   const [suggestAuthor, setSuggestAuthor] = useState("");
+  const [suggestPublisher, setSuggestPublisher] = useState("");
   const [suggestNote, setSuggestNote] = useState("");
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -144,8 +145,8 @@ function SearchPage() {
     if (!trimmed) return;
     if (!user) return toast.error("Sign in to suggest a book");
     suggest.mutate(
-      { title: trimmed, author: suggestAuthor, note: suggestNote },
-      { onSuccess: () => { setSuggestAuthor(""); setSuggestNote(""); } },
+      { title: trimmed, author: suggestAuthor, note: suggestNote, publisher: suggestPublisher },
+      { onSuccess: () => { setSuggestAuthor(""); setSuggestPublisher(""); setSuggestNote(""); } },
     );
   };
 
@@ -247,6 +248,12 @@ function SearchPage() {
               onChange={(e) => setSuggestAuthor(e.target.value)}
               placeholder="Author (optional)"
               className="rounded-xl border border-border bg-background/50 px-4 py-2.5 text-sm outline-none focus:border-primary"
+            />
+            <input
+              value={suggestPublisher}
+              onChange={(e) => setSuggestPublisher(e.target.value)}
+              placeholder="Publisher (optional)"
+              className="rounded-xl border border-border bg-background/50 px-4 py-2.5 text-sm outline-none focus:border-primary sm:col-span-2"
             />
             <textarea
               value={suggestNote}

@@ -129,6 +129,7 @@ export type Database = {
           decision_note: string | null
           id: string
           note: string | null
+          publisher: string | null
           status: string
           title: string
           user_id: string
@@ -141,6 +142,7 @@ export type Database = {
           decision_note?: string | null
           id?: string
           note?: string | null
+          publisher?: string | null
           status?: string
           title: string
           user_id: string
@@ -153,6 +155,7 @@ export type Database = {
           decision_note?: string | null
           id?: string
           note?: string | null
+          publisher?: string | null
           status?: string
           title?: string
           user_id?: string
@@ -942,6 +945,18 @@ export type Database = {
           user_id: string
         }[]
       }
+      library_top_readers: {
+        Args: { _library_id: string; _limit?: number }
+        Returns: {
+          books_read: number
+          display_name: string
+          email: string
+          favorite_genre: string
+          rental_count: number
+          reviews_count: number
+          user_id: string
+        }[]
+      }
       my_librarian_library_ids: {
         Args: { _user_id: string }
         Returns: {
@@ -974,6 +989,10 @@ export type Database = {
         }[]
       }
       top_up_wallet: { Args: { _amount: number }; Returns: number }
+      user_rental_history: {
+        Args: { _library_id?: string; _user_id: string }
+        Returns: Json
+      }
       waitlist_position: { Args: { _book_id: string }; Returns: number }
     }
     Enums: {
