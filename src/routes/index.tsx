@@ -110,6 +110,51 @@ function HomePage() {
 
   return (
     <AppLayout>
+      {showPicker && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4 backdrop-blur">
+          <div className="glass-card w-full max-w-lg rounded-3xl p-7">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/30">
+                <Building2 className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold">Welcome to Bookary</h2>
+                <p className="text-xs text-muted-foreground">Pick your library to see its shelves. You can switch anytime from the top bar.</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {libraries.map((l) => (
+                <button
+                  key={l.id}
+                  type="button"
+                  onClick={() => confirmLibrary(l.id)}
+                  className={`flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition hover:border-primary/60 hover:bg-surface/60 ${
+                    selectedId === l.id ? "border-primary/60 bg-primary/5" : "border-border bg-surface/30"
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-semibold">{l.name}</span>
+                      {l.is_default && <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-primary">Default</span>}
+                    </div>
+                    {l.name_ml && <div className="font-mal text-sm text-accent">{l.name_ml}</div>}
+                    {l.location && <div className="text-[11px] text-muted-foreground">{l.location}</div>}
+                  </div>
+                  {selectedId === l.id && <Check className="h-4 w-4 text-primary" />}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => { window.localStorage.setItem(ONBOARDING_KEY, "1"); setShowPicker(false); }}
+              className="mt-4 w-full cursor-pointer rounded-lg border border-border py-2 text-xs text-muted-foreground hover:text-foreground"
+            >
+              Skip for now
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Hero */}
       <section className="glass-card relative mb-8 overflow-hidden rounded-3xl p-6 md:p-10">
         <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-primary/30 blur-3xl" />
