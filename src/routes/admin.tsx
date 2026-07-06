@@ -1307,6 +1307,30 @@ function WaitlistTab() {
     },
   });
 
+  // Fetch reader profiles (display_name + email) for every user_id in waitlist + reservations.
+  const userIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const w of list as any[]) if (w.user_id) s.add(w.user_id);
+    for (const r of reservations as any[]) if (r.user_id) s.add(r.user_id);
+    return [...s];
+  }, [list, reservations]);
+
+  const { data: profileMap = {} } = useQuery({
+    queryKey: ["admin-waitlist-profiles", userIds.join(",")],
+    enabled: userIds.length > 0,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, display_name, email")
+        .in("id", userIds);
+      if (error) throw error;
+      const map: Record<string, { display_name: string | null; email: string | null }> = {};
+      for (const p of data ?? []) map[p.id] = { display_name: (p as any).display_name, email: (p as any).email };
+      return map;
+    },
+  });
+
   // Group queue entries by book so staff can see "this book has 3 readers waiting, in this order".
   const grouped = useMemo(() => {
     const m = new Map<string, { book: any; rows: any[] }>();
