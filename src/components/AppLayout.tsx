@@ -442,8 +442,18 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <div className="mx-auto flex max-w-[1400px] gap-6 px-4 py-6 md:px-6">
         <aside className="sticky top-20 hidden h-fit w-60 shrink-0 flex-col gap-6 self-start md:flex">
           <nav className="glass-card flex flex-col gap-1 rounded-2xl p-3">
-            <div className="px-3 pb-1 pt-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Browse</div>
-            {navMain.map((n) => {
+            <div className="flex items-center justify-between px-3 pb-1 pt-2">
+              <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Browse</span>
+              <button
+                type="button"
+                onClick={() => setHideBrowse(!hideBrowse)}
+                title={hideBrowse ? "Show Browse links" : "Hide Browse links"}
+                className="cursor-pointer rounded p-1 text-muted-foreground hover:bg-surface-elevated hover:text-foreground"
+              >
+                {hideBrowse ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+              </button>
+            </div>
+            {!hideBrowse && navMain.map((n) => {
               const active = pathname === n.to;
               return (
                 <Link
