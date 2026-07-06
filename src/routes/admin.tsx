@@ -664,7 +664,7 @@ function EditBookModal({ book, onClose }: { book: any; onClose: () => void }) {
   const [titleMl, setTitleMl] = useState(book.title_ml ?? "");
   const [author, setAuthor] = useState(book.author ?? "");
   const [authorMl, setAuthorMl] = useState(book.author_ml ?? "");
-  const [originalAuthor, setOriginalAuthor] = useState(book.original_author ?? "");
+  
   const [genre, setGenre] = useState(book.genre ?? "");
   const [genreMl, setGenreMl] = useState(book.genre_ml ?? "");
   const [shelf, setShelf] = useState(book.shelf_code ?? "");
@@ -685,7 +685,7 @@ function EditBookModal({ book, onClose }: { book: any; onClose: () => void }) {
           title_ml: titleMl.trim() || null,
           author: author.trim() || book.author,
           author_ml: authorMl.trim() || null,
-          original_author: originalAuthor.trim() || null,
+          original_author: null,
           genre: genre.trim() || book.genre,
           genre_ml: genreMl.trim() || null,
           shelf_code: shelf.trim() || null,
@@ -718,7 +718,6 @@ function EditBookModal({ book, onClose }: { book: any; onClose: () => void }) {
           <label className="text-xs"><span className="mb-1 block text-muted-foreground">Title (Malayalam)</span><input value={titleMl} onChange={(e) => setTitleMl(e.target.value)} className={`${fld} font-mal`} /></label>
           <label className="text-xs"><span className="mb-1 block text-muted-foreground">Author (English)</span><input value={author} onChange={(e) => setAuthor(e.target.value)} className={fld} /></label>
           <label className="text-xs"><span className="mb-1 block text-muted-foreground">Author (Malayalam)</span><input value={authorMl} onChange={(e) => setAuthorMl(e.target.value)} className={`${fld} font-mal`} /></label>
-          <label className="text-xs sm:col-span-2"><span className="mb-1 block text-muted-foreground">Original Author</span><input value={originalAuthor} onChange={(e) => setOriginalAuthor(e.target.value)} className={fld} /></label>
           <label className="text-xs"><span className="mb-1 block text-muted-foreground">Genre (English)</span><input value={genre} onChange={(e) => setGenre(e.target.value)} className={fld} /></label>
           <label className="text-xs"><span className="mb-1 block text-muted-foreground">Genre (Malayalam)</span><input value={genreMl} onChange={(e) => setGenreMl(e.target.value)} className={`${fld} font-mal`} /></label>
           <label className="text-xs"><span className="mb-1 block text-muted-foreground">Language</span><input value={language} onChange={(e) => setLanguage(e.target.value)} className={fld} /></label>
@@ -760,7 +759,7 @@ function AddBookModal({ onClose, defaultLibraryId }: { onClose: () => void; defa
   const [titleMl, setTitleMl] = useState("");
   const [author, setAuthor] = useState("");
   const [authorMl, setAuthorMl] = useState("");
-  const [originalAuthor, setOriginalAuthor] = useState("");
+  
   const [genre, setGenre] = useState("");
   const [genreMl, setGenreMl] = useState("");
   const [shelf, setShelf] = useState("");
@@ -796,7 +795,7 @@ function AddBookModal({ onClose, defaultLibraryId }: { onClose: () => void; defa
           <label className="text-xs"><span className="mb-1 block text-muted-foreground">Title (Malayalam)</span><input value={titleMl} onChange={(e) => setTitleMl(e.target.value)} className={`${fld} font-mal`} /></label>
           <label className="text-xs"><span className="mb-1 block text-muted-foreground">Author (English)</span><input value={author} onChange={(e) => setAuthor(e.target.value)} className={fld} /></label>
           <label className="text-xs"><span className="mb-1 block text-muted-foreground">Author (Malayalam)</span><input value={authorMl} onChange={(e) => setAuthorMl(e.target.value)} className={`${fld} font-mal`} /></label>
-          <label className="text-xs sm:col-span-2"><span className="mb-1 block text-muted-foreground">Original Author</span><input value={originalAuthor} onChange={(e) => setOriginalAuthor(e.target.value)} className={fld} /></label>
+          
           <label className="text-xs"><span className="mb-1 block text-muted-foreground">Genre (English)</span><input value={genre} onChange={(e) => setGenre(e.target.value)} className={fld} /></label>
           <label className="text-xs"><span className="mb-1 block text-muted-foreground">Genre (Malayalam)</span><input value={genreMl} onChange={(e) => setGenreMl(e.target.value)} className={`${fld} font-mal`} /></label>
           <label className="text-xs"><span className="mb-1 block text-muted-foreground">Language</span><input value={language} onChange={(e) => setLanguage(e.target.value)} className={fld} /></label>
@@ -813,7 +812,7 @@ function AddBookModal({ onClose, defaultLibraryId }: { onClose: () => void; defa
             onClick={() => create.mutate(
               {
                 title, author, genre,
-                title_ml: titleMl, author_ml: authorMl, original_author: originalAuthor, genre_ml: genreMl,
+                title_ml: titleMl, author_ml: authorMl, genre_ml: genreMl,
                 shelf_code: shelf, publisher, library_id: libraryId || undefined,
                 language, rent_price: Number(rentPrice) > 0 ? Number(rentPrice) : 10,
                 pages: pages.trim() ? Number(pages) : null,
@@ -1435,6 +1434,24 @@ function SuggestionsTab() {
   const decide = useDecideSuggestion();
   const [viewingUser, setViewingUser] = useState<string | null>(null);
 
+  const userIds = Array.from(new Set((list as any[]).map((s) => s.user_id).filter(Boolean)));
+  const { data: readers = {} } = useQuery({
+    queryKey: ["suggestion-readers", userIds.sort().join(",")],
+    enabled: userIds.length > 0,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const [{ data: profs }, { data: rents }] = await Promise.all([
+        supabase.from("profiles").select("id, display_name").in("id", userIds),
+        supabase.from("rentals").select("user_id").in("user_id", userIds).is("returned_at", null),
+      ]);
+      const counts: Record<string, number> = {};
+      (rents ?? []).forEach((r: any) => { counts[r.user_id] = (counts[r.user_id] ?? 0) + 1; });
+      const map: Record<string, { name: string; active: number }> = {};
+      (profs ?? []).forEach((p: any) => { map[p.id] = { name: p.display_name ?? "Reader", active: counts[p.id] ?? 0 }; });
+      return map;
+    },
+  });
+
   if (isLoading) return <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-16 animate-pulse rounded-xl bg-surface/60" />)}</div>;
   if (list.length === 0) return <p className="glass-card rounded-2xl p-8 text-center text-sm text-muted-foreground">No suggestions yet.</p>;
 
@@ -1481,6 +1498,12 @@ function SuggestionsTab() {
           {s.note && <p className="mt-1 text-sm text-foreground/80">{s.note}</p>}
           {s.decision_note && (
             <p className="mt-1 rounded-md bg-surface/60 px-2 py-1 text-xs text-muted-foreground">Librarian note: {s.decision_note}</p>
+          )}
+          {(readers as any)[s.user_id] && (
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Reader: <span className="text-foreground/80">{(readers as any)[s.user_id].name}</span>
+              {" · "}{(readers as any)[s.user_id].active} active rental{(readers as any)[s.user_id].active === 1 ? "" : "s"}
+            </p>
           )}
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <button onClick={() => setViewingUser(s.user_id)} className="cursor-pointer text-[11px] text-primary hover:underline">View reader →</button>
