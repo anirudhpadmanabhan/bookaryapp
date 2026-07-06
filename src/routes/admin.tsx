@@ -739,6 +739,14 @@ function EditBookModal({ book, onClose }: { book: any; onClose: () => void }) {
           <label className="text-xs"><span className="mb-1 block text-muted-foreground">Publisher</span><input value={publisher} onChange={(e) => setPublisher(e.target.value)} className={fld} /></label>
           <label className="text-xs"><span className="mb-1 block text-muted-foreground">Published Year</span><input type="number" value={year} onChange={(e) => setYear(e.target.value)} className={fld} /></label>
           <label className="text-xs"><span className="mb-1 block text-muted-foreground">Pages</span><input type="number" value={pages} onChange={(e) => setPages(e.target.value)} className={fld} /></label>
+          <label className="text-xs sm:col-span-2">
+            <span className="mb-1 block text-muted-foreground">Availability</span>
+            <select value={availability} onChange={(e) => setAvailability(e.target.value)} className={`${fld} cursor-pointer`}>
+              <option value="available">Available</option>
+              <option value="rented">Rented</option>
+              <option value="out_of_stock">Out of stock</option>
+            </select>
+          </label>
           <label className="text-xs sm:col-span-2"><span className="mb-1 block text-muted-foreground">Cover image URL</span><input value={coverUrl} onChange={(e) => setCoverUrl(e.target.value)} className={fld} /></label>
           <label className="text-xs sm:col-span-2"><span className="mb-1 block text-muted-foreground">Description</span><textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className={fld} /></label>
         </div>
