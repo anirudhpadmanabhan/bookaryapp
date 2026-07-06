@@ -60,6 +60,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const isStaff = useIsStaff();
   const [bellOpen, setBellOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [hideBrowse, setHideBrowse] = useHideBrowse();
+  const [hideMoney, setHideMoney] = useHideMoney();
   const [searchValue, setSearchValue] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement | null>(null);
