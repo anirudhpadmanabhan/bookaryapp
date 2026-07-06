@@ -2527,6 +2527,16 @@ function ReportsTab() {
   const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
   const { data: suggestions = [] } = useAllSuggestions();
   const { data: users = [] } = useAdminUsers();
+  const { selectedId } = useLibrary();
+  const { data: topReaders = [] } = useQuery({
+    queryKey: ["top-readers", selectedId],
+    enabled: !!selectedId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("library_top_readers" as any, { _library_id: selectedId, _limit: 200 });
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
 
   const [from, setFrom] = useState<string>(() => {
     const d = new Date(); d.setMonth(d.getMonth() - 3); return d.toISOString().slice(0, 10);
