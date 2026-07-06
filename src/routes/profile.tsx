@@ -144,10 +144,12 @@ function ProfilePage() {
   const submitSuggestion = (e: React.FormEvent) => {
     e.preventDefault();
     if (!sTitle.trim()) return toast.error("Add a book title");
-    suggest.mutate({ title: sTitle, author: sAuthor, note: sNote }, {
-      onSuccess: () => { setSTitle(""); setSAuthor(""); setSNote(""); },
+    const noteWithPublisher = [sPublisher.trim() ? `Publisher: ${sPublisher.trim()}` : "", sNote.trim()].filter(Boolean).join("\n\n");
+    suggest.mutate({ title: sTitle, author: sAuthor, note: noteWithPublisher }, {
+      onSuccess: () => { setSTitle(""); setSAuthor(""); setSPublisher(""); setSNote(""); },
     });
   };
+
 
   if (!profile) return <AppLayout><div className="h-40 animate-pulse rounded-2xl bg-surface" /></AppLayout>;
 
