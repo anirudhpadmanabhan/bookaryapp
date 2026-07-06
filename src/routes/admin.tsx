@@ -500,9 +500,9 @@ function BooksTab() {
             Showing {shown.length.toLocaleString()} of {filtered.length.toLocaleString()} matched · {totalForScope.toLocaleString()} total{q && ` · search "${q}"`} · sort: {sortKey} {sortDir === "asc" ? "↑" : "↓"}.
           </p>
           {view === "table" ? (
-            <BooksTable books={shown} editing={editing} setEditing={setEditing} sortKey={sortKey} sortDir={sortDir} setSort={(k) => { if (k === sortKey) setSortDir((d) => d === "asc" ? "desc" : "asc"); else { setSortKey(k); setSortDir("asc"); } }} libNameById={libNameById} />
+            <BooksTable books={shown} editing={editing} setEditing={setEditing} sortKey={sortKey} sortDir={sortDir} setSort={(k) => { if (k === sortKey) setSortDir((d) => d === "asc" ? "desc" : "asc"); else { setSortKey(k); setSortDir("asc"); } }} libNameById={libNameById} outIds={outIds} />
           ) : (
-            <BooksGridAdmin books={shown} setEditing={setEditing} />
+            <BooksGridAdmin books={shown} setEditing={setEditing} outIds={outIds} />
           )}
         </>
       )}
