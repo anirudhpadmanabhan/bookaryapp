@@ -285,6 +285,7 @@ type BookSortKey =
 function BooksTab() {
   const { data: books = [], isLoading } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
   const { data: libs = [] } = useAdminLibraries();
+  const { data: allRentals = [] } = useAllRentals();
   const scope = useMyLibraryScope();
   const [q, setQ] = useState("");
   const [view, setView] = useState<BooksView>("table");
@@ -294,6 +295,15 @@ function BooksTab() {
   const [libFilter, setLibFilter] = useState<string>("all");
   const [sortKey, setSortKey] = useState<BookSortKey>("shelf_code");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  const outIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const r of allRentals as any[]) {
+      if (!r.returned_at && r.tracking_status !== "reserved") s.add(r.book_id);
+    }
+    return s;
+  }, [allRentals]);
+
 
   const rackCompare = (a: string | null | undefined, b: string | null | undefined) => {
     if (!a && !b) return 0;
