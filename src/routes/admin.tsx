@@ -1418,8 +1418,21 @@ function RentalsByMonth({
                 </tr>
               </thead>
               <tbody>
-                {g.rows.map((r: any) => (
+                {g.rows.map((r: any) => {
+                  const isOut = !r.returned_at;
+                  return (
                   <tr key={r.id} className="border-t border-border/40 hover:bg-surface/40">
+                    <td className="px-2 py-2">
+                      {isOut ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-semibold text-rose-300">
+                          <span className="h-1.5 w-1.5 rounded-full bg-rose-400" /> Out
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> In
+                        </span>
+                      )}
+                    </td>
                     <td className="px-2 py-2">
                       <button onClick={() => setViewingUser(r.user_id)} className="cursor-pointer text-left font-semibold hover:text-primary">
                         {r.member_name ?? "—"}
@@ -1445,7 +1458,11 @@ function RentalsByMonth({
                           }}
                           className="cursor-pointer rounded-md border border-border bg-surface px-1.5 py-0.5 text-[11px]"
                         />
-                      ) : "—"}
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-semibold text-rose-300">
+                          Waiting for return
+                        </span>
+                      )}
                     </td>
                     <td className="px-2 py-2">
                       {!r.returned_at ? (
@@ -1458,22 +1475,33 @@ function RentalsByMonth({
                         </select>
                       ) : (
                         <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/15 px-2 py-0.5 text-[11px] text-emerald-300">
-                          <CheckCircle2 className="h-3 w-3" /> returned
+                          <CheckCircle2 className="h-3 w-3" /> Returned
                         </span>
                       )}
                     </td>
                     <td className="px-2 py-2 text-right">
                       {!r.returned_at && (
-                        <button
-                          onClick={() => onReturn(r)}
-                          className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-emerald-500 px-2 py-1 text-[11px] font-semibold text-emerald-950 hover:opacity-90"
-                        >
-                          <CheckCircle2 className="h-3 w-3" /> Return
-                        </button>
+                        <div className="flex justify-end gap-1">
+                          {r.tracking_status === "delivered" && (
+                            <button
+                              onClick={() => onMarkRented(r.id)}
+                              className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-amber-500 px-2 py-1 text-[11px] font-semibold text-amber-950 hover:opacity-90"
+                              title="Mark as currently rented / out"
+                            >
+                              Rented
+                            </button>
+                          )}
+                          <button
+                            onClick={() => onReturn(r)}
+                            className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-emerald-500 px-2 py-1 text-[11px] font-semibold text-emerald-950 hover:opacity-90"
+                          >
+                            <CheckCircle2 className="h-3 w-3" /> Return
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
-                ))}
+                );})}
               </tbody>
             </table>
           </div>
