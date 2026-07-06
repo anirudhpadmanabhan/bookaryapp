@@ -184,6 +184,7 @@ export type Database = {
           shelf_no: number | null
           title: string
           title_ml: string | null
+          updated_at: string
         }
         Insert: {
           author: string
@@ -209,6 +210,7 @@ export type Database = {
           shelf_no?: number | null
           title: string
           title_ml?: string | null
+          updated_at?: string
         }
         Update: {
           author?: string
@@ -234,6 +236,7 @@ export type Database = {
           shelf_no?: number | null
           title?: string
           title_ml?: string | null
+          updated_at?: string
         }
         Relationships: [
           {

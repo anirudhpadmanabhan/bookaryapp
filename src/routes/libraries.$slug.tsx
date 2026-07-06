@@ -7,7 +7,7 @@ import { useSession } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Heart, MessageCircle, Image as ImageIcon, BookOpen } from "lucide-react";
+import { ArrowLeft, Heart, MessageCircle, Image as ImageIcon, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/libraries/$slug")({
@@ -80,22 +80,31 @@ function NewPostForm({ libraryId, onCreated }: { libraryId: string; onCreated: (
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [photo, setPhoto] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
 
   const submit = async () => {
     if (!user) return;
-    if (!body.trim() && !title.trim()) return;
+    if (!body.trim() && !title.trim() && !photo) return;
     setBusy(true);
+    let finalImageUrl = imageUrl.trim() || null;
+    if (photo) {
+      const safeName = photo.name.toLowerCase().replace(/[^a-z0-9.\-_]+/g, "-");
+      const path = `${libraryId}/${Date.now()}-${safeName}`;
+      const { error: uploadError } = await supabase.storage.from("library-posts").upload(path, photo, { upsert: false, contentType: photo.type || "image/jpeg" });
+      if (uploadError) { setBusy(false); toast.error(uploadError.message); return; }
+      finalImageUrl = `library-posts/${path}`;
+    }
     const { error } = await supabase.from("library_posts").insert({
       library_id: libraryId,
       author_id: user.id,
       title: title.trim() || null,
       body: body.trim() || null,
-      image_url: imageUrl.trim() || null,
+      image_url: finalImageUrl,
     });
     setBusy(false);
     if (error) { toast.error(error.message); return; }
-    setTitle(""); setBody(""); setImageUrl("");
+    setTitle(""); setBody(""); setImageUrl(""); setPhoto(null);
     toast.success("Posted");
     onCreated();
   };
@@ -105,9 +114,14 @@ function NewPostForm({ libraryId, onCreated }: { libraryId: string; onCreated: (
       <p className="text-sm font-semibold">Post an activity</p>
       <Input placeholder="Title (optional)" value={title} onChange={(e) => setTitle(e.target.value)} />
       <Textarea placeholder="What happened at the library?" value={body} onChange={(e) => setBody(e.target.value)} rows={3} />
+      <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-border bg-surface/30 px-3 py-3 text-sm hover:bg-surface/50">
+        <Upload className="h-4 w-4 text-muted-foreground" />
+        <span className="min-w-0 flex-1 truncate text-muted-foreground">{photo ? photo.name : "Upload activity photo"}</span>
+        <input type="file" accept="image/*" className="hidden" onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} />
+      </label>
       <div className="flex items-center gap-2">
         <ImageIcon className="h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Image URL (optional)" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} />
+        <Input placeholder="Or paste image URL (optional)" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} />
       </div>
       <Button onClick={submit} disabled={busy}>{busy ? "Posting…" : "Post"}</Button>
     </div>
@@ -168,9 +182,7 @@ function PostCard({ post, userId }: { post: Post; userId: string | null }) {
   return (
     <div className="glass-card rounded-2xl p-5">
       {post.title && <h3 className="mb-2 text-lg font-semibold">{post.title}</h3>}
-      {post.image_url && (
-        <img src={post.image_url} alt={post.title ?? "Library activity"} className="mb-3 max-h-96 w-full rounded-xl object-cover" loading="lazy" />
-      )}
+      {post.image_url && <PostImage src={post.image_url} alt={post.title ?? "Library activity"} />}
       {post.body && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{post.body}</p>}
       <div className="mt-3 flex items-center gap-3 text-sm">
         <button onClick={() => toggleLike.mutate()} className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 ${liked ? "bg-rose-500/15 text-rose-400" : "bg-surface text-muted-foreground hover:text-foreground"}`}>
@@ -198,4 +210,19 @@ function PostCard({ post, userId }: { post: Post; userId: string | null }) {
       </div>
     </div>
   );
+}
+
+function PostImage({ src, alt }: { src: string; alt: string }) {
+  const { data: resolved } = useQuery({
+    queryKey: ["library-post-image", src],
+    queryFn: async () => {
+      if (!src.startsWith("library-posts/")) return src;
+      const path = src.replace(/^library-posts\//, "");
+      const { data, error } = await supabase.storage.from("library-posts").createSignedUrl(path, 60 * 60);
+      if (error) throw error;
+      return data.signedUrl;
+    },
+  });
+  if (!resolved) return null;
+  return <img src={resolved} alt={alt} className="mb-3 max-h-96 w-full rounded-xl object-cover" loading="lazy" />;
 }
