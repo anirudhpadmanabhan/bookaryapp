@@ -1147,6 +1147,7 @@ function RentalsTab() {
   const [sortKey, setSortKey] = useState<RentalSort>("rented_at");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [logOpen, setLogOpen] = useState(false);
+  const [q, setQ] = useState("");
   const qc = useQueryClient();
 
   const setReturnDate = async (rentalId: string, iso: string | null) => {
@@ -1157,11 +1158,22 @@ function RentalsTab() {
     qc.invalidateQueries({ queryKey: ["all-rentals"] });
   };
 
+  const markRented = async (rentalId: string) => {
+    const { error } = await supabase.rpc("librarian_mark_rented" as any, { _rental_id: rentalId });
+    if (error) { toast.error(error.message); return; }
+    toast.success("Marked as rented / out");
+    qc.invalidateQueries({ queryKey: ["admin-rentals"] });
+    qc.invalidateQueries({ queryKey: ["all-rentals"] });
+  };
+
   const shown = useMemo(() => {
+    const needle = q.trim().toLowerCase();
     const filtered = (rentals as any[]).filter((r) => {
-      if (filter === "active") return !r.returned_at;
-      if (filter === "returned") return !!r.returned_at;
-      return true;
+      if (filter === "active" && r.returned_at) return false;
+      if (filter === "returned" && !r.returned_at) return false;
+      if (!needle) return true;
+      const hay = `${r.member_name ?? ""} ${r.member_phone ?? ""} ${r.books?.title ?? ""} ${r.books?.author ?? ""} ${r.books?.shelf_code ?? ""}`.toLowerCase();
+      return hay.includes(needle);
     });
     const dir = sortDir === "asc" ? 1 : -1;
     const get = (r: any): any => {
@@ -1175,7 +1187,7 @@ function RentalsTab() {
       if (typeof va === "number" && typeof vb === "number") return (va - vb) * dir;
       return String(va).localeCompare(String(vb)) * dir;
     });
-  }, [rentals, filter, sortKey, sortDir]);
+  }, [rentals, filter, q, sortKey, sortDir]);
 
   const exportColumns = [
     { header: "Member", get: (r: any) => r.member_name ?? r.user_id },
@@ -1189,7 +1201,7 @@ function RentalsTab() {
     { header: "Status", get: (r: any) => r.tracking_status ?? "" },
   ];
 
-  const STATUSES = ["confirmed", "packed", "shipped", "out_for_delivery", "delivered"];
+  const STATUSES = ["confirmed", "packed", "shipped", "out_for_delivery", "delivered", "rented"];
 
   const SortableTh = ({ k, children, className = "" }: { k: RentalSort; children: any; className?: string }) => {
     const Icon = sortKey !== k ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
@@ -1217,6 +1229,10 @@ function RentalsTab() {
               {f.charAt(0).toUpperCase() + f.slice(1)}
             </button>
           ))}
+        </div>
+        <div className="flex flex-1 min-w-[200px] max-w-md items-center gap-2 rounded-lg border border-border bg-surface/50 px-3 py-1.5">
+          <SearchIcon className="h-3.5 w-3.5 text-muted-foreground" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search member / book / rack…" className="w-full bg-transparent text-xs outline-none" />
         </div>
         <div className="flex gap-2">
           <button
@@ -1248,6 +1264,7 @@ function RentalsTab() {
           setReturnDate={setReturnDate}
           onStatus={(id: string, status: string) => update.mutate({ id, status })}
           onReturn={(r: any) => { if (confirm(`Mark "${r.books?.title}" as returned?`)) markReturned.mutate(r.id); }}
+          onMarkRented={markRented}
           SortableTh={SortableTh}
         />
       )}
