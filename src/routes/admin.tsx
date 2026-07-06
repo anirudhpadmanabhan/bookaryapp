@@ -1282,7 +1282,21 @@ function RentalsTab() {
                   </td>
                   <td className="whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">{new Date(r.rented_at).toLocaleDateString()}</td>
                   <td className="whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">{new Date(r.due_at).toLocaleDateString()}</td>
-                  <td className="whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">{r.returned_at ? new Date(r.returned_at).toLocaleDateString() : "—"}</td>
+                  <td className="whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">
+                    {r.returned_at ? (
+                      <input
+                        type="date"
+                        defaultValue={new Date(r.returned_at).toISOString().slice(0, 10)}
+                        onBlur={(e) => {
+                          const v = e.target.value;
+                          const iso = v ? new Date(v + "T12:00:00Z").toISOString() : null;
+                          const cur = new Date(r.returned_at).toISOString().slice(0, 10);
+                          if (v !== cur) setReturnDate(r.id, iso);
+                        }}
+                        className="cursor-pointer rounded-md border border-border bg-surface px-1.5 py-0.5 text-[11px]"
+                      />
+                    ) : "—"}
+                  </td>
                   <td className="px-2 py-2 text-xs">₹{Number(r.price_paid ?? 0).toFixed(0)}</td>
                   <td className="px-2 py-2 text-xs">{Number(r.fine_amount ?? 0) > 0 ? <span className="rounded-full bg-rose-500/15 px-2 py-0.5 text-rose-300">₹{Number(r.fine_amount).toFixed(0)}</span> : <span className="text-muted-foreground">—</span>}</td>
                   <td className="px-2 py-2">
