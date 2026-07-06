@@ -1307,6 +1307,30 @@ function WaitlistTab() {
     },
   });
 
+  // Fetch reader profiles (display_name + email) for every user_id in waitlist + reservations.
+  const userIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const w of list as any[]) if (w.user_id) s.add(w.user_id);
+    for (const r of reservations as any[]) if (r.user_id) s.add(r.user_id);
+    return [...s];
+  }, [list, reservations]);
+
+  const { data: profileMap = {} } = useQuery({
+    queryKey: ["admin-waitlist-profiles", userIds.join(",")],
+    enabled: userIds.length > 0,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, display_name")
+        .in("id", userIds);
+      if (error) throw error;
+      const map: Record<string, { display_name: string | null }> = {};
+      for (const p of data ?? []) map[p.id] = { display_name: (p as any).display_name };
+      return map;
+    },
+  });
+
   // Group queue entries by book so staff can see "this book has 3 readers waiting, in this order".
   const grouped = useMemo(() => {
     const m = new Map<string, { book: any; rows: any[] }>();
@@ -1348,7 +1372,7 @@ function WaitlistTab() {
                       {r.books?.title ?? "Book"}
                     </Link>
                     <p className="text-xs text-muted-foreground">
-                      Offered {new Date(r.created_at).toLocaleString()} · {left !== null ? `${left}h left` : "no expiry"}
+                      Reader: <span className="font-medium text-foreground/80">{profileMap[r.user_id]?.display_name ?? "Unknown"}</span> · Offered {new Date(r.created_at).toLocaleString()} · {left !== null ? `${left}h left` : "no expiry"}
                     </p>
                     <button onClick={() => setViewingUser(r.user_id)} className="cursor-pointer text-[11px] text-primary hover:underline">View reader →</button>
                   </div>
@@ -1381,8 +1405,8 @@ function WaitlistTab() {
                     <li key={w.id} className="flex items-center justify-between gap-3 rounded-lg bg-surface/40 px-3 py-2 text-xs">
                       <div className="flex items-center gap-2.5">
                         <span className="grid h-6 w-6 place-items-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">{i + 1}</span>
-                        <button onClick={() => setViewingUser(w.user_id)} className="cursor-pointer text-primary hover:underline">
-                          Reader · joined {new Date(w.created_at).toLocaleDateString()}
+                        <button onClick={() => setViewingUser(w.user_id)} className="cursor-pointer text-left text-primary hover:underline">
+                          {profileMap[w.user_id]?.display_name ?? "Reader"} <span className="text-muted-foreground">· joined {new Date(w.created_at).toLocaleDateString()}</span>
                         </button>
                       </div>
                       <button
