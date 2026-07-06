@@ -2,12 +2,14 @@ import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   Home, Search, BookMarked, PenLine, Heart, UserRound,
   Library, NotebookPen, Wallet, LogOut, Sparkles, Bell, X, Truck, Languages as LangIcon,
+  Settings, EyeOff, Eye,
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo, type ReactNode } from "react";
 import { useSession } from "@/lib/auth";
 import { useProfile, useDueSoonRentals, useNotifications, useMarkNotificationsRead, useRentals } from "@/lib/userdata";
 import { useIsStaff } from "@/lib/admin";
 import { Shield } from "lucide-react";
+import { useHideBrowse, useHideMoney } from "@/lib/ui-prefs";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
