@@ -29,7 +29,7 @@ import {
 import { exportCsv, exportPdf } from "@/lib/pdf-export";
 import { AdsTab } from "@/components/admin/AdsTab";
 
-type Tab = "overview" | "books" | "rentals" | "waitlist" | "suggestions" | "ads" | "libraries" | "roles" | "users" | "activity";
+type Tab = "overview" | "books" | "rentals" | "waitlist" | "suggestions" | "reports" | "ads" | "libraries" | "roles" | "users" | "activity";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -92,6 +92,7 @@ function AdminPage() {
     { id: "rentals", label: "Rentals", icon: Package },
     { id: "waitlist", label: "Waitlist", icon: Clock },
     { id: "suggestions", label: "Suggestions", icon: Lightbulb },
+    { id: "reports", label: "Reports", icon: FileText },
     { id: "ads", label: "Ads", icon: Megaphone },
     { id: "libraries", label: "Libraries", icon: Building2, adminOnly: true },
     { id: "users", label: "Users", icon: Users, adminOnly: true },
@@ -145,6 +146,7 @@ function AdminPage() {
       {tab === "rentals" && <RentalsTab />}
       {tab === "waitlist" && <WaitlistTab />}
       {tab === "suggestions" && <SuggestionsTab />}
+      {tab === "reports" && <ReportsTab />}
       {tab === "ads" && <AdsTab />}
       {tab === "libraries" && isAdmin && <LibrariesTab />}
       {tab === "users" && isAdmin && <UsersTab />}
@@ -338,21 +340,32 @@ function BooksTab() {
     if (libFilter === "__unassigned") pool = pool.filter((b) => !b.library_id);
     else if (libFilter !== "all") pool = pool.filter((b) => b.library_id === libFilter);
 
-    if (q.trim()) {
-      const needle = q.toLowerCase();
-      pool = pool.filter(
-        (b) =>
-          b.title.toLowerCase().includes(needle) ||
-          b.author.toLowerCase().includes(needle) ||
-          (b.shelf_code ?? "").toLowerCase().includes(needle) ||
-          (b.publisher ?? "").toLowerCase().includes(needle) ||
-          (b.genre ?? "").toLowerCase().includes(needle) ||
-          (b.language ?? "").toLowerCase().includes(needle) ||
-          (b.title_ml ?? "").includes(q) ||
-          (b.author_ml ?? "").includes(q) ||
-          (b.genre_ml ?? "").includes(q),
-      );
+    // Prefix-priority search: exact-prefix > word-start > substring, across title/author/other.
+    // When a query is present we override sort with rank order so "aad" surfaces "Aadujeevitham" first.
+    const needle = q.trim().toLowerCase();
+    let searchRanked: { b: any; s: number }[] | null = null;
+    if (needle) {
+      searchRanked = [];
+      for (const b of pool) {
+        const title = `${b.title ?? ""} ${b.title_ml ?? ""}`.toLowerCase();
+        const author = `${b.author ?? ""} ${b.author_ml ?? ""} ${b.original_author ?? ""}`.toLowerCase();
+        const other = `${b.shelf_code ?? ""} ${b.publisher ?? ""} ${b.genre ?? ""} ${b.genre_ml ?? ""} ${b.language ?? ""}`.toLowerCase();
+        let s = -1;
+        if (title.startsWith(needle)) s = 0;
+        else if (title.includes(` ${needle}`)) s = 1;
+        else if (title.includes(needle)) s = 2;
+        else if (author.startsWith(needle)) s = 3;
+        else if (author.includes(` ${needle}`)) s = 4;
+        else if (author.includes(needle)) s = 5;
+        else if (other.startsWith(needle)) s = 6;
+        else if (other.includes(needle)) s = 7;
+        if (s >= 0) searchRanked.push({ b, s });
+      }
+      searchRanked.sort((x, y) => x.s - y.s || String(x.b.title || "").localeCompare(String(y.b.title || "")));
+      pool = searchRanked.map((r) => r.b);
+      return pool;
     }
+
     const dir = sortDir === "asc" ? 1 : -1;
     const numericKeys: BookSortKey[] = ["rent_price", "rating", "pages", "published_year"];
     pool = [...pool].sort((a, b) => {
@@ -1252,83 +1265,15 @@ function RentalsTab() {
       ) : shown.length === 0 ? (
         <p className="glass-card rounded-2xl p-8 text-center text-sm text-muted-foreground">No rentals to show.</p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-border">
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 z-10 bg-surface text-xs uppercase tracking-wider text-muted-foreground">
-              <tr>
-                <SortableTh k="member">Member</SortableTh>
-                <SortableTh k="book">Book</SortableTh>
-                <SortableTh k="rented_at">Rented</SortableTh>
-                <SortableTh k="due_at">Due</SortableTh>
-                <SortableTh k="returned_at">Returned</SortableTh>
-                <SortableTh k="price_paid">Price ₹</SortableTh>
-                <SortableTh k="fine_amount">Fine ₹</SortableTh>
-                <SortableTh k="tracking_status">Status</SortableTh>
-                <th className="px-2 py-2.5 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {shown.map((r: any) => (
-                <tr key={r.id} className="border-t border-border/40 hover:bg-surface/40">
-                  <td className="px-2 py-2">
-                    <button onClick={() => setViewingUser(r.user_id)} className="cursor-pointer text-left font-semibold hover:text-primary">
-                      {r.member_name ?? "—"}
-                    </button>
-                    {r.member_phone && <div className="text-[10px] text-muted-foreground">📞 {r.member_phone}</div>}
-                  </td>
-                  <td className="px-2 py-2">
-                    <Link to="/books/$id" params={{ id: r.books?.id ?? "" }} className="cursor-pointer font-medium hover:text-primary">{r.books?.title ?? "Book"}</Link>
-                    <div className="text-[10px] text-muted-foreground">by {r.books?.author ?? "—"} · Rack {r.books?.shelf_code ?? "—"}</div>
-                  </td>
-                  <td className="whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">{new Date(r.rented_at).toLocaleDateString()}</td>
-                  <td className="whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">{new Date(r.due_at).toLocaleDateString()}</td>
-                  <td className="whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">
-                    {r.returned_at ? (
-                      <input
-                        type="date"
-                        defaultValue={new Date(r.returned_at).toISOString().slice(0, 10)}
-                        onBlur={(e) => {
-                          const v = e.target.value;
-                          const iso = v ? new Date(v + "T12:00:00Z").toISOString() : null;
-                          const cur = new Date(r.returned_at).toISOString().slice(0, 10);
-                          if (v !== cur) setReturnDate(r.id, iso);
-                        }}
-                        className="cursor-pointer rounded-md border border-border bg-surface px-1.5 py-0.5 text-[11px]"
-                      />
-                    ) : "—"}
-                  </td>
-                  <td className="px-2 py-2 text-xs">₹{Number(r.price_paid ?? 0).toFixed(0)}</td>
-                  <td className="px-2 py-2 text-xs">{Number(r.fine_amount ?? 0) > 0 ? <span className="rounded-full bg-rose-500/15 px-2 py-0.5 text-rose-300">₹{Number(r.fine_amount).toFixed(0)}</span> : <span className="text-muted-foreground">—</span>}</td>
-                  <td className="px-2 py-2">
-                    {!r.returned_at ? (
-                      <select
-                        value={r.tracking_status ?? "confirmed"}
-                        onChange={(e) => update.mutate({ id: r.id, status: e.target.value })}
-                        className="cursor-pointer rounded-md border border-border bg-surface px-1.5 py-0.5 text-[11px]"
-                      >
-                        {STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
-                      </select>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/15 px-2 py-0.5 text-[11px] text-emerald-300">
-                        <CheckCircle2 className="h-3 w-3" /> returned
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-2 py-2 text-right">
-                    {!r.returned_at && (
-                      <button
-                        onClick={() => { if (confirm(`Mark "${r.books?.title}" as returned? Late fine (₹1/day after 20d) is auto-deducted.`)) markReturned.mutate(r.id); }}
-                        className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-emerald-500 px-2 py-1 text-[11px] font-semibold text-emerald-950 hover:opacity-90"
-                      >
-                        <CheckCircle2 className="h-3 w-3" /> Return
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <RentalsByMonth
+          rentals={shown}
+          STATUSES={STATUSES}
+          setViewingUser={setViewingUser}
+          setReturnDate={setReturnDate}
+          onStatus={(id: string, status: string) => update.mutate({ id, status })}
+          onReturn={(r: any) => { if (confirm(`Mark "${r.books?.title}" as returned? Late fine (₹1/day after 20d) is auto-deducted.`)) markReturned.mutate(r.id); }}
+          SortableTh={SortableTh}
+        />
       )}
 
       {viewingUser && <UserDashboardModal userId={viewingUser} onClose={() => setViewingUser(null)} />}
@@ -1422,6 +1367,130 @@ function LogRentalDialog({ onClose, onCreated }: { onClose: () => void; onCreate
 }
 
 
+
+
+
+// Groups rentals into month sections newest-first with a collapsible <details> wrapper.
+function RentalsByMonth({
+  rentals, STATUSES, setViewingUser, setReturnDate, onStatus, onReturn, SortableTh,
+}: {
+  rentals: any[];
+  STATUSES: string[];
+  setViewingUser: (id: string) => void;
+  setReturnDate: (id: string, iso: string | null) => void;
+  onStatus: (id: string, status: string) => void;
+  onReturn: (r: any) => void;
+  SortableTh: any;
+}) {
+  const groups = useMemo(() => {
+    const m = new Map<string, { label: string; rows: any[] }>();
+    for (const r of rentals) {
+      const d = new Date(r.rented_at ?? r.created_at ?? Date.now());
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const label = d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+      const g = m.get(key) ?? { label, rows: [] };
+      g.rows.push(r);
+      m.set(key, g);
+    }
+    return [...m.entries()]
+      .sort(([a], [b]) => (a > b ? -1 : a < b ? 1 : 0))
+      .map(([key, v]) => ({ key, ...v }));
+  }, [rentals]);
+
+  return (
+    <div className="space-y-3">
+      {groups.map((g, idx) => (
+        <details key={g.key} open={idx === 0} className="glass-card group rounded-xl">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-xl px-4 py-3 hover:bg-surface/40">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold">{g.label}</span>
+              <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-primary">{g.rows.length}</span>
+            </div>
+            <span className="text-xs text-muted-foreground group-open:hidden">Expand</span>
+            <span className="hidden text-xs text-muted-foreground group-open:inline">Collapse</span>
+          </summary>
+          <div className="overflow-x-auto border-t border-border/40">
+            <table className="w-full text-sm">
+              <thead className="bg-surface text-xs uppercase tracking-wider text-muted-foreground">
+                <tr>
+                  <SortableTh k="member">Member</SortableTh>
+                  <SortableTh k="book">Book</SortableTh>
+                  <SortableTh k="rented_at">Rented</SortableTh>
+                  <SortableTh k="due_at">Due</SortableTh>
+                  <SortableTh k="returned_at">Returned</SortableTh>
+                  <SortableTh k="tracking_status">Status</SortableTh>
+                  <th className="px-2 py-2.5 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {g.rows.map((r: any) => (
+                  <tr key={r.id} className="border-t border-border/40 hover:bg-surface/40">
+                    <td className="px-2 py-2">
+                      <button onClick={() => setViewingUser(r.user_id)} className="cursor-pointer text-left font-semibold hover:text-primary">
+                        {r.member_name ?? "—"}
+                      </button>
+                      {r.member_phone && <div className="text-[10px] text-muted-foreground">📞 {r.member_phone}</div>}
+                    </td>
+                    <td className="px-2 py-2">
+                      <Link to="/books/$id" params={{ id: r.books?.id ?? "" }} className="cursor-pointer font-medium hover:text-primary">{r.books?.title ?? "Book"}</Link>
+                      <div className="text-[10px] text-muted-foreground">by {r.books?.author ?? "—"} · Rack {r.books?.shelf_code ?? "—"}</div>
+                    </td>
+                    <td className="whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">{new Date(r.rented_at).toLocaleDateString()}</td>
+                    <td className="whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">{new Date(r.due_at).toLocaleDateString()}</td>
+                    <td className="whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">
+                      {r.returned_at ? (
+                        <input
+                          type="date"
+                          defaultValue={new Date(r.returned_at).toISOString().slice(0, 10)}
+                          onBlur={(e) => {
+                            const v = e.target.value;
+                            const iso = v ? new Date(v + "T12:00:00Z").toISOString() : null;
+                            const cur = new Date(r.returned_at).toISOString().slice(0, 10);
+                            if (v !== cur) setReturnDate(r.id, iso);
+                          }}
+                          className="cursor-pointer rounded-md border border-border bg-surface px-1.5 py-0.5 text-[11px]"
+                        />
+                      ) : "—"}
+                    </td>
+                    <td className="px-2 py-2">
+                      {!r.returned_at ? (
+                        <select
+                          value={r.tracking_status ?? "confirmed"}
+                          onChange={(e) => onStatus(r.id, e.target.value)}
+                          className="cursor-pointer rounded-md border border-border bg-surface px-1.5 py-0.5 text-[11px]"
+                        >
+                          {STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
+                        </select>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/15 px-2 py-0.5 text-[11px] text-emerald-300">
+                          <CheckCircle2 className="h-3 w-3" /> returned
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-2 py-2 text-right">
+                      {!r.returned_at && (
+                        <button
+                          onClick={() => onReturn(r)}
+                          className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-emerald-500 px-2 py-1 text-[11px] font-semibold text-emerald-950 hover:opacity-90"
+                        >
+                          <CheckCircle2 className="h-3 w-3" /> Return
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      ))}
+    </div>
+  );
+}
+
+
+
+
 // ===== WAITLIST =====
 function WaitlistTab() {
   const { data: list = [], isLoading } = useAllWaitlist();
@@ -1458,13 +1527,11 @@ function WaitlistTab() {
     enabled: userIds.length > 0,
     staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, display_name")
-        .in("id", userIds);
+      // Staff-only RPC returns display_name + email + phone for the batch of reader ids.
+      const { data, error } = await supabase.rpc("staff_users_by_ids" as any, { _ids: userIds });
       if (error) throw error;
-      const map: Record<string, { display_name: string | null }> = {};
-      for (const p of data ?? []) map[p.id] = { display_name: (p as any).display_name };
+      const map: Record<string, { display_name: string | null; email: string | null; phone: string | null }> = {};
+      for (const p of (data ?? []) as any[]) map[p.user_id] = { display_name: p.display_name, email: p.email, phone: p.phone };
       return map;
     },
   });
@@ -1510,7 +1577,9 @@ function WaitlistTab() {
                       {r.books?.title ?? "Book"}
                     </Link>
                     <p className="text-xs text-muted-foreground">
-                      Reader: <span className="font-medium text-foreground/80">{profileMap[r.user_id]?.display_name ?? "Unknown"}</span> · Offered {new Date(r.created_at).toLocaleString()} · {left !== null ? `${left}h left` : "no expiry"}
+                      Reader: <span className="font-medium text-foreground/80">{(profileMap as any)[r.user_id]?.display_name ?? "Unknown"}</span>
+                      {(profileMap as any)[r.user_id]?.email && <> · <a href={`mailto:${(profileMap as any)[r.user_id].email}`} className="cursor-pointer hover:text-primary">{(profileMap as any)[r.user_id].email}</a></>}
+                      {" · "}Offered {new Date(r.created_at).toLocaleString()} · {left !== null ? `${left}h left` : "no expiry"}
                     </p>
                     <button onClick={() => setViewingUser(r.user_id)} className="cursor-pointer text-[11px] text-primary hover:underline">View reader →</button>
                   </div>
@@ -1541,11 +1610,16 @@ function WaitlistTab() {
                 <ol className="space-y-1.5">
                   {rows.map((w: any, i: number) => (
                     <li key={w.id} className="flex items-center justify-between gap-3 rounded-lg bg-surface/40 px-3 py-2 text-xs">
-                      <div className="flex items-center gap-2.5">
+                      <div className="min-w-0 flex items-center gap-2.5">
                         <span className="grid h-6 w-6 place-items-center rounded-full bg-primary/15 text-[11px] font-bold text-primary">{i + 1}</span>
-                        <button onClick={() => setViewingUser(w.user_id)} className="cursor-pointer text-left text-primary hover:underline">
-                          {profileMap[w.user_id]?.display_name ?? "Reader"} <span className="text-muted-foreground">· joined {new Date(w.created_at).toLocaleDateString()}</span>
-                        </button>
+                        <div className="min-w-0">
+                          <button onClick={() => setViewingUser(w.user_id)} className="cursor-pointer text-left text-primary hover:underline">
+                            {(profileMap as any)[w.user_id]?.display_name ?? "Reader"}
+                          </button>
+                          <div className="text-[10px] text-muted-foreground">
+                            {(profileMap as any)[w.user_id]?.email ?? "—"} · joined {new Date(w.created_at).toLocaleDateString()}
+                          </div>
+                        </div>
                       </div>
                       <button
                         onClick={() => remove.mutate(w.id)}
@@ -2361,3 +2435,122 @@ function AddMemberDialog({ onClose }: { onClose: () => void }) {
     </div>
   );
 }
+
+// ===== REPORTS =====
+// One hub tab that lets staff download filtered CSV/PDF reports for all four datasets.
+function ReportsTab() {
+  const { data: rentals = [] } = useAllRentals();
+  const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
+  const { data: suggestions = [] } = useAllSuggestions();
+  const { data: users = [] } = useAdminUsers();
+
+  const [from, setFrom] = useState<string>(() => {
+    const d = new Date(); d.setMonth(d.getMonth() - 3); return d.toISOString().slice(0, 10);
+  });
+  const [to, setTo] = useState<string>(() => new Date().toISOString().slice(0, 10));
+
+  const fromTs = new Date(from + "T00:00:00Z").getTime();
+  const toTs = new Date(to + "T23:59:59Z").getTime();
+
+  const rentalRows = useMemo(() => (rentals as any[]).filter((r) => {
+    const t = new Date(r.rented_at ?? 0).getTime();
+    return t >= fromTs && t <= toTs;
+  }), [rentals, fromTs, toTs]);
+  const suggestionRows = useMemo(() => (suggestions as any[]).filter((s) => {
+    const t = new Date(s.created_at ?? 0).getTime();
+    return t >= fromTs && t <= toTs;
+  }), [suggestions, fromTs, toTs]);
+
+  const rentalCols = [
+    { header: "Member", get: (r: any) => r.member_name ?? r.user_id },
+    { header: "Phone", get: (r: any) => r.member_phone ?? "" },
+    { header: "Book", get: (r: any) => r.books?.title ?? "" },
+    { header: "Author", get: (r: any) => r.books?.author ?? "" },
+    { header: "Rack", get: (r: any) => r.books?.shelf_code ?? "" },
+    { header: "Rented", get: (r: any) => new Date(r.rented_at).toLocaleDateString() },
+    { header: "Due", get: (r: any) => new Date(r.due_at).toLocaleDateString() },
+    { header: "Returned", get: (r: any) => r.returned_at ? new Date(r.returned_at).toLocaleDateString() : "" },
+    { header: "Status", get: (r: any) => r.tracking_status ?? "" },
+  ];
+  const bookCols = [
+    { header: "Rack", get: (b: any) => b.shelf_code ?? "" },
+    { header: "Title", get: (b: any) => b.title ?? "" },
+    { header: "Author", get: (b: any) => b.author ?? "" },
+    { header: "Publisher", get: (b: any) => b.publisher ?? "" },
+    { header: "Language", get: (b: any) => b.language ?? "" },
+    { header: "Genre", get: (b: any) => b.genre ?? "" },
+    { header: "Availability", get: (b: any) => b.availability ?? "available" },
+  ];
+  const suggestionCols = [
+    { header: "Title", get: (s: any) => s.title ?? "" },
+    { header: "Author", get: (s: any) => s.author ?? "" },
+    { header: "Status", get: (s: any) => s.status ?? "pending" },
+    { header: "Note", get: (s: any) => s.note ?? "" },
+    { header: "Created", get: (s: any) => new Date(s.created_at).toLocaleDateString() },
+  ];
+  const memberCols = [
+    { header: "Name", get: (u: any) => u.display_name ?? "" },
+    { header: "Email", get: (u: any) => u.email ?? "" },
+    { header: "Active rentals", get: (u: any) => Number(u.active_rentals ?? 0) },
+    { header: "Total rentals", get: (u: any) => Number(u.total_rentals ?? 0) },
+    { header: "Joined", get: (u: any) => new Date(u.created_at).toLocaleDateString() },
+  ];
+
+  const Card = ({ title, count, onCsv, onPdf, extra }: { title: string; count: number; onCsv: () => void; onPdf: () => void; extra?: React.ReactNode }) => (
+    <div className="glass-card rounded-2xl p-5">
+      <div className="mb-2 flex items-baseline justify-between">
+        <h3 className="text-sm font-bold">{title}</h3>
+        <span className="text-xs text-muted-foreground">{count.toLocaleString()} rows</span>
+      </div>
+      {extra}
+      <div className="mt-3 flex gap-2">
+        <button onClick={onCsv} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-surface/50 px-3 py-1.5 text-xs hover:bg-surface-elevated"><FileDown className="h-3.5 w-3.5" /> CSV</button>
+        <button onClick={onPdf} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-surface/50 px-3 py-1.5 text-xs hover:bg-surface-elevated"><FileText className="h-3.5 w-3.5" /> PDF</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-5">
+      <div className="glass-card flex flex-wrap items-end gap-3 rounded-2xl p-4">
+        <div>
+          <div className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">From</div>
+          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="cursor-pointer rounded-lg border border-border bg-transparent px-3 py-1.5 text-sm" />
+        </div>
+        <div>
+          <div className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">To</div>
+          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="cursor-pointer rounded-lg border border-border bg-transparent px-3 py-1.5 text-sm" />
+        </div>
+        <p className="ml-auto text-xs text-muted-foreground">Date range filters rentals and suggestions. Books &amp; members export the full current set.</p>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <Card
+          title="Rentals report"
+          count={rentalRows.length}
+          onCsv={() => exportCsv({ filename: `rentals-${from}_${to}.csv`, columns: rentalCols, rows: rentalRows })}
+          onPdf={() => exportPdf({ filename: `rentals-${from}_${to}.pdf`, title: "Rentals", subtitle: `${from} → ${to} · ${rentalRows.length} rows`, columns: rentalCols, rows: rentalRows })}
+        />
+        <Card
+          title="Suggestions report"
+          count={suggestionRows.length}
+          onCsv={() => exportCsv({ filename: `suggestions-${from}_${to}.csv`, columns: suggestionCols, rows: suggestionRows })}
+          onPdf={() => exportPdf({ filename: `suggestions-${from}_${to}.pdf`, title: "Suggestions", subtitle: `${from} → ${to} · ${suggestionRows.length} rows`, columns: suggestionCols, rows: suggestionRows })}
+        />
+        <Card
+          title="Books catalogue"
+          count={(books as any[]).length}
+          onCsv={() => exportCsv({ filename: `books-${Date.now()}.csv`, columns: bookCols, rows: books as any[] })}
+          onPdf={() => exportPdf({ filename: `books-${Date.now()}.pdf`, title: "Books catalogue", subtitle: `${(books as any[]).length} books`, columns: bookCols, rows: books as any[] })}
+        />
+        <Card
+          title="Members directory"
+          count={(users as any[]).length}
+          onCsv={() => exportCsv({ filename: `members-${Date.now()}.csv`, columns: memberCols, rows: users as any[] })}
+          onPdf={() => exportPdf({ filename: `members-${Date.now()}.pdf`, title: "Members", subtitle: `${(users as any[]).length} readers`, columns: memberCols, rows: users as any[] })}
+        />
+      </div>
+    </div>
+  );
+}
+

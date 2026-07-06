@@ -20,6 +20,7 @@ export type Book = {
   shelf_code: string | null;
   language: string | null;
   cover_url: string | null;
+  availability?: string | null;
   created_at?: string;
 };
 
@@ -151,7 +152,7 @@ export function sortBooks(books: Book[], sort: BookSort, direction: SortDirectio
 
 
 const LIST_COLUMNS =
-  "id,title,title_ml,author,author_ml,original_author,genre,genre_ml,rating,rent_price,cover_color,pages,published_year,publisher,shelf_code,language,cover_url,created_at,library_id";
+  "id,title,title_ml,author,author_ml,original_author,genre,genre_ml,rating,rent_price,cover_color,pages,published_year,publisher,shelf_code,language,cover_url,availability,created_at,library_id";
 
 export type HomeFacet = { key: string; ml?: string | null; count: number };
 export type GenreFacet = { key: string; ml: string | null; en: string; count: number; slugKey: string };

@@ -6,11 +6,12 @@ import { BooksGrid, type ViewMode } from "@/components/BooksGrid";
 import { BookCard } from "@/components/BookCard";
 import { colorAt } from "@/lib/books";
 import { SortBar } from "@/components/SortBar";
+import { useLibrary } from "@/lib/library";
 import {
   Pagination, PaginationContent, PaginationItem, PaginationLink,
   PaginationPrevious, PaginationNext, PaginationEllipsis,
 } from "@/components/ui/pagination";
-import { ArrowRight, Library, PenLine, Sparkles, ChevronDown, ChevronUp, Languages as LangIcon, Flame, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { ArrowRight, Library, PenLine, Sparkles, ChevronDown, ChevronUp, Languages as LangIcon, Flame, ChevronsLeft, ChevronsRight, Building2, Check } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 
 
