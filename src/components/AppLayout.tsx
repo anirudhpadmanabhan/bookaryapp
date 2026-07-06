@@ -388,10 +388,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
                           </div>
                         )}
                         <div className="mt-1 truncate text-xs text-muted-foreground">{user.email}</div>
-                        <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs text-emerald-300">
-                          <Wallet className="h-3 w-3" /> ₹{Number(profile.wallet_balance).toFixed(0)}
-                        </div>
-                      </div>
+                        {!hideMoney && (
+                          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs text-emerald-300">
+                            <Wallet className="h-3 w-3" /> ₹{Number(profile.wallet_balance).toFixed(0)}
+                          </div>
+                        )}
                       <Link to="/profile" onClick={() => setMenuOpen(false)} className="flex cursor-pointer items-center gap-2 px-3 py-2.5 text-sm hover:bg-surface-elevated">
                         <UserRound className="h-4 w-4" /> Profile
                       </Link>
