@@ -2651,6 +2651,13 @@ function ReportsTab() {
           onCsv={() => exportCsv({ filename: `members-${Date.now()}.csv`, columns: memberCols, rows: users as any[] })}
           onPdf={() => exportPdf({ filename: `members-${Date.now()}.pdf`, title: "Members", subtitle: `${(users as any[]).length} readers`, columns: memberCols, rows: users as any[] })}
         />
+        <Card
+          title="Top readers"
+          count={(topReaders as any[]).length}
+          extra={<p className="text-xs text-muted-foreground">Readers ranked by rentals, books read and reviews for this library.</p>}
+          onCsv={() => exportCsv({ filename: `top-readers-${Date.now()}.csv`, columns: topReaderCols, rows: topReaders as any[] })}
+          onPdf={() => exportPdf({ filename: `top-readers-${Date.now()}.pdf`, title: "Top readers", subtitle: `${(topReaders as any[]).length} readers`, columns: topReaderCols, rows: topReaders as any[] })}
+        />
       </div>
     </div>
   );
