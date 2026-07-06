@@ -145,8 +145,8 @@ function SearchPage() {
     if (!trimmed) return;
     if (!user) return toast.error("Sign in to suggest a book");
     suggest.mutate(
-      { title: trimmed, author: suggestAuthor, note: suggestNote },
-      { onSuccess: () => { setSuggestAuthor(""); setSuggestNote(""); } },
+      { title: trimmed, author: suggestAuthor, note: suggestNote, publisher: suggestPublisher },
+      { onSuccess: () => { setSuggestAuthor(""); setSuggestPublisher(""); setSuggestNote(""); } },
     );
   };
 
