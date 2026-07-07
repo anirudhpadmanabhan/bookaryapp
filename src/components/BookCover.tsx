@@ -22,8 +22,8 @@ function coverCandidates(url: string): string[] {
     const id = extractDriveId(clean);
     if (!id) return [clean];
     return [
-      `https://drive.google.com/thumbnail?id=${id}&sz=w800`,
       `https://lh3.googleusercontent.com/d/${id}=w800`,
+      `https://drive.google.com/thumbnail?id=${id}&sz=w800`,
       `https://drive.usercontent.google.com/download?id=${id}&export=view`,
     ];
   } catch {
