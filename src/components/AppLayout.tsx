@@ -440,9 +440,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 type="button"
                 onClick={() => setHideBrowse(!hideBrowse)}
                 title={hideBrowse ? "Show Browse links" : "Hide Browse links"}
-                className="cursor-pointer rounded p-1 text-muted-foreground hover:bg-surface-elevated hover:text-foreground"
+                className="cursor-pointer rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:bg-surface-elevated hover:text-foreground"
               >
-                {hideBrowse ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                {hideBrowse ? "Show" : "Hide"}
               </button>
             </div>
             {!hideBrowse && navMain.map((n) => {
