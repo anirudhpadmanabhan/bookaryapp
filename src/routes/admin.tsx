@@ -2534,8 +2534,7 @@ function ReportsTab() {
   const { data: users = [] } = useAdminUsers();
   const { selectedId } = useLibrary();
   const { data: topReaders = [] } = useQuery({
-    queryKey: ["top-readers", selectedId],
-    enabled: !!selectedId,
+    queryKey: ["top-readers", selectedId ?? "all"],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("library_top_readers" as any, { _library_id: selectedId, _limit: 200 });
       if (error) throw error;
