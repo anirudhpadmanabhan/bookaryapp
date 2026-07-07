@@ -2761,6 +2761,7 @@ function LibraryProfileTab() {
         {(posts as any[]).map((p) => (
           <div key={p.id} className="glass-card rounded-2xl p-4">
             {p.title && <h3 className="mb-1 text-base font-semibold">{p.title}</h3>}
+            {p.image_url && <AdminPostImage src={p.image_url} alt={p.title ?? "Library activity"} />}
             {p.body && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{p.body}</p>}
             <div className="mt-2 text-[11px] text-muted-foreground">{formatDMY(p.created_at)}</div>
           </div>
