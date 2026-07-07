@@ -95,6 +95,7 @@ function AdminPage() {
     { id: "suggestions", label: "Suggestions", icon: Lightbulb },
     { id: "reports", label: "Reports", icon: FileText },
     { id: "ads", label: "Ads", icon: Megaphone },
+    { id: "profile", label: "Library profile", icon: Building2 },
     { id: "libraries", label: "Libraries", icon: Building2, adminOnly: true },
     { id: "users", label: "Users", icon: Users, adminOnly: true },
     { id: "roles", label: "Roles", icon: Shield, adminOnly: true },
