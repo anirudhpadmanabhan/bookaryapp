@@ -150,6 +150,7 @@ function AdminPage() {
       {tab === "suggestions" && <SuggestionsTab />}
       {tab === "reports" && <ReportsTab />}
       {tab === "ads" && <AdsTab />}
+      {tab === "profile" && <LibraryProfileTab />}
       {tab === "libraries" && isAdmin && <LibrariesTab />}
       {tab === "users" && isAdmin && <UsersTab />}
       {tab === "roles" && isAdmin && <StaffRolesTab />}
