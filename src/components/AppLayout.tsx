@@ -478,9 +478,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 type="button"
                 onClick={() => setHideShelves(!hideShelves)}
                 title={hideShelves ? "Show shelf links" : "Hide shelf links"}
-                className="cursor-pointer rounded p-1 text-muted-foreground hover:bg-surface-elevated hover:text-foreground"
+                className="cursor-pointer rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:bg-surface-elevated hover:text-foreground"
               >
-                {hideShelves ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                {hideShelves ? "Show" : "Hide"}
               </button>
             </div>
             {!hideShelves && navMine.map((n) => {
