@@ -9,7 +9,7 @@ import {
   useAdminLibraries, useCreateLibrary, useUpdateLibrary, useDeleteLibrary,
   useStaffRoles, useSetUserRole, useLibraryMembers,
   useGrantLibrarianForLibrary, useRevokeLibrarianForLibrary,
-  useStaffUserSummary,
+  useStaffUserSummary, useUserRentalHistory, useReadingInsights,
   useBulkImportBooks, useLibraryBookCounts, type BookImportRow, type ImportMode,
   useAdminUsers, useTransactionLog,
 } from "@/lib/admin";
