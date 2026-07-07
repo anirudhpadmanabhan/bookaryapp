@@ -2534,8 +2534,7 @@ function ReportsTab() {
   const { data: users = [] } = useAdminUsers();
   const { selectedId } = useLibrary();
   const { data: topReaders = [] } = useQuery({
-    queryKey: ["top-readers", selectedId],
-    enabled: !!selectedId,
+    queryKey: ["top-readers", selectedId ?? "all"],
     queryFn: async () => {
       const { data, error } = await supabase.rpc("library_top_readers" as any, { _library_id: selectedId, _limit: 200 });
       if (error) throw error;
@@ -2762,6 +2761,7 @@ function LibraryProfileTab() {
         {(posts as any[]).map((p) => (
           <div key={p.id} className="glass-card rounded-2xl p-4">
             {p.title && <h3 className="mb-1 text-base font-semibold">{p.title}</h3>}
+            {p.image_url && <AdminPostImage src={p.image_url} alt={p.title ?? "Library activity"} />}
             {p.body && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{p.body}</p>}
             <div className="mt-2 text-[11px] text-muted-foreground">{formatDMY(p.created_at)}</div>
           </div>
@@ -2769,4 +2769,19 @@ function LibraryProfileTab() {
       </div>
     </div>
   );
+}
+
+function AdminPostImage({ src, alt }: { src: string; alt: string }) {
+  const { data: resolved } = useQuery({
+    queryKey: ["library-post-image", src],
+    queryFn: async () => {
+      if (!src.startsWith("library-posts/")) return src;
+      const path = src.replace(/^library-posts\//, "");
+      const { data, error } = await supabase.storage.from("library-posts").createSignedUrl(path, 60 * 60);
+      if (error) throw error;
+      return data.signedUrl;
+    },
+  });
+  if (!resolved) return null;
+  return <img src={resolved} alt={alt} className="mb-3 max-h-80 w-full rounded-xl object-cover" loading="lazy" />;
 }

@@ -156,11 +156,7 @@ function BookPage() {
       </button>
       <div className="grid gap-8 md:grid-cols-[280px_1fr]">
         <div className="max-w-[280px]">
-          {book.cover_url ? (
-            <img src={book.cover_url} alt={`Cover for ${book.title}`} loading="lazy" decoding="async" className="w-full rounded-xl shadow-lg" />
-          ) : (
-            <BookCover book={book} />
-          )}
+          <BookCover book={book} className="w-full !aspect-[2/3] rounded-xl shadow-lg" />
           {book.shelf_code && (
             <div className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-surface px-4 py-2.5 text-sm">
               <MapPin className="h-4 w-4 text-primary" />
