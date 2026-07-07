@@ -472,8 +472,18 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 Library profile
               </Link>
             )}
-            <div className="px-3 pb-1 pt-3 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Your shelf</div>
-            {navMine.map((n) => {
+            <div className="flex items-center justify-between px-3 pb-1 pt-3">
+              <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Your shelf</span>
+              <button
+                type="button"
+                onClick={() => setHideShelves(!hideShelves)}
+                title={hideShelves ? "Show shelf links" : "Hide shelf links"}
+                className="cursor-pointer rounded p-1 text-muted-foreground hover:bg-surface-elevated hover:text-foreground"
+              >
+                {hideShelves ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+              </button>
+            </div>
+            {!hideShelves && navMine.map((n) => {
               const active = pathname === n.to;
               return (
                 <Link
