@@ -2234,7 +2234,7 @@ function UserDashboardModal({ userId, onClose }: { userId: string; onClose: () =
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function Stat({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="rounded-lg border border-border/60 bg-surface/40 p-3">
       <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
@@ -2244,20 +2244,57 @@ function Stat({ label, value }: { label: string; value: number }) {
 }
 
 // ===== USERS (admin) =====
+type UserSortKey = "name" | "email" | "active" | "total" | "joined";
+
 function UsersTab() {
   const { data: users = [], isLoading } = useAdminUsers();
   const [viewingUser, setViewingUser] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  const [sortKey, setSortKey] = useState<UserSortKey>("total");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const filtered = useMemo(() => {
-    if (!q.trim()) return users;
-    const needle = q.toLowerCase();
-    return users.filter(
-      (u) =>
-        u.email.toLowerCase().includes(needle) ||
-        (u.display_name ?? "").toLowerCase().includes(needle),
+    const needle = q.trim().toLowerCase();
+    const list = needle
+      ? users.filter(
+          (u) =>
+            u.email.toLowerCase().includes(needle) ||
+            (u.display_name ?? "").toLowerCase().includes(needle),
+        )
+      : users.slice();
+    const dir = sortDir === "asc" ? 1 : -1;
+    list.sort((a, b) => {
+      switch (sortKey) {
+        case "name":
+          return (a.display_name ?? a.email).localeCompare(b.display_name ?? b.email) * dir;
+        case "email":
+          return a.email.localeCompare(b.email) * dir;
+        case "active":
+          return (Number(a.active_rentals) - Number(b.active_rentals)) * dir;
+        case "total":
+          return (Number(a.total_rentals) - Number(b.total_rentals)) * dir;
+        case "joined":
+          return (new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) * dir;
+      }
+    });
+    return list;
+  }, [users, q, sortKey, sortDir]);
+
+  const setSort = (k: UserSortKey) => {
+    if (k === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(k); setSortDir(k === "name" || k === "email" || k === "joined" ? "asc" : "desc"); }
+  };
+
+  const SortH = ({ k, label, className = "" }: { k: UserSortKey; label: string; className?: string }) => {
+    const Icon = sortKey !== k ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
+    return (
+      <th className={`px-3 py-2.5 text-left ${className}`}>
+        <button onClick={() => setSort(k)} className="inline-flex cursor-pointer items-center gap-1 hover:text-foreground">
+          {label} <Icon className="h-3 w-3" />
+        </button>
+      </th>
     );
-  }, [users, q]);
+  };
 
   if (isLoading) return <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-14 animate-pulse rounded-xl bg-surface/60" />)}</div>;
 
@@ -2273,19 +2310,19 @@ function UsersTab() {
             className="w-full bg-transparent text-sm outline-none"
           />
         </div>
-        <p className="text-xs text-muted-foreground">{users.length.toLocaleString()} total members</p>
+        <p className="text-xs text-muted-foreground">{users.length.toLocaleString()} total members · sorted by {sortKey} {sortDir === "asc" ? "↑" : "↓"}</p>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-border">
         <table className="w-full text-sm">
           <thead className="sticky top-0 z-10 bg-surface text-xs uppercase tracking-wider text-muted-foreground">
             <tr>
-              <th className="px-3 py-2.5 text-left">Member</th>
-              <th className="px-3 py-2.5 text-left">Email</th>
+              <SortH k="name" label="Member" />
+              <SortH k="email" label="Email" />
               <th className="px-3 py-2.5 text-left">Roles</th>
-              <th className="px-3 py-2.5 text-left">Active</th>
-              <th className="px-3 py-2.5 text-left">Total rentals</th>
-              <th className="px-3 py-2.5 text-left">Joined</th>
+              <SortH k="active" label="Active" />
+              <SortH k="total" label="Total rentals" />
+              <SortH k="joined" label="Joined" />
               <th className="px-3 py-2.5"></th>
             </tr>
           </thead>
