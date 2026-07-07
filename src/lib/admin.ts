@@ -549,6 +549,32 @@ export function useStaffUserSummary(userId: string | undefined) {
   });
 }
 
+export function useUserRentalHistory(userId: string | undefined) {
+  return useQuery({
+    enabled: !!userId,
+    queryKey: ["user-rental-history", userId],
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("user_rental_history" as any, { _user_id: userId, _library_id: null });
+      if (error) throw error;
+      return data as any;
+    },
+  });
+}
+
+export function useReadingInsights(userId: string | undefined) {
+  return useQuery({
+    enabled: !!userId,
+    queryKey: ["reading-insights-admin", userId],
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("reading_insights" as any, { _user_id: userId });
+      if (error) throw error;
+      return data as any;
+    },
+  });
+}
+
 // ===== BULK BOOK UPLOAD =====
 export type BookImportRow = {
   title: string;

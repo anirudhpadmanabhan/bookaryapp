@@ -9,7 +9,7 @@ import {
   useAdminLibraries, useCreateLibrary, useUpdateLibrary, useDeleteLibrary,
   useStaffRoles, useSetUserRole, useLibraryMembers,
   useGrantLibrarianForLibrary, useRevokeLibrarianForLibrary,
-  useStaffUserSummary,
+  useStaffUserSummary, useUserRentalHistory, useReadingInsights,
   useBulkImportBooks, useLibraryBookCounts, type BookImportRow, type ImportMode,
   useAdminUsers, useTransactionLog,
 } from "@/lib/admin";
@@ -25,7 +25,7 @@ import {
   Shield, Library as LibIcon, Package, Clock, Lightbulb,
   Search as SearchIcon, Trash2, CheckCircle2, Plus, Pencil, X, Save,
   Upload, Grid3x3, List as ListIcon, Building2, Users, Mail, Star, Activity,
-  FileText, FileDown, ArrowUpDown, ArrowUp, ArrowDown, LayoutDashboard, Megaphone, ExternalLink,
+  FileText, FileDown, ArrowUpDown, ArrowUp, ArrowDown, LayoutDashboard, Megaphone,
 } from "lucide-react";
 import { exportCsv, exportPdf } from "@/lib/pdf-export";
 import { AdsTab } from "@/components/admin/AdsTab";
@@ -505,16 +505,6 @@ function BooksTab() {
         >
           <Plus className="h-4 w-4" /> Add book
         </button>
-        {selected?.slug && (
-          <Link
-            to="/libraries/$slug"
-            params={{ slug: selected.slug }}
-            className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface/50 px-3 py-2.5 text-sm font-semibold hover:bg-surface-elevated"
-            title="Open photo and activity posts for this library"
-          >
-            <Building2 className="h-4 w-4" /> Library profile <ExternalLink className="h-3.5 w-3.5" />
-          </Link>
-        )}
       </div>
 
       {isLoading ? (
@@ -2168,10 +2158,30 @@ function AddLibraryScope({
 // ===== USER DASHBOARD MODAL (staff) =====
 function UserDashboardModal({ userId, onClose }: { userId: string; onClose: () => void }) {
   const { data, isLoading } = useStaffUserSummary(userId);
+  const { data: history } = useUserRentalHistory(userId);
+  const { data: insights } = useReadingInsights(userId);
+
+  const historyRentals: any[] = (history?.rentals ?? []) as any[];
+  const stats = history?.stats ?? {};
+
+  const exportUserRentals = () => {
+    const cols = [
+      { header: "Book", get: (r: any) => r.book?.title ?? "" },
+      { header: "Author", get: (r: any) => r.book?.author ?? "" },
+      { header: "Rack", get: (r: any) => r.book?.shelf_code ?? "" },
+      { header: "Genre", get: (r: any) => r.book?.genre ?? "" },
+      { header: "Rented", get: (r: any) => formatDMY(r.rented_at) },
+      { header: "Due", get: (r: any) => formatDMY(r.due_at) },
+      { header: "Returned", get: (r: any) => (r.returned_at ? formatDMY(r.returned_at) : "") },
+      { header: "Status", get: (r: any) => r.tracking_status ?? "" },
+    ];
+    const name = (data?.profile?.display_name ?? data?.email ?? userId).toString().replace(/[^a-z0-9]+/gi, "_").toLowerCase();
+    exportCsv({ filename: `rentals-${name}-${Date.now()}.csv`, columns: cols, rows: historyRentals });
+  };
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="glass-card max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl p-6">
+      <div onClick={(e) => e.stopPropagation()} className="glass-card max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-2xl p-6">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold">Reader dashboard</h2>
           <button onClick={onClose} className="cursor-pointer text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
@@ -2190,24 +2200,49 @@ function UserDashboardModal({ userId, onClose }: { userId: string; onClose: () =
                 {data.profile?.phone && <div className="text-xs text-muted-foreground">📞 {data.profile.phone}</div>}
                 {data.profile?.address && <div className="text-xs text-muted-foreground">📍 {data.profile.address}</div>}
               </div>
+              <button
+                onClick={exportUserRentals}
+                disabled={historyRentals.length === 0}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-surface/50 px-3 py-1.5 text-xs hover:bg-surface-elevated disabled:opacity-50"
+              >
+                <FileDown className="h-3.5 w-3.5" /> Export rentals CSV
+              </button>
             </div>
 
             <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <Stat label="Active rentals" value={(data.active_rentals ?? []).length} />
-              <Stat label="Past rentals" value={data.past_rentals_count ?? 0} />
-              <Stat label="Reviews" value={data.reviews_count ?? 0} />
-              <Stat label="Diary entries" value={data.diary_count ?? 0} />
+              <Stat label="Total rentals" value={Number(stats.total ?? historyRentals.length)} />
+              <Stat label="Active" value={Number(stats.active ?? (data.active_rentals ?? []).length)} />
+              <Stat label="Reviews" value={Number(stats.reviews ?? data.reviews_count ?? 0)} />
+              <Stat label="Books read" value={Number(stats.books_read ?? 0)} />
             </div>
 
-            <h3 className="mb-2 text-sm font-semibold">Active rentals</h3>
-            {(data.active_rentals ?? []).length === 0 ? (
-              <p className="rounded-lg bg-surface/40 p-3 text-xs text-muted-foreground">None right now.</p>
+            <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <Stat label="Reading" value={Number(insights?.reading ?? 0)} />
+              <Stat label="Want to read" value={Number(insights?.want ?? 0)} />
+              <Stat label="Favorite genre" value={insights?.favorite_genre ?? "—"} />
+              <Stat label="Streak (days)" value={Number(insights?.streak ?? 0)} />
+            </div>
+
+            <h3 className="mb-2 text-sm font-semibold">Rental history <span className="text-xs font-normal text-muted-foreground">({historyRentals.length})</span></h3>
+            {historyRentals.length === 0 ? (
+              <p className="rounded-lg bg-surface/40 p-3 text-xs text-muted-foreground">No rentals yet.</p>
             ) : (
-              <div className="space-y-2">
-                {(data.active_rentals as any[]).map((r) => (
+              <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+                {historyRentals.map((r) => (
                   <div key={r.id} className="rounded-lg border border-border/60 bg-surface/30 p-2.5 text-xs">
-                    <div className="font-medium">{r.book?.title ?? "Book"}</div>
-                    <div className="text-muted-foreground">Status: {r.tracking_status} · Due {formatDMY(r.due_at)}</div>
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <div className="font-medium">{r.book?.title ?? "Book"}</div>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${r.returned_at ? "bg-slate-500/15 text-slate-300" : "bg-emerald-500/15 text-emerald-300"}`}>
+                        {r.returned_at ? "Returned" : r.tracking_status ?? "Active"}
+                      </span>
+                    </div>
+                    <div className="text-muted-foreground">
+                      {r.book?.author ?? ""}{r.book?.shelf_code ? ` · Rack ${r.book.shelf_code}` : ""}
+                    </div>
+                    <div className="text-muted-foreground">
+                      Rented {formatDMY(r.rented_at)} · Due {formatDMY(r.due_at)}
+                      {r.returned_at && ` · Returned ${formatDMY(r.returned_at)}`}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -2244,7 +2279,8 @@ function UserDashboardModal({ userId, onClose }: { userId: string; onClose: () =
   );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+
+function Stat({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="rounded-lg border border-border/60 bg-surface/40 p-3">
       <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
@@ -2254,20 +2290,57 @@ function Stat({ label, value }: { label: string; value: number }) {
 }
 
 // ===== USERS (admin) =====
+type UserSortKey = "name" | "email" | "active" | "total" | "joined";
+
 function UsersTab() {
   const { data: users = [], isLoading } = useAdminUsers();
   const [viewingUser, setViewingUser] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  const [sortKey, setSortKey] = useState<UserSortKey>("total");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const filtered = useMemo(() => {
-    if (!q.trim()) return users;
-    const needle = q.toLowerCase();
-    return users.filter(
-      (u) =>
-        u.email.toLowerCase().includes(needle) ||
-        (u.display_name ?? "").toLowerCase().includes(needle),
+    const needle = q.trim().toLowerCase();
+    const list = needle
+      ? users.filter(
+          (u) =>
+            u.email.toLowerCase().includes(needle) ||
+            (u.display_name ?? "").toLowerCase().includes(needle),
+        )
+      : users.slice();
+    const dir = sortDir === "asc" ? 1 : -1;
+    list.sort((a, b) => {
+      switch (sortKey) {
+        case "name":
+          return (a.display_name ?? a.email).localeCompare(b.display_name ?? b.email) * dir;
+        case "email":
+          return a.email.localeCompare(b.email) * dir;
+        case "active":
+          return (Number(a.active_rentals) - Number(b.active_rentals)) * dir;
+        case "total":
+          return (Number(a.total_rentals) - Number(b.total_rentals)) * dir;
+        case "joined":
+          return (new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) * dir;
+      }
+    });
+    return list;
+  }, [users, q, sortKey, sortDir]);
+
+  const setSort = (k: UserSortKey) => {
+    if (k === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(k); setSortDir(k === "name" || k === "email" || k === "joined" ? "asc" : "desc"); }
+  };
+
+  const SortH = ({ k, label, className = "" }: { k: UserSortKey; label: string; className?: string }) => {
+    const Icon = sortKey !== k ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
+    return (
+      <th className={`px-3 py-2.5 text-left ${className}`}>
+        <button onClick={() => setSort(k)} className="inline-flex cursor-pointer items-center gap-1 hover:text-foreground">
+          {label} <Icon className="h-3 w-3" />
+        </button>
+      </th>
     );
-  }, [users, q]);
+  };
 
   if (isLoading) return <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-14 animate-pulse rounded-xl bg-surface/60" />)}</div>;
 
@@ -2283,19 +2356,19 @@ function UsersTab() {
             className="w-full bg-transparent text-sm outline-none"
           />
         </div>
-        <p className="text-xs text-muted-foreground">{users.length.toLocaleString()} total members</p>
+        <p className="text-xs text-muted-foreground">{users.length.toLocaleString()} total members · sorted by {sortKey} {sortDir === "asc" ? "↑" : "↓"}</p>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-border">
         <table className="w-full text-sm">
           <thead className="sticky top-0 z-10 bg-surface text-xs uppercase tracking-wider text-muted-foreground">
             <tr>
-              <th className="px-3 py-2.5 text-left">Member</th>
-              <th className="px-3 py-2.5 text-left">Email</th>
+              <SortH k="name" label="Member" />
+              <SortH k="email" label="Email" />
               <th className="px-3 py-2.5 text-left">Roles</th>
-              <th className="px-3 py-2.5 text-left">Active</th>
-              <th className="px-3 py-2.5 text-left">Total rentals</th>
-              <th className="px-3 py-2.5 text-left">Joined</th>
+              <SortH k="active" label="Active" />
+              <SortH k="total" label="Total rentals" />
+              <SortH k="joined" label="Joined" />
               <th className="px-3 py-2.5"></th>
             </tr>
           </thead>
@@ -2643,6 +2716,7 @@ function ReportsTab() {
           onCsv={() => exportCsv({ filename: `suggestions-${from}_${to}.csv`, columns: suggestionCols, rows: suggestionRows })}
           onPdf={() => exportPdf({ filename: `suggestions-${from}_${to}.pdf`, title: "Suggestions", subtitle: `${from} → ${to} · ${suggestionRows.length} rows`, columns: suggestionCols, rows: suggestionRows })}
         />
+        <PerUserRentalsCard users={users as any[]} rentals={rentals as any[]} />
         <Card
           title="Books catalogue"
           count={(books as any[]).length}
@@ -2662,6 +2736,64 @@ function ReportsTab() {
           onCsv={() => exportCsv({ filename: `top-readers-${Date.now()}.csv`, columns: topReaderCols, rows: topReaders as any[] })}
           onPdf={() => exportPdf({ filename: `top-readers-${Date.now()}.pdf`, title: "Top readers", subtitle: `${(topReaders as any[]).length} readers`, columns: topReaderCols, rows: topReaders as any[] })}
         />
+      </div>
+    </div>
+  );
+}
+
+function PerUserRentalsCard({ users, rentals }: { users: any[]; rentals: any[] }) {
+  const [uid, setUid] = useState<string>("");
+  const scoped = useMemo(() => rentals.filter((r) => r.user_id === uid), [rentals, uid]);
+  const selectedUser = users.find((u) => u.user_id === uid);
+  const cols = [
+    { header: "Book", get: (r: any) => r.books?.title ?? "" },
+    { header: "Author", get: (r: any) => r.books?.author ?? "" },
+    { header: "Rack", get: (r: any) => r.books?.shelf_code ?? "" },
+    { header: "Genre", get: (r: any) => r.books?.genre ?? "" },
+    { header: "Rented", get: (r: any) => formatDMY(r.rented_at) },
+    { header: "Due", get: (r: any) => formatDMY(r.due_at) },
+    { header: "Returned", get: (r: any) => (r.returned_at ? formatDMY(r.returned_at) : "") },
+    { header: "Status", get: (r: any) => r.tracking_status ?? "" },
+  ];
+  const nameSlug = (selectedUser?.display_name ?? selectedUser?.email ?? "user").toString().replace(/[^a-z0-9]+/gi, "_").toLowerCase();
+  const disabled = !uid || scoped.length === 0;
+  return (
+    <div className="glass-card rounded-2xl p-5">
+      <div className="mb-2 flex items-baseline justify-between">
+        <h3 className="text-sm font-bold">Per-user rentals</h3>
+        <span className="text-xs text-muted-foreground">{scoped.length.toLocaleString()} rows</span>
+      </div>
+      <p className="mb-2 text-xs text-muted-foreground">Pick a member to export just their rental history.</p>
+      <select
+        value={uid}
+        onChange={(e) => setUid(e.target.value)}
+        className="w-full cursor-pointer rounded-lg border border-border bg-background/50 px-3 py-2 text-sm"
+      >
+        <option value="">Select a member…</option>
+        {users
+          .slice()
+          .sort((a, b) => Number(b.total_rentals ?? 0) - Number(a.total_rentals ?? 0))
+          .map((u) => (
+            <option key={u.user_id} value={u.user_id}>
+              {(u.display_name ?? u.email)} — {Number(u.total_rentals ?? 0)} rentals
+            </option>
+          ))}
+      </select>
+      <div className="mt-3 flex gap-2">
+        <button
+          disabled={disabled}
+          onClick={() => exportCsv({ filename: `rentals-${nameSlug}-${Date.now()}.csv`, columns: cols, rows: scoped })}
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-surface/50 px-3 py-1.5 text-xs hover:bg-surface-elevated disabled:opacity-50"
+        >
+          <FileDown className="h-3.5 w-3.5" /> CSV
+        </button>
+        <button
+          disabled={disabled}
+          onClick={() => exportPdf({ filename: `rentals-${nameSlug}-${Date.now()}.pdf`, title: `Rentals — ${selectedUser?.display_name ?? selectedUser?.email ?? ""}`, subtitle: `${scoped.length} rentals`, columns: cols, rows: scoped })}
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-surface/50 px-3 py-1.5 text-xs hover:bg-surface-elevated disabled:opacity-50"
+        >
+          <FileText className="h-3.5 w-3.5" /> PDF
+        </button>
       </div>
     </div>
   );

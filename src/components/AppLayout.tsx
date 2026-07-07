@@ -3,7 +3,7 @@ import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   Home, Search, BookMarked, PenLine, Heart, UserRound,
   Library, NotebookPen, LogOut, Sparkles, Bell, X, Truck, Languages as LangIcon,
-  EyeOff, Eye, Building2,
+  Building2,
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo, type ReactNode } from "react";
 import { useSession } from "@/lib/auth";
@@ -43,7 +43,6 @@ const mobileNav = [
 
 const TIPS: { title: string; body: string }[] = [
   { title: "Sort what you see", body: "Every list has a Sort menu and an Asc/Desc toggle." },
-  { title: "Switch tile or list", body: "Use the grid icon to flip between rich tiles and a dense list." },
   { title: "Rate without typing", body: "Pick a star count on any book — even a silent rating helps other readers." },
   { title: "Thumbnails carry the title", body: "Every cover is illustrated with its Malayalam and English title." },
   { title: "Loved syncs everywhere", body: "Tap the heart anywhere — it shows up on your Loved tab instantly." },
@@ -441,9 +440,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 type="button"
                 onClick={() => setHideBrowse(!hideBrowse)}
                 title={hideBrowse ? "Show Browse links" : "Hide Browse links"}
-                className="cursor-pointer rounded p-1 text-muted-foreground hover:bg-surface-elevated hover:text-foreground"
+                className="cursor-pointer rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:bg-surface-elevated hover:text-foreground"
               >
-                {hideBrowse ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                {hideBrowse ? "Show" : "Hide"}
               </button>
             </div>
             {!hideBrowse && navMain.map((n) => {
@@ -479,9 +478,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 type="button"
                 onClick={() => setHideShelves(!hideShelves)}
                 title={hideShelves ? "Show shelf links" : "Hide shelf links"}
-                className="cursor-pointer rounded p-1 text-muted-foreground hover:bg-surface-elevated hover:text-foreground"
+                className="cursor-pointer rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground hover:bg-surface-elevated hover:text-foreground"
               >
-                {hideShelves ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                {hideShelves ? "Show" : "Hide"}
               </button>
             </div>
             {!hideShelves && navMine.map((n) => {
