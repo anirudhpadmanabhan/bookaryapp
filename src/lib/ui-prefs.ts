@@ -3,6 +3,11 @@ import { useEffect, useState } from "react";
 // Simple localStorage-backed UI preferences (member side).
 const KEYS = {
   hideBrowse: "bookary.ui.hide_browse",
+  hideShelves: "bookary.ui.hide_shelves",
+  hideGenres: "bookary.ui.hide_genres",
+  hideWriters: "bookary.ui.hide_writers",
+  hideLanguages: "bookary.ui.hide_languages",
+  hideViewSwitch: "bookary.ui.hide_view_switch",
 } as const;
 
 function read(k: string, fallback: boolean): boolean {
@@ -32,5 +37,9 @@ function useBoolPref(k: string, fallback: boolean) {
   return [v, (nv: boolean) => write(k, nv)] as const;
 }
 
-// Browse section is shown by default; user can hide via sidebar gear.
 export const useHideBrowse = () => useBoolPref(KEYS.hideBrowse, false);
+export const useHideShelves = () => useBoolPref(KEYS.hideShelves, false);
+export const useHideGenres = () => useBoolPref(KEYS.hideGenres, false);
+export const useHideWriters = () => useBoolPref(KEYS.hideWriters, false);
+export const useHideLanguages = () => useBoolPref(KEYS.hideLanguages, false);
+export const useHideViewSwitch = () => useBoolPref(KEYS.hideViewSwitch, false);
