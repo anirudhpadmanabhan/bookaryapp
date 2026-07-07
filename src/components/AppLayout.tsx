@@ -43,7 +43,6 @@ const mobileNav = [
 
 const TIPS: { title: string; body: string }[] = [
   { title: "Sort what you see", body: "Every list has a Sort menu and an Asc/Desc toggle." },
-  { title: "Switch tile or list", body: "Use the grid icon to flip between rich tiles and a dense list." },
   { title: "Rate without typing", body: "Pick a star count on any book — even a silent rating helps other readers." },
   { title: "Thumbnails carry the title", body: "Every cover is illustrated with its Malayalam and English title." },
   { title: "Loved syncs everywhere", body: "Tap the heart anywhere — it shows up on your Loved tab instantly." },
