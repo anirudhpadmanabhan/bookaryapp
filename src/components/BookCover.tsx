@@ -3,30 +3,31 @@ import type { Book } from "@/lib/books";
 import { colorForBook } from "@/lib/books";
 import { cn } from "@/lib/utils";
 
-/**
- * Normalize a cover URL. Google Drive share links (`/file/d/<id>/view...`
- * or `open?id=<id>`) are not directly embeddable — rewrite them to the
- * `lh3.googleusercontent.com` thumbnail endpoint so <img> can render them.
- */
-function normalizeCoverUrl(url: string): string {
+function extractDriveId(s: string): string | null {
+  const m1 = s.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (m1) return m1[1];
+  const m2 = s.match(/drive\.google\.com\/(?:open|uc)\?[^ ]*id=([a-zA-Z0-9_-]+)/);
+  if (m2) return m2[1];
+  const m3 = s.match(/docs\.google\.com\/uc\?[^ ]*id=([a-zA-Z0-9_-]+)/);
+  if (m3) return m3[1];
+  const m4 = s.match(/drive\.usercontent\.google\.com\/download\?id=([a-zA-Z0-9_-]+)/);
+  if (m4) return m4[1];
+  return null;
+}
+
+/** Ordered list of embeddable URL candidates to try for a Google Drive cover. */
+function coverCandidates(url: string): string[] {
   try {
     const clean = url.trim();
-    const extract = (s: string) => {
-      const m1 = s.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
-      if (m1) return m1[1];
-      const m2 = s.match(/drive\.google\.com\/(?:open|uc)\?[^ ]*id=([a-zA-Z0-9_-]+)/);
-      if (m2) return m2[1];
-      const m3 = s.match(/docs\.google\.com\/uc\?[^ ]*id=([a-zA-Z0-9_-]+)/);
-      if (m3) return m3[1];
-      const m4 = s.match(/drive\.usercontent\.google\.com\/download\?id=([a-zA-Z0-9_-]+)/);
-      if (m4) return m4[1];
-      return null;
-    };
-    const id = extract(clean);
-    if (id) return `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
-    return clean;
+    const id = extractDriveId(clean);
+    if (!id) return [clean];
+    return [
+      `https://drive.google.com/thumbnail?id=${id}&sz=w800`,
+      `https://lh3.googleusercontent.com/d/${id}=w800`,
+      `https://drive.usercontent.google.com/download?id=${id}&export=view`,
+    ];
   } catch {
-    return url;
+    return [url];
   }
 }
 
