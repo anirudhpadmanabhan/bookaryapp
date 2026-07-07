@@ -505,16 +505,6 @@ function BooksTab() {
         >
           <Plus className="h-4 w-4" /> Add book
         </button>
-        {selected?.slug && (
-          <Link
-            to="/libraries/$slug"
-            params={{ slug: selected.slug }}
-            className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-surface/50 px-3 py-2.5 text-sm font-semibold hover:bg-surface-elevated"
-            title="Open photo and activity posts for this library"
-          >
-            <Building2 className="h-4 w-4" /> Library profile <ExternalLink className="h-3.5 w-3.5" />
-          </Link>
-        )}
       </div>
 
       {isLoading ? (
