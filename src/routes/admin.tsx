@@ -2716,6 +2716,7 @@ function ReportsTab() {
           onCsv={() => exportCsv({ filename: `suggestions-${from}_${to}.csv`, columns: suggestionCols, rows: suggestionRows })}
           onPdf={() => exportPdf({ filename: `suggestions-${from}_${to}.pdf`, title: "Suggestions", subtitle: `${from} → ${to} · ${suggestionRows.length} rows`, columns: suggestionCols, rows: suggestionRows })}
         />
+        <PerUserRentalsCard users={users as any[]} rentals={rentals as any[]} />
         <Card
           title="Books catalogue"
           count={(books as any[]).length}
