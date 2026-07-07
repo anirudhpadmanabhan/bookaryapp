@@ -10,7 +10,7 @@ import { useSession } from "@/lib/auth";
 import { useProfile, useDueSoonRentals, useNotifications, useMarkNotificationsRead, useRentals } from "@/lib/userdata";
 import { useIsStaff } from "@/lib/admin";
 import { Shield } from "lucide-react";
-import { useHideBrowse } from "@/lib/ui-prefs";
+import { useHideBrowse, useHideShelves } from "@/lib/ui-prefs";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
