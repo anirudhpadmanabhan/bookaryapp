@@ -1429,7 +1429,7 @@ function LogRentalDialog({ onClose, onCreated }: { onClose: () => void; onCreate
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button onClick={onClose} className="cursor-pointer rounded-lg border border-border px-4 py-2 text-sm hover:bg-surface-elevated">Cancel</button>
-          <button disabled={busy} onClick={submit} className="cursor-pointer rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50">
+          <button disabled={busy || !member || !bookId} onClick={submit} className="cursor-pointer rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50">
             {busy ? "Saving…" : "Log rental"}
           </button>
         </div>
