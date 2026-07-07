@@ -2770,3 +2770,18 @@ function LibraryProfileTab() {
     </div>
   );
 }
+
+function AdminPostImage({ src, alt }: { src: string; alt: string }) {
+  const { data: resolved } = useQuery({
+    queryKey: ["library-post-image", src],
+    queryFn: async () => {
+      if (!src.startsWith("library-posts/")) return src;
+      const path = src.replace(/^library-posts\//, "");
+      const { data, error } = await supabase.storage.from("library-posts").createSignedUrl(path, 60 * 60);
+      if (error) throw error;
+      return data.signedUrl;
+    },
+  });
+  if (!resolved) return null;
+  return <img src={resolved} alt={alt} className="mb-3 max-h-80 w-full rounded-xl object-cover" loading="lazy" />;
+}
