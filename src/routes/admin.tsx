@@ -30,7 +30,7 @@ import {
 import { exportCsv, exportPdf } from "@/lib/pdf-export";
 import { AdsTab } from "@/components/admin/AdsTab";
 
-type Tab = "overview" | "books" | "rentals" | "waitlist" | "suggestions" | "reports" | "ads" | "libraries" | "roles" | "users" | "activity";
+type Tab = "overview" | "books" | "rentals" | "waitlist" | "suggestions" | "reports" | "ads" | "libraries" | "profile" | "roles" | "users" | "activity";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
