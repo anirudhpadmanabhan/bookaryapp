@@ -64,6 +64,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const [bellOpen, setBellOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [hideBrowse, setHideBrowse] = useHideBrowse();
+  const [hideShelves, setHideShelves] = useHideShelves();
   
   const [searchValue, setSearchValue] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
