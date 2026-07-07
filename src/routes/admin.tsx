@@ -1,3 +1,4 @@
+import { formatDMY } from "@/lib/utils";
 import { createFileRoute, Link, useNavigate, useRouterState, redirect } from "@tanstack/react-router";
 import { AppLayout } from "@/components/AppLayout";
 import { useSession } from "@/lib/auth";
@@ -1521,8 +1522,8 @@ function RentalsByMonth({
                       <Link to="/books/$id" params={{ id: r.books?.id ?? "" }} className="cursor-pointer font-medium hover:text-primary">{r.books?.title ?? "Book"}</Link>
                       <div className="text-[10px] text-muted-foreground">by {r.books?.author ?? "—"} · Rack {r.books?.shelf_code ?? "—"}</div>
                     </td>
-                    <td className="whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">{new Date(r.rented_at).toLocaleDateString()}</td>
-                    <td className="whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">{new Date(r.due_at).toLocaleDateString()}</td>
+                    <td className="whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">{formatDMY(r.rented_at)}</td>
+                    <td className="whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">{formatDMY(r.due_at)}</td>
                     <td className="whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">
                       {r.returned_at ? (
                         <input
@@ -1718,7 +1719,7 @@ function WaitlistTab() {
                             {(profileMap as any)[w.user_id]?.display_name ?? "Reader"}
                           </button>
                           <div className="text-[10px] text-muted-foreground">
-                            {(profileMap as any)[w.user_id]?.email ?? "—"} · joined {new Date(w.created_at).toLocaleDateString()}
+                            {(profileMap as any)[w.user_id]?.email ?? "—"} · joined {formatDMY(w.created_at)}
                           </div>
                         </div>
                       </div>
@@ -1805,7 +1806,7 @@ function SuggestionsTab() {
               <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${STATUS[s.status ?? "pending"] ?? STATUS.pending}`}>
                 {s.status ?? "pending"}
               </span>
-              <span className="text-xs text-muted-foreground">{new Date(s.created_at).toLocaleDateString()}</span>
+              <span className="text-xs text-muted-foreground">{formatDMY(s.created_at)}</span>
             </div>
           </div>
           {s.author && <p className="text-xs text-muted-foreground">by {s.author}</p>}
@@ -2045,7 +2046,7 @@ function StaffRolesTab() {
                         <span key={r} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${r === "admin" ? "bg-amber-500/20 text-amber-300" : "bg-primary/15 text-primary"}`}>{labelFor(r)}</span>
                       ))}
                     </div>
-                    <div className="mt-1 text-[11px] text-muted-foreground/70">First granted {new Date(l.granted_at).toLocaleDateString()}</div>
+                    <div className="mt-1 text-[11px] text-muted-foreground/70">First granted {formatDMY(l.granted_at)}</div>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {isAdminRole && (
@@ -2204,7 +2205,7 @@ function UserDashboardModal({ userId, onClose }: { userId: string; onClose: () =
                 {(data.active_rentals as any[]).map((r) => (
                   <div key={r.id} className="rounded-lg border border-border/60 bg-surface/30 p-2.5 text-xs">
                     <div className="font-medium">{r.book?.title ?? "Book"}</div>
-                    <div className="text-muted-foreground">Status: {r.tracking_status} · Due {new Date(r.due_at).toLocaleDateString()}</div>
+                    <div className="text-muted-foreground">Status: {r.tracking_status} · Due {formatDMY(r.due_at)}</div>
                   </div>
                 ))}
               </div>
@@ -2217,7 +2218,7 @@ function UserDashboardModal({ userId, onClose }: { userId: string; onClose: () =
                   {(data.waitlist as any[]).map((w) => (
                     <div key={w.id} className="rounded-lg border border-border/60 bg-surface/30 p-2.5 text-xs">
                       <div className="font-medium">{w.book?.title ?? "Book"}</div>
-                      <div className="text-muted-foreground">Joined {new Date(w.created_at).toLocaleDateString()}</div>
+                      <div className="text-muted-foreground">Joined {formatDMY(w.created_at)}</div>
                     </div>
                   ))}
                 </div>
@@ -2320,7 +2321,7 @@ function UsersTab() {
                   )}
                 </td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">{u.total_rentals}</td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">{new Date(u.created_at).toLocaleDateString()}</td>
+                <td className="px-3 py-2 text-xs text-muted-foreground">{formatDMY(u.created_at)}</td>
                 <td className="px-3 py-2 text-right">
                   <button
                     onClick={() => setViewingUser(u.user_id)}
@@ -2422,7 +2423,7 @@ function ActivityLogTab() {
                 return (
                   <tr key={row.id} className="border-t border-border/40 hover:bg-surface/40">
                     <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
-                      {dt.toLocaleDateString()} <span className="text-foreground/60">{dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                      {formatDMY(dt)} <span className="text-foreground/60">{dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
                     </td>
                     <td className="px-3 py-2"><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${style.cls}`}>{style.label}</span></td>
                     <td className="px-3 py-2 text-xs font-medium">{row.subject_user_name ?? row.actor_name ?? "system"}</td>
@@ -2563,9 +2564,9 @@ function ReportsTab() {
     { header: "Book", get: (r: any) => r.books?.title ?? "" },
     { header: "Author", get: (r: any) => r.books?.author ?? "" },
     { header: "Rack", get: (r: any) => r.books?.shelf_code ?? "" },
-    { header: "Rented", get: (r: any) => new Date(r.rented_at).toLocaleDateString() },
-    { header: "Due", get: (r: any) => new Date(r.due_at).toLocaleDateString() },
-    { header: "Returned", get: (r: any) => r.returned_at ? new Date(r.returned_at).toLocaleDateString() : "" },
+    { header: "Rented", get: (r: any) => formatDMY(r.rented_at) },
+    { header: "Due", get: (r: any) => formatDMY(r.due_at) },
+    { header: "Returned", get: (r: any) => r.returned_at ? formatDMY(r.returned_at) : "" },
     { header: "Status", get: (r: any) => r.tracking_status ?? "" },
   ];
   const bookCols = [
@@ -2582,14 +2583,14 @@ function ReportsTab() {
     { header: "Author", get: (s: any) => s.author ?? "" },
     { header: "Status", get: (s: any) => s.status ?? "pending" },
     { header: "Note", get: (s: any) => s.note ?? "" },
-    { header: "Created", get: (s: any) => new Date(s.created_at).toLocaleDateString() },
+    { header: "Created", get: (s: any) => formatDMY(s.created_at) },
   ];
   const memberCols = [
     { header: "Name", get: (u: any) => u.display_name ?? "" },
     { header: "Email", get: (u: any) => u.email ?? "" },
     { header: "Active rentals", get: (u: any) => Number(u.active_rentals ?? 0) },
     { header: "Total rentals", get: (u: any) => Number(u.total_rentals ?? 0) },
-    { header: "Joined", get: (u: any) => new Date(u.created_at).toLocaleDateString() },
+    { header: "Joined", get: (u: any) => formatDMY(u.created_at) },
   ];
   const topReaderCols = [
     { header: "Reader", get: (u: any) => u.display_name ?? (u.email?.split("@")[0] ?? "") },

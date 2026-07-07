@@ -1,3 +1,4 @@
+import { formatDMY } from "@/lib/utils";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppLayout } from "@/components/AppLayout";
 import { useQuery } from "@tanstack/react-query";
@@ -61,7 +62,7 @@ function PublicProfilePage() {
             )}
           </div>
           <p className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
-            <Calendar className="h-3 w-3" /> Reader since {new Date(profile.created_at).toLocaleDateString()}
+            <Calendar className="h-3 w-3" /> Reader since {formatDMY(profile.created_at)}
           </p>
           <p className="mt-2 text-xs text-muted-foreground">Public view — contact and ledger details are private.</p>
         </div>
@@ -114,7 +115,7 @@ function PublicProfilePage() {
                       {r.books?.title}
                     </Link>
                     <span className="text-xs text-muted-foreground">by {r.books?.author}</span>
-                    <span className="ml-auto text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</span>
+                    <span className="ml-auto text-xs text-muted-foreground">{formatDMY(r.created_at)}</span>
                   </div>
                   <div className="my-1.5 flex">
                     {Array.from({ length: 5 }).map((_, i) => (

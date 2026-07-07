@@ -1,3 +1,4 @@
+import { formatDMY } from "@/lib/utils";
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   Home, Search, BookMarked, PenLine, Heart, UserRound,
@@ -119,7 +120,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         id: `due-${r.id}`,
         kind: r.overdue ? "overdue" : "due_soon",
         title: r.overdue ? `${r.books?.title ?? "Book"} is overdue` : `${r.books?.title ?? "Book"} due in ${r.daysLeft}d`,
-        body: `by ${r.books?.author ?? ""} · return by ${new Date(r.due_at).toLocaleDateString()}`,
+        body: `by ${r.books?.author ?? ""} · return by ${formatDMY(r.due_at)}`,
         ts: new Date(r.due_at).getTime(),
         unread: true,
         bookId: r.book_id,
