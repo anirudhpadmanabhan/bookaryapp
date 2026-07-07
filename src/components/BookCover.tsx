@@ -66,9 +66,11 @@ export function BookCover({
   colorOverride?: string;
 }) {
   const color = colorOverride ?? colorForBook(book.id);
+  const [attempt, setAttempt] = useState(0);
   const [failed, setFailed] = useState(false);
   if (book.cover_url && !failed) {
-    const src = normalizeCoverUrl(book.cover_url);
+    const candidates = coverCandidates(book.cover_url);
+    const src = candidates[Math.min(attempt, candidates.length - 1)];
     return (
       <div className={cn("cover relative overflow-hidden !p-0", `cover-${color}`, className)}>
         <img
@@ -77,7 +79,10 @@ export function BookCover({
           loading="lazy"
           decoding="async"
           referrerPolicy="no-referrer"
-          onError={() => setFailed(true)}
+          onError={() => {
+            if (attempt < candidates.length - 1) setAttempt(attempt + 1);
+            else setFailed(true);
+          }}
           className="absolute inset-0 h-full w-full object-cover"
         />
       </div>
