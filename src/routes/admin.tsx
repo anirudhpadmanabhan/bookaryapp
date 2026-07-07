@@ -2668,3 +2668,105 @@ function ReportsTab() {
   );
 }
 
+
+// ===== LIBRARY PROFILE (activities) =====
+function LibraryProfileTab() {
+  const { user } = useSession();
+  const { data: libs = [] } = useAdminLibraries();
+  const [libId, setLibId] = useState<string | null>(null);
+  const qc = useQueryClient();
+
+  const activeLibId = libId ?? libs[0]?.id ?? null;
+
+  const { data: posts = [] } = useQuery({
+    queryKey: ["library-posts-admin", activeLibId],
+    enabled: !!activeLibId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("library_posts").select("*").eq("library_id", activeLibId!).order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    if (!user || !activeLibId) return;
+    if (!title.trim() && !body.trim() && !photo) return;
+    setBusy(true);
+    let image_url: string | null = null;
+    if (photo) {
+      const safe = photo.name.toLowerCase().replace(/[^a-z0-9.\-_]+/g, "-");
+      const path = `${activeLibId}/${Date.now()}-${safe}`;
+      const { error: upErr } = await supabase.storage.from("library-posts").upload(path, photo, { upsert: false, contentType: photo.type || "image/jpeg" });
+      if (upErr) { setBusy(false); toast.error(upErr.message); return; }
+      image_url = `library-posts/${path}`;
+    }
+    const { error } = await supabase.from("library_posts").insert({
+      library_id: activeLibId, author_id: user.id,
+      title: title.trim() || null, body: body.trim() || null, image_url,
+    });
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    setTitle(""); setBody(""); setPhoto(null);
+    toast.success("Posted");
+    qc.invalidateQueries({ queryKey: ["library-posts-admin", activeLibId] });
+  };
+
+  const activeLib = libs.find((l) => l.id === activeLibId);
+
+  return (
+    <div className="space-y-4">
+      <div className="glass-card rounded-2xl p-5">
+        <div className="mb-3 flex flex-wrap items-center gap-3">
+          <div>
+            <h2 className="text-lg font-bold">Library profile</h2>
+            <p className="text-xs text-muted-foreground">Share activities and photos from your library. Members can like and comment.</p>
+          </div>
+          {libs.length > 1 && (
+            <select
+              value={activeLibId ?? ""}
+              onChange={(e) => setLibId(e.target.value || null)}
+              className="ml-auto rounded-lg border border-border bg-background/50 px-3 py-2 text-sm"
+            >
+              {libs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            </select>
+          )}
+          {activeLib?.slug && (
+            <Link to="/libraries/$slug" params={{ slug: activeLib.slug }} className="cursor-pointer rounded-lg border border-border px-3 py-2 text-xs hover:bg-surface-elevated">
+              Open public page →
+            </Link>
+          )}
+        </div>
+
+        <div className="space-y-2 rounded-xl border border-border/60 bg-surface/30 p-3">
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (optional)" className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
+          <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="What's happening at the library?" rows={3} className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
+          <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border bg-background/40 px-3 py-2 text-xs">
+            <span className="min-w-0 flex-1 truncate text-muted-foreground">{photo ? photo.name : "Attach photo (optional)"}</span>
+            <input type="file" accept="image/*" className="hidden" onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} />
+          </label>
+          <div className="flex justify-end">
+            <button disabled={busy || !activeLibId} onClick={submit} className="cursor-pointer rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50">
+              {busy ? "Posting…" : "Post activity"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {posts.length === 0 && <p className="text-sm text-muted-foreground">No activity posts yet.</p>}
+        {(posts as any[]).map((p) => (
+          <div key={p.id} className="glass-card rounded-2xl p-4">
+            {p.title && <h3 className="mb-1 text-base font-semibold">{p.title}</h3>}
+            {p.body && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{p.body}</p>}
+            <div className="mt-2 text-[11px] text-muted-foreground">{formatDMY(p.created_at)}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
