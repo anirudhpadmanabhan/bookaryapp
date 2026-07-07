@@ -2741,6 +2741,64 @@ function ReportsTab() {
   );
 }
 
+function PerUserRentalsCard({ users, rentals }: { users: any[]; rentals: any[] }) {
+  const [uid, setUid] = useState<string>("");
+  const scoped = useMemo(() => rentals.filter((r) => r.user_id === uid), [rentals, uid]);
+  const selectedUser = users.find((u) => u.user_id === uid);
+  const cols = [
+    { header: "Book", get: (r: any) => r.books?.title ?? "" },
+    { header: "Author", get: (r: any) => r.books?.author ?? "" },
+    { header: "Rack", get: (r: any) => r.books?.shelf_code ?? "" },
+    { header: "Genre", get: (r: any) => r.books?.genre ?? "" },
+    { header: "Rented", get: (r: any) => formatDMY(r.rented_at) },
+    { header: "Due", get: (r: any) => formatDMY(r.due_at) },
+    { header: "Returned", get: (r: any) => (r.returned_at ? formatDMY(r.returned_at) : "") },
+    { header: "Status", get: (r: any) => r.tracking_status ?? "" },
+  ];
+  const nameSlug = (selectedUser?.display_name ?? selectedUser?.email ?? "user").toString().replace(/[^a-z0-9]+/gi, "_").toLowerCase();
+  const disabled = !uid || scoped.length === 0;
+  return (
+    <div className="glass-card rounded-2xl p-5">
+      <div className="mb-2 flex items-baseline justify-between">
+        <h3 className="text-sm font-bold">Per-user rentals</h3>
+        <span className="text-xs text-muted-foreground">{scoped.length.toLocaleString()} rows</span>
+      </div>
+      <p className="mb-2 text-xs text-muted-foreground">Pick a member to export just their rental history.</p>
+      <select
+        value={uid}
+        onChange={(e) => setUid(e.target.value)}
+        className="w-full cursor-pointer rounded-lg border border-border bg-background/50 px-3 py-2 text-sm"
+      >
+        <option value="">Select a member…</option>
+        {users
+          .slice()
+          .sort((a, b) => Number(b.total_rentals ?? 0) - Number(a.total_rentals ?? 0))
+          .map((u) => (
+            <option key={u.user_id} value={u.user_id}>
+              {(u.display_name ?? u.email)} — {Number(u.total_rentals ?? 0)} rentals
+            </option>
+          ))}
+      </select>
+      <div className="mt-3 flex gap-2">
+        <button
+          disabled={disabled}
+          onClick={() => exportCsv({ filename: `rentals-${nameSlug}-${Date.now()}.csv`, columns: cols, rows: scoped })}
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-surface/50 px-3 py-1.5 text-xs hover:bg-surface-elevated disabled:opacity-50"
+        >
+          <FileDown className="h-3.5 w-3.5" /> CSV
+        </button>
+        <button
+          disabled={disabled}
+          onClick={() => exportPdf({ filename: `rentals-${nameSlug}-${Date.now()}.pdf`, title: `Rentals — ${selectedUser?.display_name ?? selectedUser?.email ?? ""}`, subtitle: `${scoped.length} rentals`, columns: cols, rows: scoped })}
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-surface/50 px-3 py-1.5 text-xs hover:bg-surface-elevated disabled:opacity-50"
+        >
+          <FileText className="h-3.5 w-3.5" /> PDF
+        </button>
+      </div>
+    </div>
+  );
+}
+
 
 // ===== LIBRARY PROFILE (activities) =====
 function LibraryProfileTab() {
