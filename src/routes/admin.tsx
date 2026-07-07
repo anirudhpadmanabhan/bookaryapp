@@ -2158,10 +2158,30 @@ function AddLibraryScope({
 // ===== USER DASHBOARD MODAL (staff) =====
 function UserDashboardModal({ userId, onClose }: { userId: string; onClose: () => void }) {
   const { data, isLoading } = useStaffUserSummary(userId);
+  const { data: history } = useUserRentalHistory(userId);
+  const { data: insights } = useReadingInsights(userId);
+
+  const historyRentals: any[] = (history?.rentals ?? []) as any[];
+  const stats = history?.stats ?? {};
+
+  const exportUserRentals = () => {
+    const cols = [
+      { header: "Book", get: (r: any) => r.book?.title ?? "" },
+      { header: "Author", get: (r: any) => r.book?.author ?? "" },
+      { header: "Rack", get: (r: any) => r.book?.shelf_code ?? "" },
+      { header: "Genre", get: (r: any) => r.book?.genre ?? "" },
+      { header: "Rented", get: (r: any) => formatDMY(r.rented_at) },
+      { header: "Due", get: (r: any) => formatDMY(r.due_at) },
+      { header: "Returned", get: (r: any) => (r.returned_at ? formatDMY(r.returned_at) : "") },
+      { header: "Status", get: (r: any) => r.tracking_status ?? "" },
+    ];
+    const name = (data?.profile?.display_name ?? data?.email ?? userId).toString().replace(/[^a-z0-9]+/gi, "_").toLowerCase();
+    exportCsv({ filename: `rentals-${name}-${Date.now()}.csv`, columns: cols, rows: historyRentals });
+  };
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 backdrop-blur" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="glass-card max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl p-6">
+      <div onClick={(e) => e.stopPropagation()} className="glass-card max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-2xl p-6">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold">Reader dashboard</h2>
           <button onClick={onClose} className="cursor-pointer text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
@@ -2180,24 +2200,49 @@ function UserDashboardModal({ userId, onClose }: { userId: string; onClose: () =
                 {data.profile?.phone && <div className="text-xs text-muted-foreground">📞 {data.profile.phone}</div>}
                 {data.profile?.address && <div className="text-xs text-muted-foreground">📍 {data.profile.address}</div>}
               </div>
+              <button
+                onClick={exportUserRentals}
+                disabled={historyRentals.length === 0}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-surface/50 px-3 py-1.5 text-xs hover:bg-surface-elevated disabled:opacity-50"
+              >
+                <FileDown className="h-3.5 w-3.5" /> Export rentals CSV
+              </button>
             </div>
 
             <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <Stat label="Active rentals" value={(data.active_rentals ?? []).length} />
-              <Stat label="Past rentals" value={data.past_rentals_count ?? 0} />
-              <Stat label="Reviews" value={data.reviews_count ?? 0} />
-              <Stat label="Diary entries" value={data.diary_count ?? 0} />
+              <Stat label="Total rentals" value={Number(stats.total ?? historyRentals.length)} />
+              <Stat label="Active" value={Number(stats.active ?? (data.active_rentals ?? []).length)} />
+              <Stat label="Reviews" value={Number(stats.reviews ?? data.reviews_count ?? 0)} />
+              <Stat label="Books read" value={Number(stats.books_read ?? 0)} />
             </div>
 
-            <h3 className="mb-2 text-sm font-semibold">Active rentals</h3>
-            {(data.active_rentals ?? []).length === 0 ? (
-              <p className="rounded-lg bg-surface/40 p-3 text-xs text-muted-foreground">None right now.</p>
+            <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <Stat label="Reading" value={Number(insights?.reading ?? 0)} />
+              <Stat label="Want to read" value={Number(insights?.want ?? 0)} />
+              <Stat label="Favorite genre" value={insights?.favorite_genre ?? "—"} />
+              <Stat label="Streak (days)" value={Number(insights?.streak ?? 0)} />
+            </div>
+
+            <h3 className="mb-2 text-sm font-semibold">Rental history <span className="text-xs font-normal text-muted-foreground">({historyRentals.length})</span></h3>
+            {historyRentals.length === 0 ? (
+              <p className="rounded-lg bg-surface/40 p-3 text-xs text-muted-foreground">No rentals yet.</p>
             ) : (
-              <div className="space-y-2">
-                {(data.active_rentals as any[]).map((r) => (
+              <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+                {historyRentals.map((r) => (
                   <div key={r.id} className="rounded-lg border border-border/60 bg-surface/30 p-2.5 text-xs">
-                    <div className="font-medium">{r.book?.title ?? "Book"}</div>
-                    <div className="text-muted-foreground">Status: {r.tracking_status} · Due {formatDMY(r.due_at)}</div>
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <div className="font-medium">{r.book?.title ?? "Book"}</div>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${r.returned_at ? "bg-slate-500/15 text-slate-300" : "bg-emerald-500/15 text-emerald-300"}`}>
+                        {r.returned_at ? "Returned" : r.tracking_status ?? "Active"}
+                      </span>
+                    </div>
+                    <div className="text-muted-foreground">
+                      {r.book?.author ?? ""}{r.book?.shelf_code ? ` · Rack ${r.book.shelf_code}` : ""}
+                    </div>
+                    <div className="text-muted-foreground">
+                      Rented {formatDMY(r.rented_at)} · Due {formatDMY(r.due_at)}
+                      {r.returned_at && ` · Returned ${formatDMY(r.returned_at)}`}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -2233,6 +2278,7 @@ function UserDashboardModal({ userId, onClose }: { userId: string; onClose: () =
     </div>
   );
 }
+
 
 function Stat({ label, value }: { label: string; value: number | string }) {
   return (
