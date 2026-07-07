@@ -1,3 +1,4 @@
+import { formatDMY } from "@/lib/utils";
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { AppLayout } from "@/components/AppLayout";
@@ -32,9 +33,9 @@ function StatusTimeline({ status, rentedAt, dueAt, returnedAt }: { status: strin
         {TRACK_STEPS.map((s) => <span key={s} className="capitalize">{s.replace(/_/g, " ")}</span>)}
       </div>
       <div className="mt-3 grid gap-1 text-xs text-muted-foreground sm:grid-cols-3">
-        <span className="inline-flex items-center gap-1.5"><Calendar className="h-3 w-3" />Rented {new Date(rentedAt).toLocaleDateString()}</span>
-        <span className="inline-flex items-center gap-1.5"><Calendar className="h-3 w-3" />Due {new Date(dueAt).toLocaleDateString()}</span>
-        {returnedAt && <span className="inline-flex items-center gap-1.5 text-emerald-300"><CheckCircle2 className="h-3 w-3" />Returned {new Date(returnedAt).toLocaleDateString()}</span>}
+        <span className="inline-flex items-center gap-1.5"><Calendar className="h-3 w-3" />Rented {formatDMY(rentedAt)}</span>
+        <span className="inline-flex items-center gap-1.5"><Calendar className="h-3 w-3" />Due {formatDMY(dueAt)}</span>
+        {returnedAt && <span className="inline-flex items-center gap-1.5 text-emerald-300"><CheckCircle2 className="h-3 w-3" />Returned {formatDMY(returnedAt)}</span>}
       </div>
     </div>
   );
@@ -136,7 +137,7 @@ function TrackingPage() {
                   <Link to="/books/$id" params={{ id: w.books?.id ?? "" }} className="cursor-pointer text-sm font-semibold hover:text-primary">
                     {w.books?.title ?? "Book"}
                   </Link>
-                  <p className="text-xs text-muted-foreground">Joined {new Date(w.created_at).toLocaleDateString()} · You'll be auto-assigned when the current reader returns.</p>
+                  <p className="text-xs text-muted-foreground">Joined {formatDMY(w.created_at)} · You'll be auto-assigned when the current reader returns.</p>
                 </div>
                 <button
                   onClick={() => leaveWait.mutate(w.book_id)}
@@ -162,7 +163,7 @@ function TrackingPage() {
                   <Link to="/books/$id" params={{ id: r.books?.id ?? "" }} className="cursor-pointer font-medium hover:text-primary">
                     {r.books?.title ?? "Book"}
                   </Link>
-                  <p className="text-xs text-muted-foreground">Returned {new Date(r.returned_at).toLocaleDateString()}</p>
+                  <p className="text-xs text-muted-foreground">Returned {formatDMY(r.returned_at)}</p>
                 </div>
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs text-emerald-300">
                   <CheckCircle2 className="h-3 w-3" /> Returned

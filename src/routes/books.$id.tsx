@@ -1,3 +1,4 @@
+import { formatDMY } from "@/lib/utils";
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
@@ -106,7 +107,7 @@ function BookPage() {
     if (activeRental) {
       return (
         <span className={`inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500/15 px-5 py-3 text-sm font-semibold text-emerald-300 ${className}`}>
-          ✓ You've rented this — due {new Date(activeRental.due_at).toLocaleDateString()}
+          ✓ You've rented this — due {formatDMY(activeRental.due_at)}
         </span>
       );
     }
@@ -214,7 +215,7 @@ function BookPage() {
 
           {otherRental && !activeRental && (
             <div className="mt-5 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
-              Currently rented by another reader{otherRental.due_at ? ` — due ${new Date(otherRental.due_at).toLocaleDateString()}` : ""}. Join the waiting list and you'll be auto-assigned when it's returned.
+              Currently rented by another reader{otherRental.due_at ? ` — due ${formatDMY(otherRental.due_at)}` : ""}. Join the waiting list and you'll be auto-assigned when it's returned.
             </div>
           )}
 
@@ -361,7 +362,7 @@ function BookPage() {
                     {r.author_tag && (
                       <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-accent">{r.author_tag}</span>
                     )}
-                    <span className="text-xs text-muted-foreground">· {new Date(r.created_at).toLocaleDateString()}</span>
+                    <span className="text-xs text-muted-foreground">· {formatDMY(r.created_at)}</span>
                   </Link>
                   <div className="flex">
                     {Array.from({ length: 5 }).map((_, i) => (

@@ -1,3 +1,4 @@
+import { formatDMY } from "@/lib/utils";
 import { createFileRoute, Link, useNavigate, useRouterState, redirect } from "@tanstack/react-router";
 import { AppLayout } from "@/components/AppLayout";
 import { useSession } from "@/lib/auth";
@@ -29,7 +30,7 @@ import {
 import { exportCsv, exportPdf } from "@/lib/pdf-export";
 import { AdsTab } from "@/components/admin/AdsTab";
 
-type Tab = "overview" | "books" | "rentals" | "waitlist" | "suggestions" | "reports" | "ads" | "libraries" | "roles" | "users" | "activity";
+type Tab = "overview" | "books" | "rentals" | "waitlist" | "suggestions" | "reports" | "ads" | "libraries" | "profile" | "roles" | "users" | "activity";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -94,6 +95,7 @@ function AdminPage() {
     { id: "suggestions", label: "Suggestions", icon: Lightbulb },
     { id: "reports", label: "Reports", icon: FileText },
     { id: "ads", label: "Ads", icon: Megaphone },
+    { id: "profile", label: "Library profile", icon: Building2 },
     { id: "libraries", label: "Libraries", icon: Building2, adminOnly: true },
     { id: "users", label: "Users", icon: Users, adminOnly: true },
     { id: "roles", label: "Roles", icon: Shield, adminOnly: true },
@@ -148,6 +150,7 @@ function AdminPage() {
       {tab === "suggestions" && <SuggestionsTab />}
       {tab === "reports" && <ReportsTab />}
       {tab === "ads" && <AdsTab />}
+      {tab === "profile" && <LibraryProfileTab />}
       {tab === "libraries" && isAdmin && <LibrariesTab />}
       {tab === "users" && isAdmin && <UsersTab />}
       {tab === "roles" && isAdmin && <StaffRolesTab />}
@@ -1428,7 +1431,7 @@ function LogRentalDialog({ onClose, onCreated }: { onClose: () => void; onCreate
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button onClick={onClose} className="cursor-pointer rounded-lg border border-border px-4 py-2 text-sm hover:bg-surface-elevated">Cancel</button>
-          <button disabled={busy} onClick={submit} className="cursor-pointer rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50">
+          <button disabled={busy || !member || !bookId} onClick={submit} className="cursor-pointer rounded-lg bg-gradient-to-r from-primary to-accent px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50">
             {busy ? "Saving…" : "Log rental"}
           </button>
         </div>
@@ -1521,8 +1524,8 @@ function RentalsByMonth({
                       <Link to="/books/$id" params={{ id: r.books?.id ?? "" }} className="cursor-pointer font-medium hover:text-primary">{r.books?.title ?? "Book"}</Link>
                       <div className="text-[10px] text-muted-foreground">by {r.books?.author ?? "—"} · Rack {r.books?.shelf_code ?? "—"}</div>
                     </td>
-                    <td className="whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">{new Date(r.rented_at).toLocaleDateString()}</td>
-                    <td className="whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">{new Date(r.due_at).toLocaleDateString()}</td>
+                    <td className="whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">{formatDMY(r.rented_at)}</td>
+                    <td className="whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">{formatDMY(r.due_at)}</td>
                     <td className="whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">
                       {r.returned_at ? (
                         <input
@@ -1718,7 +1721,7 @@ function WaitlistTab() {
                             {(profileMap as any)[w.user_id]?.display_name ?? "Reader"}
                           </button>
                           <div className="text-[10px] text-muted-foreground">
-                            {(profileMap as any)[w.user_id]?.email ?? "—"} · joined {new Date(w.created_at).toLocaleDateString()}
+                            {(profileMap as any)[w.user_id]?.email ?? "—"} · joined {formatDMY(w.created_at)}
                           </div>
                         </div>
                       </div>
@@ -1805,7 +1808,7 @@ function SuggestionsTab() {
               <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${STATUS[s.status ?? "pending"] ?? STATUS.pending}`}>
                 {s.status ?? "pending"}
               </span>
-              <span className="text-xs text-muted-foreground">{new Date(s.created_at).toLocaleDateString()}</span>
+              <span className="text-xs text-muted-foreground">{formatDMY(s.created_at)}</span>
             </div>
           </div>
           {s.author && <p className="text-xs text-muted-foreground">by {s.author}</p>}
@@ -2045,7 +2048,7 @@ function StaffRolesTab() {
                         <span key={r} className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${r === "admin" ? "bg-amber-500/20 text-amber-300" : "bg-primary/15 text-primary"}`}>{labelFor(r)}</span>
                       ))}
                     </div>
-                    <div className="mt-1 text-[11px] text-muted-foreground/70">First granted {new Date(l.granted_at).toLocaleDateString()}</div>
+                    <div className="mt-1 text-[11px] text-muted-foreground/70">First granted {formatDMY(l.granted_at)}</div>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {isAdminRole && (
@@ -2204,7 +2207,7 @@ function UserDashboardModal({ userId, onClose }: { userId: string; onClose: () =
                 {(data.active_rentals as any[]).map((r) => (
                   <div key={r.id} className="rounded-lg border border-border/60 bg-surface/30 p-2.5 text-xs">
                     <div className="font-medium">{r.book?.title ?? "Book"}</div>
-                    <div className="text-muted-foreground">Status: {r.tracking_status} · Due {new Date(r.due_at).toLocaleDateString()}</div>
+                    <div className="text-muted-foreground">Status: {r.tracking_status} · Due {formatDMY(r.due_at)}</div>
                   </div>
                 ))}
               </div>
@@ -2217,7 +2220,7 @@ function UserDashboardModal({ userId, onClose }: { userId: string; onClose: () =
                   {(data.waitlist as any[]).map((w) => (
                     <div key={w.id} className="rounded-lg border border-border/60 bg-surface/30 p-2.5 text-xs">
                       <div className="font-medium">{w.book?.title ?? "Book"}</div>
-                      <div className="text-muted-foreground">Joined {new Date(w.created_at).toLocaleDateString()}</div>
+                      <div className="text-muted-foreground">Joined {formatDMY(w.created_at)}</div>
                     </div>
                   ))}
                 </div>
@@ -2320,7 +2323,7 @@ function UsersTab() {
                   )}
                 </td>
                 <td className="px-3 py-2 text-xs text-muted-foreground">{u.total_rentals}</td>
-                <td className="px-3 py-2 text-xs text-muted-foreground">{new Date(u.created_at).toLocaleDateString()}</td>
+                <td className="px-3 py-2 text-xs text-muted-foreground">{formatDMY(u.created_at)}</td>
                 <td className="px-3 py-2 text-right">
                   <button
                     onClick={() => setViewingUser(u.user_id)}
@@ -2422,7 +2425,7 @@ function ActivityLogTab() {
                 return (
                   <tr key={row.id} className="border-t border-border/40 hover:bg-surface/40">
                     <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
-                      {dt.toLocaleDateString()} <span className="text-foreground/60">{dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                      {formatDMY(dt)} <span className="text-foreground/60">{dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
                     </td>
                     <td className="px-3 py-2"><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${style.cls}`}>{style.label}</span></td>
                     <td className="px-3 py-2 text-xs font-medium">{row.subject_user_name ?? row.actor_name ?? "system"}</td>
@@ -2563,9 +2566,9 @@ function ReportsTab() {
     { header: "Book", get: (r: any) => r.books?.title ?? "" },
     { header: "Author", get: (r: any) => r.books?.author ?? "" },
     { header: "Rack", get: (r: any) => r.books?.shelf_code ?? "" },
-    { header: "Rented", get: (r: any) => new Date(r.rented_at).toLocaleDateString() },
-    { header: "Due", get: (r: any) => new Date(r.due_at).toLocaleDateString() },
-    { header: "Returned", get: (r: any) => r.returned_at ? new Date(r.returned_at).toLocaleDateString() : "" },
+    { header: "Rented", get: (r: any) => formatDMY(r.rented_at) },
+    { header: "Due", get: (r: any) => formatDMY(r.due_at) },
+    { header: "Returned", get: (r: any) => r.returned_at ? formatDMY(r.returned_at) : "" },
     { header: "Status", get: (r: any) => r.tracking_status ?? "" },
   ];
   const bookCols = [
@@ -2582,14 +2585,14 @@ function ReportsTab() {
     { header: "Author", get: (s: any) => s.author ?? "" },
     { header: "Status", get: (s: any) => s.status ?? "pending" },
     { header: "Note", get: (s: any) => s.note ?? "" },
-    { header: "Created", get: (s: any) => new Date(s.created_at).toLocaleDateString() },
+    { header: "Created", get: (s: any) => formatDMY(s.created_at) },
   ];
   const memberCols = [
     { header: "Name", get: (u: any) => u.display_name ?? "" },
     { header: "Email", get: (u: any) => u.email ?? "" },
     { header: "Active rentals", get: (u: any) => Number(u.active_rentals ?? 0) },
     { header: "Total rentals", get: (u: any) => Number(u.total_rentals ?? 0) },
-    { header: "Joined", get: (u: any) => new Date(u.created_at).toLocaleDateString() },
+    { header: "Joined", get: (u: any) => formatDMY(u.created_at) },
   ];
   const topReaderCols = [
     { header: "Reader", get: (u: any) => u.display_name ?? (u.email?.split("@")[0] ?? "") },
@@ -2665,3 +2668,105 @@ function ReportsTab() {
   );
 }
 
+
+// ===== LIBRARY PROFILE (activities) =====
+function LibraryProfileTab() {
+  const { user } = useSession();
+  const { data: libs = [] } = useAdminLibraries();
+  const [libId, setLibId] = useState<string | null>(null);
+  const qc = useQueryClient();
+
+  const activeLibId = libId ?? libs[0]?.id ?? null;
+
+  const { data: posts = [] } = useQuery({
+    queryKey: ["library-posts-admin", activeLibId],
+    enabled: !!activeLibId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("library_posts").select("*").eq("library_id", activeLibId!).order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    if (!user || !activeLibId) return;
+    if (!title.trim() && !body.trim() && !photo) return;
+    setBusy(true);
+    let image_url: string | null = null;
+    if (photo) {
+      const safe = photo.name.toLowerCase().replace(/[^a-z0-9.\-_]+/g, "-");
+      const path = `${activeLibId}/${Date.now()}-${safe}`;
+      const { error: upErr } = await supabase.storage.from("library-posts").upload(path, photo, { upsert: false, contentType: photo.type || "image/jpeg" });
+      if (upErr) { setBusy(false); toast.error(upErr.message); return; }
+      image_url = `library-posts/${path}`;
+    }
+    const { error } = await supabase.from("library_posts").insert({
+      library_id: activeLibId, author_id: user.id,
+      title: title.trim() || null, body: body.trim() || null, image_url,
+    });
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    setTitle(""); setBody(""); setPhoto(null);
+    toast.success("Posted");
+    qc.invalidateQueries({ queryKey: ["library-posts-admin", activeLibId] });
+  };
+
+  const activeLib = libs.find((l) => l.id === activeLibId);
+
+  return (
+    <div className="space-y-4">
+      <div className="glass-card rounded-2xl p-5">
+        <div className="mb-3 flex flex-wrap items-center gap-3">
+          <div>
+            <h2 className="text-lg font-bold">Library profile</h2>
+            <p className="text-xs text-muted-foreground">Share activities and photos from your library. Members can like and comment.</p>
+          </div>
+          {libs.length > 1 && (
+            <select
+              value={activeLibId ?? ""}
+              onChange={(e) => setLibId(e.target.value || null)}
+              className="ml-auto rounded-lg border border-border bg-background/50 px-3 py-2 text-sm"
+            >
+              {libs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            </select>
+          )}
+          {activeLib?.slug && (
+            <Link to="/libraries/$slug" params={{ slug: activeLib.slug }} className="cursor-pointer rounded-lg border border-border px-3 py-2 text-xs hover:bg-surface-elevated">
+              Open public page →
+            </Link>
+          )}
+        </div>
+
+        <div className="space-y-2 rounded-xl border border-border/60 bg-surface/30 p-3">
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (optional)" className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
+          <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="What's happening at the library?" rows={3} className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm" />
+          <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border bg-background/40 px-3 py-2 text-xs">
+            <span className="min-w-0 flex-1 truncate text-muted-foreground">{photo ? photo.name : "Attach photo (optional)"}</span>
+            <input type="file" accept="image/*" className="hidden" onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} />
+          </label>
+          <div className="flex justify-end">
+            <button disabled={busy || !activeLibId} onClick={submit} className="cursor-pointer rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50">
+              {busy ? "Posting…" : "Post activity"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {posts.length === 0 && <p className="text-sm text-muted-foreground">No activity posts yet.</p>}
+        {(posts as any[]).map((p) => (
+          <div key={p.id} className="glass-card rounded-2xl p-4">
+            {p.title && <h3 className="mb-1 text-base font-semibold">{p.title}</h3>}
+            {p.body && <p className="whitespace-pre-wrap text-sm text-muted-foreground">{p.body}</p>}
+            <div className="mt-2 text-[11px] text-muted-foreground">{formatDMY(p.created_at)}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

@@ -1,3 +1,4 @@
+import { formatDMY } from "@/lib/utils";
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   Home, Search, BookMarked, PenLine, Heart, UserRound,
@@ -9,7 +10,7 @@ import { useSession } from "@/lib/auth";
 import { useProfile, useDueSoonRentals, useNotifications, useMarkNotificationsRead, useRentals } from "@/lib/userdata";
 import { useIsStaff } from "@/lib/admin";
 import { Shield } from "lucide-react";
-import { useHideBrowse } from "@/lib/ui-prefs";
+import { useHideBrowse, useHideShelves } from "@/lib/ui-prefs";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -63,6 +64,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const [bellOpen, setBellOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [hideBrowse, setHideBrowse] = useHideBrowse();
+  const [hideShelves, setHideShelves] = useHideShelves();
   
   const [searchValue, setSearchValue] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -119,7 +121,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         id: `due-${r.id}`,
         kind: r.overdue ? "overdue" : "due_soon",
         title: r.overdue ? `${r.books?.title ?? "Book"} is overdue` : `${r.books?.title ?? "Book"} due in ${r.daysLeft}d`,
-        body: `by ${r.books?.author ?? ""} · return by ${new Date(r.due_at).toLocaleDateString()}`,
+        body: `by ${r.books?.author ?? ""} · return by ${formatDMY(r.due_at)}`,
         ts: new Date(r.due_at).getTime(),
         unread: true,
         bookId: r.book_id,
@@ -471,8 +473,18 @@ export function AppLayout({ children }: { children: ReactNode }) {
                 Library profile
               </Link>
             )}
-            <div className="px-3 pb-1 pt-3 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Your shelf</div>
-            {navMine.map((n) => {
+            <div className="flex items-center justify-between px-3 pb-1 pt-3">
+              <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Your shelf</span>
+              <button
+                type="button"
+                onClick={() => setHideShelves(!hideShelves)}
+                title={hideShelves ? "Show shelf links" : "Hide shelf links"}
+                className="cursor-pointer rounded p-1 text-muted-foreground hover:bg-surface-elevated hover:text-foreground"
+              >
+                {hideShelves ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+              </button>
+            </div>
+            {!hideShelves && navMine.map((n) => {
               const active = pathname === n.to;
               return (
                 <Link

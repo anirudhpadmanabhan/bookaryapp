@@ -1,75 +1,30 @@
-Big batch of fixes grouped by area. I'll ship them all in one build pass.
 
-## 1. Rental status flow (admin/librarian)
+## Scope
+Deliver every item you selected. Grouped for review; I'll ship them in one working pass.
 
-- On a `delivered` rental, add a "Mark as rented / out" option → sets `tracking_status = 'rented'` and keeps the book flagged out.
-- Status pills in the rentals action column:
-  - Green pill "Returned" (current) when returned.
-  - Red pill "Waiting for return" while active (delivered/rented/confirmed) with a **Mark returned** action inline.
-  - Show clear In / Out indicator per row (red dot = out with member, green = in).
-- Fix returned_at not reflecting: after `librarian_mark_returned` / `librarian_set_return`, refetch admin rentals query + invalidate book availability. Show the actual `returned_at` date in the row.
-- Librarian can edit the returned date (date picker → `librarian_set_return`).
+## 1. Library Profile as admin tab + sidebar eye-toggles
+- Add a **"Library"** tab inside `src/routes/admin.tsx` (visible to admins + librarians). Content: name/location editor, activity feed (reuses `library_posts` + `NewPostForm` from `libraries.$slug.tsx`), likes/comments preview. Admin sees a library picker; librarian is auto-scoped to their library.
+- Keep the public `/libraries/$slug` route unchanged so members can still browse it.
+- Extend `src/lib/ui-prefs.ts` with toggles for each sidebar area: Browse, Shelves, Genres/Writers/Languages, and view-mode (tile/list). Add an eye icon next to every collapsible header in `AppLayout.tsx` that persists via localStorage.
 
-## 2. "Log a rental" form
+## 2. Per-user rentals + insights + report export
+- New "Members" drill-down inside the admin **Users** tab: click a member → drawer showing rentals list, most-read genre, review count, books read (uses existing `user_rental_history` + `reading_insights` RPCs).
+- Reports tab: add **Top Readers** export (CSV + PDF) already wired via `library_top_readers`; add a second **Per-User Rental History** export that takes the selected user.
+- Fix the "top readers not reflected" gap now that `has_role_in_library` EXECUTE is restored — verify the query invalidates on library switch.
 
-- Member field: autocomplete by **display name** (email hidden, shown as small subtitle).
-- Book field: search by title, **author**, and **shelf_code**.
-- Uses existing `librarian_log_rental`.
+## 3. Fix Log-a-Rental + DD/MM/YYYY everywhere
+- **Log a Rental** dialog: switch from free-text email to strict picker using `staff_search_members`. Disable the Log button until an existing member row is selected. Remove any fallback path that inserts a new profile/user.
+- Add a **date formatting util** `formatDMY(date)` in `src/lib/utils.ts`. Replace every `toLocaleDateString()` / `new Date(...).toDateString()` call across admin, profile, rentals, posts, notifications, and reports with `formatDMY`.
+- Rental "Returned date" input becomes a `<Input type="date">` displayed as DD/MM/YYYY via the util; staff can edit and clear.
 
-## 3. User insights & reports
-
-- New RPC `library_user_insights(_library_id)` returning per-user rental_count, favorite genre, review_count, diary read_count.
-- Admin → Users tab: filter/rentals-of-particular-user drill-in (click user → rental history modal).
-- Reports tab: add "Top readers" CSV/PDF export using the new RPC.
-
-## 4. Library picker & switcher
-
-- Onboarding library picker already exists on `/`; ensure last selected library persists (localStorage key already there) and defaults to it on next visit.
-- Add library switcher entry point to the top location tab in `AppLayout` (mobile/desktop header) so users can change library from anywhere.
-- Rentals page: add search box (title/author).
-
-## 5. Suggestions
-
-- Add a dedicated **Publisher** input in the suggestions form, positioned below publisher details. Stored into suggestion note or new column.
-
-## 6. Admin books tab
-
-- Prominent full-width search input at top.
-- Library name chip: small, horizontal, responsive (truncate on mobile).
-- **Fix**: Safdar Hashmi library books not visible → verify admin queries filter by selected library correctly; ensure admin books query respects `library_id` from `useLibrary()` rather than a stale/default value. Fix genre_ml mislabels for Safdar's books (data patch).
-- **Fix**: Availability dropdown (available / out_of_stock / rented) not saving → wire `librarian_set_availability` correctly with mutation + toast; ensure select onChange fires.
-
-## 7. Per-library branding
-
-- Home top banner reads the currently selected library's name/name_ml — remove hardcoded "Cherukad Smaraka Vayanasala" copy so Safdar Hashmi shows its own name.
-- Distinct banner per library (library-specific title, ml name, location).
-
-## 8. Data scoping
-
-- Libraries only see rentals whose book belongs to them (already via `library_id` on books; audit `admin_list_users`, rentals queries, reports). New librarian-scoped rental fetcher.
-- Total-users KPI: show only to `admin` role (hide from librarians).
-
-## 9. Library profile page (`/libraries/$slug`)
-
-- Route already exists. Add:
-  - Header shows library-specific branding.
-  - Staff can post activity with title/body/image (already present).
-  - Public feed: readers see posts, can like + comment (already present).
-- Add a Link/entry point from home banner → library profile.
-- Sanity-check RLS on `library_posts`, `library_post_likes`, `library_post_comments` (public read, staff write, authed like/comment).
-
-## 10. Book cover URL fix
-
-- `BookCover.normalizeCoverUrl` already handles `/file/d/<id>` and `open?id=`. Extend to also handle:
-  - `drive.google.com/uc?export=view&id=<id>`
-  - Shared `usercontent.google.com` links
-  - Trim whitespace / trailing params.
-- Still fall back to text cover on img error.
+## 4. Rack 4012 cover + verify data flow
+- The Aadujeevitham (#4012) `cover_url` is a Drive `/file/d/…/view` link; the normalizer in `BookCover.tsx` already rewrites it to `drive.google.com/thumbnail?id=…&sz=w800`. I'll add a fallback: if the thumbnail 403s, retry with `lh3.googleusercontent.com/d/<id>=w800`.
+- Verify against `/books/8323af89-…` after deploy; if Drive still blocks, mark the book with a static uploaded cover under `library-posts` bucket.
+- Confirm Top-Readers card populates now that the SQL EXECUTE grant is back.
 
 ## Technical notes
+- No new tables. Reuses `library_posts`, `library_post_likes`, `library_post_comments`, `user_rental_history`, `library_top_readers`, `staff_search_members`.
+- Client-only changes for date formatting and sidebar toggles; no schema migration required for those.
+- One tiny migration only if needed: ensure `staff_search_members` returns only rows with existing `profiles.id` (already the case via `LEFT JOIN` — no change).
 
-- **Migrations**: new `librarian_mark_rented(_rental_id)` RPC, new `library_user_insights(_library_id)` RPC, small data patch for Safdar genre_ml.
-- **Frontend**: touches `src/routes/admin.tsx` (rentals table, books tab, log rental modal, reports), `src/routes/index.tsx` (banner), `src/components/AppLayout.tsx` (header switcher), `src/routes/profile.tsx` or new rentals search, `src/components/BookCover.tsx` (URL normalizer), `src/routes/libraries.$slug.tsx` (branding entry).
-- No wallet/price logic re-introduced — system remains fully free.
-
-Say **go** to implement.
+Approve to proceed and I'll implement in a single build pass.

@@ -1,3 +1,4 @@
+import { formatDMY } from "@/lib/utils";
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { AppLayout } from "@/components/AppLayout";
 import { useDiary, useEditDiaryFull, useDeleteDiary, useAddDiary, useProfile } from "@/lib/userdata";
@@ -434,7 +435,7 @@ function DiaryItem({ entry }: { entry: any }) {
           )}
           {entry.books?.title_ml && <span className="font-mal text-sm text-accent">{entry.books.title_ml}</span>}
           <span className="ml-auto text-xs text-muted-foreground">
-            {new Date(entry.created_at).toLocaleDateString()}{entry.books?.author ? ` · ${entry.books.author}` : ""}
+            {formatDMY(entry.created_at)}{entry.books?.author ? ` · ${entry.books.author}` : ""}
           </span>
         </div>
         <Link to="/u/$id" params={{ id: entry.user_id }} className="mb-2 inline-flex cursor-pointer items-center gap-2 text-xs text-muted-foreground hover:text-primary">

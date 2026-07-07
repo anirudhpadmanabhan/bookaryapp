@@ -1,3 +1,4 @@
+import { formatDMY } from "@/lib/utils";
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { AppLayout } from "@/components/AppLayout";
 import { useSession } from "@/lib/auth";
@@ -135,7 +136,7 @@ function ProfilePage() {
   };
 
   const notifyRental = (title: string, dueAt: string) => {
-    toast.success(`Reminder set for ${title} — due ${new Date(dueAt).toLocaleDateString()}`);
+    toast.success(`Reminder set for ${title} — due ${formatDMY(dueAt)}`);
   };
 
   const submitSuggestion = (e: React.FormEvent) => {
@@ -203,7 +204,7 @@ function ProfilePage() {
                 </button>
               </div>
               <p className="text-sm text-muted-foreground">{user?.email}</p>
-              <p className="mt-1 text-xs text-muted-foreground">Reader since {new Date(profile.created_at).toLocaleDateString()}</p>
+              <p className="mt-1 text-xs text-muted-foreground">Reader since {formatDMY(profile.created_at)}</p>
             </>
           )}
 
@@ -284,7 +285,7 @@ function ProfilePage() {
               <div key={r.id} className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 text-xs ${r.overdue ? "border-rose-500/40 bg-rose-500/10" : "border-amber-400/30 bg-amber-500/10"}`}>
                 <div className="min-w-0">
                   <div className="truncate font-semibold">{r.books?.title}</div>
-                  <div className="truncate text-[11px] text-muted-foreground">due {new Date(r.due_at).toLocaleDateString()}</div>
+                  <div className="truncate text-[11px] text-muted-foreground">due {formatDMY(r.due_at)}</div>
                 </div>
                 <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${r.overdue ? "bg-rose-500/20 text-rose-300" : "bg-amber-500/20 text-amber-300"}`}>
                   {r.overdue ? `${Math.abs(r.daysLeft)}d late` : `${r.daysLeft}d`}
@@ -324,9 +325,9 @@ function ProfilePage() {
                     </Link>
                     <p className="text-xs text-muted-foreground">by {r.books?.author}</p>
                     <p className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-                      <span className="text-muted-foreground">Rented {rentedDate.toLocaleDateString()}</span>
+                      <span className="text-muted-foreground">Rented {formatDMY(rentedDate)}</span>
                       <span className="text-muted-foreground">·</span>
-                      <span className="text-muted-foreground">Due {dueDate.toLocaleDateString()}</span>
+                      <span className="text-muted-foreground">Due {formatDMY(dueDate)}</span>
                       <span className="text-muted-foreground">·</span>
                       <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 ${overdue ? "bg-rose-500/15 text-rose-300" : "bg-emerald-500/15 text-emerald-300"}`}>
                         <Clock className="h-3 w-3" />
@@ -401,7 +402,7 @@ function ProfilePage() {
                   </div>
                   <div>
                     <div className="text-sm font-semibold">{w.books?.title}</div>
-                    <div className="text-xs text-muted-foreground">by {w.books?.author} · waiting since {new Date(w.created_at).toLocaleDateString()}</div>
+                    <div className="text-xs text-muted-foreground">by {w.books?.author} · waiting since {formatDMY(w.created_at)}</div>
                   </div>
                 </Link>
                 <button onClick={() => leaveWait.mutate(w.book_id)} className="cursor-pointer rounded-lg border border-rose-500/40 px-3 py-1.5 text-xs text-rose-300 hover:bg-rose-500/10">
@@ -444,7 +445,7 @@ function ProfilePage() {
                     <span className="ml-2 text-muted-foreground">by {r.books?.author}</span>
                   </div>
                 </div>
-                <span className="text-xs text-muted-foreground">returned {new Date(r.returned_at).toLocaleDateString()}</span>
+                <span className="text-xs text-muted-foreground">returned {formatDMY(r.returned_at)}</span>
               </Link>
             ))}
           </div>

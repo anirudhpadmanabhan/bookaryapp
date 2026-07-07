@@ -1,3 +1,4 @@
+import { formatDMY } from "@/lib/utils";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -191,13 +192,13 @@ function PostCard({ post, userId }: { post: Post; userId: string | null }) {
         <span className="inline-flex items-center gap-1.5 text-muted-foreground">
           <MessageCircle className="h-4 w-4" /> {comments.length}
         </span>
-        <span className="ml-auto text-xs text-muted-foreground">{new Date(post.created_at).toLocaleDateString()}</span>
+        <span className="ml-auto text-xs text-muted-foreground">{formatDMY(post.created_at)}</span>
       </div>
 
       <div className="mt-4 space-y-2 border-t border-border/40 pt-3">
         {comments.map((c: any) => (
           <div key={c.id} className="rounded-lg bg-surface/50 px-3 py-2 text-sm">
-            <div className="text-xs text-muted-foreground">{(names as any)[c.user_id] ?? "Reader"} · {new Date(c.created_at).toLocaleDateString()}</div>
+            <div className="text-xs text-muted-foreground">{(names as any)[c.user_id] ?? "Reader"} · {formatDMY(c.created_at)}</div>
             <div>{c.body}</div>
           </div>
         ))}
