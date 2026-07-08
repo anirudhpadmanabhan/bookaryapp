@@ -5,6 +5,7 @@ import {
   Library, NotebookPen, LogOut, Sparkles, Bell, X, Truck, Languages as LangIcon,
   Building2,
 } from "lucide-react";
+import bookaryLogo from "@/assets/bookary-logo.png.asset.json";
 import { useState, useRef, useEffect, useMemo, type ReactNode } from "react";
 import { useSession } from "@/lib/auth";
 import { useProfile, useDueSoonRentals, useNotifications, useMarkNotificationsRead, useRentals } from "@/lib/userdata";
@@ -198,14 +199,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <header className="sticky top-0 z-30 border-b border-border/60 bg-background/70 backdrop-blur-xl safe-top">
         <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between gap-2 px-3 md:h-16 md:gap-4 md:px-6">
           <div className="flex min-w-0 items-center gap-3">
-            <Link to="/" className="flex cursor-pointer items-center gap-2.5">
-              <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/30">
-                <BookMarked className="h-5 w-5 text-white" />
-              </div>
-              <div className="leading-tight">
-                <div className="text-base font-bold tracking-tight">BOOKARY</div>
-                <div className="hidden text-[10px] uppercase tracking-[0.2em] text-muted-foreground sm:block">Reading library</div>
-              </div>
+            <Link to="/" className="flex cursor-pointer items-center" aria-label="Bookary home">
+              <img
+                src={bookaryLogo.url}
+                alt="Bookary — log your books as diary. Easy library system. Easy delivery."
+                className="h-9 w-auto md:h-10"
+              />
             </Link>
             <div className="hidden max-w-[220px] sm:block">
               <LibrarySwitcher compact />
