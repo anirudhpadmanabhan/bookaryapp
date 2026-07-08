@@ -114,6 +114,18 @@
     padding-right: env(safe-area-inset-right);
   }
 
+  img, video { max-width: 100%; height: auto; }
+
+  /* Snappier tap targets on touch devices */
+  @media (hover: none) {
+    button, a { -webkit-touch-callout: none; }
+  }
+
+  /* Standalone (installed PWA) — treat like a native app */
+  @media (display-mode: standalone) {
+    html, body { overscroll-behavior: none; }
+  }
+
   body {
     background-image:
       radial-gradient(60rem 40rem at 10% -10%, oklch(0.34 0.13 290 / 35%), transparent 60%),
