@@ -59,7 +59,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { data: notifs = [] } = useNotifications();
   const markRead = useMarkNotificationsRead();
   const isStaff = useIsStaff();
-  const { selected } = useLibrary();
+  const { selected, selectedId } = useLibrary();
   const [bellOpen, setBellOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [hideBrowse, setHideBrowse] = useHideBrowse();
@@ -69,7 +69,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement | null>(null);
   const { data: allBooks = [] } = useQuery({
-    queryKey: ["books"],
+    queryKey: ["books", selectedId],
     queryFn: fetchBooks,
     staleTime: 5 * 60_000,
     enabled: searchValue.trim().length >= 2,
