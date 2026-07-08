@@ -5,6 +5,7 @@ import {
   Library, NotebookPen, LogOut, Sparkles, Bell, X, Truck, Languages as LangIcon,
   Building2,
 } from "lucide-react";
+import bookaryLogo from "@/assets/bookary-logo.png.asset.json";
 import { useState, useRef, useEffect, useMemo, type ReactNode } from "react";
 import { useSession } from "@/lib/auth";
 import { useProfile, useDueSoonRentals, useNotifications, useMarkNotificationsRead, useRentals } from "@/lib/userdata";
