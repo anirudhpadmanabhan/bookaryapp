@@ -16,6 +16,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLibrary } from "@/lib/library";
 import { toast } from "sonner";
 import { fetchBooks } from "@/lib/books";
 

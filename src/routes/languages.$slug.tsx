@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useLibrary } from "@/lib/library";
 import { AppLayout } from "@/components/AppLayout";
 import { fetchBooks, sortBooks, unslug, slugify, type BookSort } from "@/lib/books";
 import { BooksGrid, type ViewMode } from "@/components/BooksGrid";
