@@ -20,7 +20,8 @@ export const Route = createFileRoute("/languages")({
 });
 
 export function LanguagesPage() {
-  const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
+  const { selectedId } = useLibrary();
+  const { data: books = [] } = useQuery({ queryKey: ["books", selectedId], queryFn: fetchBooks });
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<Sort>("popular");
 

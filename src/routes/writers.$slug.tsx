@@ -16,7 +16,8 @@ export const Route = createFileRoute("/writers/$slug")({
 function WriterPage() {
   const { slug } = Route.useParams();
   const target = unslug(slug);
-  const { data: books = [], isLoading } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
+  const { selectedId } = useLibrary();
+  const { data: books = [], isLoading } = useQuery({ queryKey: ["books", selectedId], queryFn: fetchBooks });
   const [sort, setSort] = useState<BookSort>("newest");
   const [view, setView] = useState<ViewMode>("tile");
 

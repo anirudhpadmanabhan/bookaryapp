@@ -22,7 +22,8 @@ function isCsvg(name: string, ml: string | null): boolean {
 }
 
 export function WritersPage() {
-  const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
+  const { selectedId } = useLibrary();
+  const { data: books = [] } = useQuery({ queryKey: ["books", selectedId], queryFn: fetchBooks });
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<WriterSort>("popular");
 

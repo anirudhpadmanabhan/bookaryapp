@@ -20,7 +20,8 @@ function LovedPage() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user, loading } = useSession();
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth", search: { redirect: pathname } }); }, [user, loading, navigate, pathname]);
-  const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
+  const { selectedId } = useLibrary();
+  const { data: books = [] } = useQuery({ queryKey: ["books", selectedId], queryFn: fetchBooks });
   const { data: favorites = [] } = useFavorites();
   const favIds = new Set(favorites.map((f) => f.book_id));
   const loved = books.filter((b, i, arr) => favIds.has(b.id) && arr.findIndex((x) => x.id === b.id) === i);

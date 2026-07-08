@@ -22,7 +22,8 @@ export const Route = createFileRoute("/languages/$slug")({
 function LanguagePage() {
   const { slug } = Route.useParams();
   const target = unslug(slug);
-  const { data: books = [], isLoading } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
+  const { selectedId } = useLibrary();
+  const { data: books = [], isLoading } = useQuery({ queryKey: ["books", selectedId], queryFn: fetchBooks });
   const [sort, setSort] = useState<BookSort>("newest");
   const [view, setView] = useState<ViewMode>("tile");
 

@@ -298,7 +298,8 @@ function StarPicker({ value, onChange, size = 5 }: { value: number; onChange: (n
 
 function NewEntryForm() {
   const add = useAddDiary();
-  const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
+  const { selectedId } = useLibrary();
+  const { data: books = [] } = useQuery({ queryKey: ["books", selectedId], queryFn: fetchBooks });
   const [open, setOpen] = useState(false);
   const [bookSearch, setBookSearch] = useState("");
   const [bookId, setBookId] = useState<string | null>(null);

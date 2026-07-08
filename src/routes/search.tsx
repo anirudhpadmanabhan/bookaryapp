@@ -34,7 +34,8 @@ function SearchPage() {
   const [direction, setDirection] = useState<SortDirection>("desc");
   const [view, setView] = useState<ViewMode>("tile");
   const [showDropdown, setShowDropdown] = useState(false);
-  const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks, staleTime: 5 * 60_000 });
+  const { selectedId } = useLibrary();
+  const { data: books = [] } = useQuery({ queryKey: ["books", selectedId], queryFn: fetchBooks, staleTime: 5 * 60_000 });
   const { user } = useSession();
   const suggest = useSuggestBook();
   const [suggestAuthor, setSuggestAuthor] = useState("");

@@ -75,7 +75,8 @@ function ProfilePage() {
   const { data: favorites = [] } = useFavorites();
   const { data: waitlist = [] } = useWaitlist();
   const { data: suggestions = [] } = useSuggestions();
-  const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
+  const { selectedId } = useLibrary();
+  const { data: books = [] } = useQuery({ queryKey: ["books", selectedId], queryFn: fetchBooks });
   const insights = useReadingInsights();
   const dueSoon = useDueSoonRentals();
   const suggest = useSuggestBook();
