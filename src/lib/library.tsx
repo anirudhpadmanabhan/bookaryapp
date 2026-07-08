@@ -58,11 +58,14 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   const setSelectedId = (id: string) => {
     setSelectedIdState(id);
     window.localStorage.setItem(STORAGE_KEY, id);
-    qc.invalidateQueries({ queryKey: ["books"] });
-    qc.invalidateQueries({ queryKey: ["home-data"] });
-    qc.invalidateQueries({ queryKey: ["books-page"] });
-    qc.invalidateQueries({ queryKey: ["new-arrivals"] });
-    qc.invalidateQueries({ queryKey: ["genre-facets"] });
+    // Drop cached library-scoped data so we never render another library's
+    // books while the new query is in flight.
+    qc.removeQueries({ queryKey: ["books"] });
+    qc.removeQueries({ queryKey: ["home-data"] });
+    qc.removeQueries({ queryKey: ["books-page"] });
+    qc.removeQueries({ queryKey: ["new-arrivals"] });
+    qc.removeQueries({ queryKey: ["genre-facets"] });
+    qc.removeQueries({ queryKey: ["popular-books"] });
   };
 
   const selected = libraries.find((l) => l.id === selectedId) ?? null;
