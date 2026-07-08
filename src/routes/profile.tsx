@@ -340,7 +340,7 @@ function ProfilePage() {
                     <button type="button" onClick={() => notifyRental(r.books?.title ?? "this book", r.due_at)} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-surface-elevated">
                       <BellRing className="h-3.5 w-3.5" /> Notify
                     </button>
-                    <button type="button" onClick={() => returnBook(r.id)} className="cursor-pointer rounded-lg bg-surface-elevated px-3 py-1.5 text-sm hover:bg-primary/20 hover:text-primary">Return</button>
+                    <span className="rounded-lg bg-surface-elevated px-3 py-1.5 text-xs text-muted-foreground">Ask staff to mark returned</span>
                   </div>
                 </div>
               );
