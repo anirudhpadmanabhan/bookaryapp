@@ -16,6 +16,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLibrary } from "@/lib/library";
 import { toast } from "sonner";
 import { fetchBooks } from "@/lib/books";
 
@@ -74,7 +75,8 @@ function ProfilePage() {
   const { data: favorites = [] } = useFavorites();
   const { data: waitlist = [] } = useWaitlist();
   const { data: suggestions = [] } = useSuggestions();
-  const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
+  const { selectedId } = useLibrary();
+  const { data: books = [] } = useQuery({ queryKey: ["books", selectedId], queryFn: fetchBooks });
   const insights = useReadingInsights();
   const dueSoon = useDueSoonRentals();
   const suggest = useSuggestBook();

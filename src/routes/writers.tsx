@@ -1,5 +1,6 @@
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useLibrary } from "@/lib/library";
 import { AppLayout } from "@/components/AppLayout";
 import { fetchBooks, colorAt, slugify } from "@/lib/books";
 import { useState, useMemo } from "react";
@@ -21,7 +22,8 @@ function isCsvg(name: string, ml: string | null): boolean {
 }
 
 export function WritersPage() {
-  const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks });
+  const { selectedId } = useLibrary();
+  const { data: books = [] } = useQuery({ queryKey: ["books", selectedId], queryFn: fetchBooks });
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<WriterSort>("popular");
 

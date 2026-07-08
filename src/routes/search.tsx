@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useLibrary } from "@/lib/library";
 import { AppLayout } from "@/components/AppLayout";
 import {
   fetchBooks, sortBooks, type BookSort, type SortDirection,
@@ -33,7 +34,8 @@ function SearchPage() {
   const [direction, setDirection] = useState<SortDirection>("desc");
   const [view, setView] = useState<ViewMode>("tile");
   const [showDropdown, setShowDropdown] = useState(false);
-  const { data: books = [] } = useQuery({ queryKey: ["books"], queryFn: fetchBooks, staleTime: 5 * 60_000 });
+  const { selectedId } = useLibrary();
+  const { data: books = [] } = useQuery({ queryKey: ["books", selectedId], queryFn: fetchBooks, staleTime: 5 * 60_000 });
   const { user } = useSession();
   const suggest = useSuggestBook();
   const [suggestAuthor, setSuggestAuthor] = useState("");
