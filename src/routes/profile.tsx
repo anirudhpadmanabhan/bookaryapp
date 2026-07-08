@@ -127,13 +127,6 @@ function ProfilePage() {
   const claim = useClaimReservation();
   const decline = useDeclineReservation();
 
-  const returnBook = async (rentalId: string) => {
-    const { error } = await supabase.from("rentals").update({ returned_at: new Date().toISOString(), tracking_status: "returned" } as any).eq("id", rentalId);
-    if (error) return toast.error(error.message);
-    qc.invalidateQueries({ queryKey: ["rentals"] });
-    qc.invalidateQueries({ queryKey: ["waitlist"] });
-    toast.success("Book returned");
-  };
 
   const notifyRental = (title: string, dueAt: string) => {
     toast.success(`Reminder set for ${title} — due ${formatDMY(dueAt)}`);
