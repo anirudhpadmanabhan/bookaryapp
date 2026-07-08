@@ -516,7 +516,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       <nav
         aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-background/95 backdrop-blur-xl md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-background/95 backdrop-blur-xl pb-[env(safe-area-inset-bottom)] md:hidden"
       >
         <ul className="grid grid-cols-5">
           {mobileNav.map((n) => {
