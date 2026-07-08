@@ -194,9 +194,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen pb-20 text-foreground md:pb-0">
-      <header className="sticky top-0 z-30 border-b border-border/60 bg-background/70 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-2 px-3 md:gap-4 md:px-6">
+    <div className="min-h-screen text-foreground pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
+      <header className="sticky top-0 z-30 border-b border-border/60 bg-background/70 backdrop-blur-xl safe-top">
+        <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between gap-2 px-3 md:h-16 md:gap-4 md:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <Link to="/" className="flex cursor-pointer items-center gap-2.5">
               <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/30">
@@ -431,7 +431,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <LibrarySwitcher compact />
       </div>
 
-      <div className="mx-auto flex max-w-[1400px] gap-6 px-4 py-6 md:px-6">
+      <div className="mx-auto flex max-w-[1400px] gap-6 px-3 py-4 sm:px-4 md:px-6 md:py-6">
         <aside className="sticky top-20 hidden h-fit w-60 shrink-0 flex-col gap-6 self-start md:flex">
           <nav className="glass-card flex flex-col gap-1 rounded-2xl p-3">
             <div className="flex items-center justify-between px-3 pb-1 pt-2">
@@ -516,7 +516,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
       <nav
         aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-background/95 backdrop-blur-xl md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-background/95 backdrop-blur-xl pb-[env(safe-area-inset-bottom)] md:hidden"
       >
         <ul className="grid grid-cols-5">
           {mobileNav.map((n) => {
