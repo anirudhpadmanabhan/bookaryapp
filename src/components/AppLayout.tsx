@@ -431,7 +431,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         <LibrarySwitcher compact />
       </div>
 
-      <div className="mx-auto flex max-w-[1400px] gap-6 px-4 py-6 md:px-6">
+      <div className="mx-auto flex max-w-[1400px] gap-6 px-3 py-4 sm:px-4 md:px-6 md:py-6">
         <aside className="sticky top-20 hidden h-fit w-60 shrink-0 flex-col gap-6 self-start md:flex">
           <nav className="glass-card flex flex-col gap-1 rounded-2xl p-3">
             <div className="flex items-center justify-between px-3 pb-1 pt-2">
