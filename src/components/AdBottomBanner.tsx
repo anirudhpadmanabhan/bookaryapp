@@ -55,7 +55,7 @@ export function AdBottomBanner() {
   const href = safeUrl(ad.cta_url);
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-[90] px-3 pb-3">
+    <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-[90] px-3 pb-2 md:bottom-0 md:pb-3">
       <div className="mx-auto max-w-5xl rounded-2xl border border-border bg-black/85 p-3 shadow-2xl backdrop-blur">
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1">
