@@ -1,17 +1,19 @@
 // Post-build helper for Capacitor Android builds.
 //
-// TanStack Start emits an SSR Worker bundle (dist/server) and static assets
-// (dist/client), but never emits dist/client/index.html. Capacitor's Android
-// wrapper needs a webDir with an index.html, so this script assembles a
-// separate `dist/capacitor/` folder that Capacitor uses as its webDir.
+// TanStack Start / Nitro emits its static client assets to one of two
+// locations depending on the deploy preset and Nitro version:
+//   - `dist/client/`          (Cloudflare preset used by Lovable hosting)
+//   - `.output/public/`       (default Nitro preset used by plain `nitro build`)
 //
-// We keep `dist/client/` untouched so Cloudflare / Lovable hosting still
-// serves the SSR site (a stray index.html inside dist/client would be
-// served for "/" by the Cloudflare assets binding and break SSR).
+// Neither location contains an `index.html`, because the site is SSR-only.
+// Capacitor's Android wrapper needs a `webDir` that contains an
+// `index.html`, so this script assembles a separate `dist/capacitor/`
+// folder that Capacitor uses as its `webDir`. The original client folder
+// is left untouched so Cloudflare / Lovable hosting keeps serving SSR.
 //
-// The generated index.html is a lightweight loading shell. The Capacitor
+// The generated `index.html` is a lightweight loading shell. The Capacitor
 // config sets `server.url` to the published Lovable site, so the WebView
-// navigates there immediately after launch; the local index.html is only
+// navigates there immediately after launch; the local `index.html` is only
 // used as a fallback while the network request is in flight or offline.
 import { cp, mkdir, writeFile, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -19,21 +21,44 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const clientDir = path.join(root, "dist/client");
-const outDir = path.join(root, "dist/capacitor");
 
-if (!existsSync(clientDir)) {
-  console.error("[capacitor] dist/client is missing — run `vite build` first");
+// Candidate source directories in priority order. The first one that exists
+// is used as the static asset source for the Capacitor shell.
+const candidates = [
+  "dist/client",       // Cloudflare / Lovable preset (this repo's default)
+  ".output/public",    // Default Nitro preset
+  "dist/public",       // Some Nitro presets
+  "dist",              // Last-resort fallback if only PWA files landed here
+];
+
+const sourceDir = candidates
+  .map((rel) => path.join(root, rel))
+  .find((abs) => existsSync(abs));
+
+if (!sourceDir) {
+  console.error(
+    "[capacitor] Could not find a client build directory. Looked for:\n  " +
+      candidates.join("\n  ") +
+      "\nRun `npm run build` (or `vite build`) first.",
+  );
   process.exit(1);
 }
 
+const outDir = path.join(root, "dist/capacitor");
 const PUBLISHED_URL = "https://bookary-boost-engine.lovable.app";
 
 await rm(outDir, { recursive: true, force: true });
 await mkdir(outDir, { recursive: true });
 // Ship every static asset (icons, splash images, manifest, sw.js) alongside
 // index.html so Capacitor packages them into the APK.
-await cp(clientDir, outDir, { recursive: true });
+await cp(sourceDir, outDir, { recursive: true });
+
+// If the PWA service worker landed in `dist/` (sibling of dist/client) rather
+// than inside the client folder, copy it in too so the shell can register it.
+const swSource = path.join(root, "dist/sw.js");
+if (existsSync(swSource) && !existsSync(path.join(outDir, "sw.js"))) {
+  await cp(swSource, path.join(outDir, "sw.js"));
+}
 
 // Minimal boot shell. Capacitor's server.url points the WebView at the
 // published site; this HTML is only visible while that page loads or if the
@@ -67,13 +92,10 @@ const html = `<!doctype html>
       <button class="retry" id="retry" onclick="location.href='${PUBLISHED_URL}'">Retry</button>
     </div>
     <script>
-      // If Capacitor's server.url is unreachable, offer a manual retry after 8s.
       setTimeout(function () {
         var b = document.getElementById('retry');
         if (b) b.style.display = 'inline-block';
       }, 8000);
-      // When served directly (e.g. \`vite preview\` of dist/capacitor), redirect
-      // to the live site so the shell isn't stuck as a dead page.
       if (!window.Capacitor && location.protocol.startsWith('http')) {
         location.replace('${PUBLISHED_URL}');
       }
@@ -83,4 +105,6 @@ const html = `<!doctype html>
 `;
 
 await writeFile(path.join(outDir, "index.html"), html, "utf8");
-console.log(`[capacitor] wrote ${path.relative(root, outDir)}/index.html and copied static assets`);
+console.log(
+  `[capacitor] source: ${path.relative(root, sourceDir)} → wrote ${path.relative(root, outDir)}/index.html + copied static assets`,
+);
