@@ -1,9 +1,9 @@
 # Publishing Bookary to Google Play Store
 
-This app is built with Lovable (TanStack Start + Vite) and wrapped for Android using **Capacitor**. Follow these steps on your local machine (not inside Lovable).
+This app is built with Lovable (TanStack Start + Vite, SSR) and wrapped for Android using **Capacitor**. Because the app is SSR-only, the Android WebView loads the live Lovable-hosted site (`server.url` in `capacitor.config.ts`) and the built-in PWA service worker handles offline caching. The static shell in `dist/capacitor/` is only used as a boot / fallback screen.
 
 ## Prerequisites
-- Node 20+ and Bun (or npm)
+- Node 20+ (npm or bun)
 - **Android Studio** (latest stable) with an Android SDK installed
 - A **Google Play Console** developer account ($25 one-time)
 - Java 17 (bundled with Android Studio)
@@ -12,20 +12,20 @@ This app is built with Lovable (TanStack Start + Vite) and wrapped for Android u
 ```bash
 git clone <your-github-repo-url>
 cd <repo>
-bun install
+npm install
 ```
 
 ## 2. Install Capacitor (first time only)
 ```bash
-bun add @capacitor/core @capacitor/android
-bun add -d @capacitor/cli
+npm install @capacitor/core @capacitor/android
+npm install -D @capacitor/cli
 ```
 
-## 3. Build the web app
+## 3. Build the web app (produces `dist/capacitor/`)
 ```bash
-bun run build
+npm run build
 ```
-This produces the static bundle in `dist/` that Capacitor ships inside the APK/AAB.
+`npm run build` runs `vite build` and then `node scripts/build-capacitor.mjs`, which assembles a static shell in `dist/capacitor/` (icons, manifest, service worker, boot HTML) that Capacitor packages into the APK/AAB.
 
 ## 4. Add the Android platform (first time only)
 ```bash
