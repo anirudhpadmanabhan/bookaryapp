@@ -1,3 +1,4 @@
+console.log("######## NEW BUILD-CAPACITOR SCRIPT ########");
 // Post-build helper for Capacitor Android builds.
 //
 // TanStack Start / Nitro emits its static client assets to one of two
