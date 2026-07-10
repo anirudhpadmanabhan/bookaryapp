@@ -131,8 +131,17 @@ function HomePage() {
                 <p className="text-xs text-muted-foreground">Pick your library to see its shelves. You can switch anytime from the top bar.</p>
               </div>
             </div>
-            <div className="space-y-2">
-              {libraries.map((l) => (
+            <input
+              type="text"
+              value={pickerQuery}
+              onChange={(e) => setPickerQuery(e.target.value)}
+              placeholder="Search libraries by name or location…"
+              className="mb-3 w-full rounded-xl border border-border bg-background/50 px-4 py-2.5 text-sm outline-none focus:border-primary"
+            />
+            <div className="max-h-[50vh] space-y-2 overflow-y-auto pr-1">
+              {filteredLibraries.length === 0 ? (
+                <p className="rounded-xl border border-border bg-surface/40 px-4 py-6 text-center text-sm text-muted-foreground">No libraries match "{pickerQuery}".</p>
+              ) : filteredLibraries.map((l) => (
                 <button
                   key={l.id}
                   type="button"
@@ -163,6 +172,7 @@ function HomePage() {
           </div>
         </div>
       )}
+
 
       {/* Hero — dynamic per selected library */}
       <section className="glass-card relative mb-8 overflow-hidden rounded-3xl p-6 md:p-10">
