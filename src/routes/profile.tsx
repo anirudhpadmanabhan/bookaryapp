@@ -130,9 +130,8 @@ function ProfilePage() {
   const decline = useDeclineReservation();
 
 
-  const notifyRental = (title: string, dueAt: string) => {
-    toast.success(`Reminder set for ${title} — due ${formatDMY(dueAt)}`);
-  };
+
+
 
   const submitSuggestion = (e: React.FormEvent) => {
     e.preventDefault();
