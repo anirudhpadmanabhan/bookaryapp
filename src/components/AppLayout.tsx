@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo, type ReactNode } from "react";
 import { useSession } from "@/lib/auth";
-import { useProfile, useDueSoonRentals, useNotifications, useMarkNotificationsRead, useRentals } from "@/lib/userdata";
+import { useProfile, useDueSoonRentals, useNotifications, useMarkNotificationsRead, useDismissNotification, useRentals } from "@/lib/userdata";
 import { useIsStaff } from "@/lib/admin";
 import { Shield } from "lucide-react";
 import { useHideBrowse, useHideShelves } from "@/lib/ui-prefs";
@@ -58,6 +58,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { data: rentals = [] } = useRentals();
   const { data: notifs = [] } = useNotifications();
   const markRead = useMarkNotificationsRead();
+  const dismissNotif = useDismissNotification();
   const isStaff = useIsStaff();
   const { selected, selectedId } = useLibrary();
   const [bellOpen, setBellOpen] = useState(false);
@@ -330,15 +331,20 @@ export function AppLayout({ children }: { children: ReactNode }) {
                                 </div>
                               </div>
                             );
+                            const onOpen = () => {
+                              setBellOpen(false);
+                              if (item.id.startsWith("n-")) dismissNotif.mutate(item.id);
+                            };
                             return (
                               <li key={item.id}>
                                 {item.bookId ? (
-                                  <Link to="/books/$id" params={{ id: item.bookId }} onClick={() => setBellOpen(false)} className="block cursor-pointer">{Inner}</Link>
+                                  <Link to="/books/$id" params={{ id: item.bookId }} onClick={onOpen} className="block cursor-pointer">{Inner}</Link>
                                 ) : (
-                                  <Link to="/tracking" onClick={() => setBellOpen(false)} className="block cursor-pointer">{Inner}</Link>
+                                  <Link to="/tracking" onClick={onOpen} className="block cursor-pointer">{Inner}</Link>
                                 )}
                               </li>
                             );
+
                           })}
                         </ul>
                       )}

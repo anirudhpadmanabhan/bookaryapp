@@ -130,9 +130,8 @@ function ProfilePage() {
   const decline = useDeclineReservation();
 
 
-  const notifyRental = (title: string, dueAt: string) => {
-    toast.success(`Reminder set for ${title} — due ${formatDMY(dueAt)}`);
-  };
+
+
 
   const submitSuggestion = (e: React.FormEvent) => {
     e.preventDefault();
@@ -273,7 +272,7 @@ function ProfilePage() {
       )}
 
       {dueSoon.length > 0 && (
-        <Section id="due" title={`Due within 20 days (${dueSoon.length})`} icon={AlertTriangle}>
+        <Section id="due" title={`Due within 30 days (${dueSoon.length})`} icon={AlertTriangle}>
           {/* Compact grid — keeps the list dense and avoids vertical sprawl */}
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {dueSoon.map((r) => (
@@ -291,65 +290,47 @@ function ProfilePage() {
         </Section>
       )}
 
-      {/* Active rentals + Tracking */}
+
+      {/* Active rentals + Tracking — compact link list */}
       <Section id="rentals" title={`Active rentals & tracking (${active.length})`} icon={BookOpen}>
         {active.length === 0 ? (
           <div className="glass-card rounded-2xl p-6 text-sm text-muted-foreground">No active rentals.</div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {active.map((r: any) => {
               const dueDate = new Date(r.due_at);
-              const rentedDate = new Date(r.rented_at);
               const msLeft = dueDate.getTime() - Date.now();
               const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
               const overdue = msLeft < 0;
               const status = r.tracking_status ?? "confirmed";
-              const statusLabel: Record<string, string> = {
-                confirmed: "Confirmed", packed: "Packed", out_for_delivery: "Out for delivery", delivered: "Delivered",
-              };
               return (
-                <div key={r.id} className="glass-card flex flex-wrap items-start gap-4 rounded-2xl p-4">
-                  <Link to="/books/$id" params={{ id: r.book_id }} className="block cursor-pointer">
-                    <div className={`cover cover-${r.books?.cover_color || "amber"} h-20 w-14 flex-shrink-0 !aspect-auto !p-2 hover:opacity-90`}>
-                      <span className="font-mal text-[8px] text-white/90">{r.books?.title_ml}</span>
+                <Link
+                  key={r.id}
+                  to="/books/$id"
+                  params={{ id: r.book_id }}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface/40 px-3 py-2 text-sm cursor-pointer hover:bg-surface-elevated"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className={`cover cover-${r.books?.cover_color || "amber"} h-10 w-7 shrink-0 !aspect-auto !p-1`}>
+                      <span className="font-mal text-[6px] text-white/90">{r.books?.title_ml}</span>
                     </div>
-                  </Link>
-                  <div className="flex-1 min-w-0">
-                    <Link to="/books/$id" params={{ id: r.book_id }} className="cursor-pointer hover:text-primary">
-                      <h3 className="font-semibold">{r.books?.title}</h3>
-                    </Link>
-                    <p className="text-xs text-muted-foreground">by {r.books?.author}</p>
-                    <p className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-                      <span className="text-muted-foreground">Rented {formatDMY(rentedDate)}</span>
-                      <span className="text-muted-foreground">·</span>
-                      <span className="text-muted-foreground">Due {formatDMY(dueDate)}</span>
-                      <span className="text-muted-foreground">·</span>
-                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 ${overdue ? "bg-rose-500/15 text-rose-300" : "bg-emerald-500/15 text-emerald-300"}`}>
-                        <Clock className="h-3 w-3" />
-                        {overdue ? `${Math.abs(daysLeft)}d overdue` : `${daysLeft}d left`}
-                      </span>
-                    </p>
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5 text-primary">
-                        📦 {statusLabel[status] ?? status}
-                      </span>
-                      {r.delivery_address && (
-                        <span className="text-muted-foreground">→ {r.delivery_address}</span>
-                      )}
+                    <div className="min-w-0">
+                      <div className="truncate font-medium">{r.books?.title}</div>
+                      <div className="truncate text-[11px] text-muted-foreground">
+                        by {r.books?.author} · due {formatDMY(dueDate)} · <span className="capitalize">{status.replace(/_/g, " ")}</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex shrink-0 flex-col gap-2">
-                    <button type="button" onClick={() => notifyRental(r.books?.title ?? "this book", r.due_at)} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-surface-elevated">
-                      <BellRing className="h-3.5 w-3.5" /> Notify
-                    </button>
-                    <span className="rounded-lg bg-surface-elevated px-3 py-1.5 text-xs text-muted-foreground">Ask staff to mark returned</span>
-                  </div>
-                </div>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${overdue ? "bg-rose-500/20 text-rose-300" : "bg-emerald-500/20 text-emerald-300"}`}>
+                    {overdue ? `${Math.abs(daysLeft)}d late` : `${daysLeft}d left`}
+                  </span>
+                </Link>
               );
             })}
           </div>
         )}
       </Section>
+
 
       {/* Reservations (24h window) */}
       {reservations.length > 0 && (

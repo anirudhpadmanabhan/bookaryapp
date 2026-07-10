@@ -106,6 +106,31 @@
     }
   }
 
+  /* Dark, subtle scrollbar so no white/light strip shows in the right rail. */
+  html {
+    scrollbar-color: oklch(0.35 0.05 280) transparent;
+    scrollbar-width: thin;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: oklch(0.32 0.05 280 / 70%);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.44 0.08 280 / 90%);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+  }
+  ::-webkit-scrollbar-corner { background: transparent; }
+
   /* Respect device safe areas (notches, home indicator, status bar). */
   .safe-top { padding-top: env(safe-area-inset-top); }
   .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
@@ -113,6 +138,7 @@
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
   }
+
 
   img, video { max-width: 100%; height: auto; }
 

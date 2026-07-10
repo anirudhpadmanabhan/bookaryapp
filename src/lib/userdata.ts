@@ -245,7 +245,7 @@ export function useDeclineReservation() {
   });
 }
 
-// Notifications — rentals due within 20 days (and overdue).
+// Notifications — rentals due within 30 days (and overdue).
 export function useDueSoonRentals() {
   const { data: rentals = [] } = useRentals();
   const now = Date.now();
@@ -256,9 +256,10 @@ export function useDueSoonRentals() {
       const daysLeft = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
       return { ...r, daysLeft, overdue: due < now };
     })
-    .filter((r) => r.daysLeft <= 20)
+    .filter((r) => r.daysLeft <= 30)
     .sort((a, b) => a.daysLeft - b.daysLeft);
 }
+
 
 // DIARY
 export function useDiary() {
@@ -455,6 +456,23 @@ export function useMarkNotificationsRead() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
   });
 }
+
+export function useDismissNotification() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      // Strip 'n-' prefix used in the merged inbox to reach the raw row id.
+      const rowId = id.startsWith("n-") ? id.slice(2) : id;
+      // Try delete; if RLS blocks delete, fall back to marking read.
+      const { error } = await supabase.from("notifications" as any).delete().eq("id", rowId);
+      if (error) {
+        await supabase.from("notifications" as any).update({ read_at: new Date().toISOString() } as any).eq("id", rowId);
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+}
+
 
 export function useUpsertReview() {
   const qc = useQueryClient();
