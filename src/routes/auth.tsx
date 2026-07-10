@@ -86,7 +86,7 @@ function AuthPage() {
             <span className="font-mal text-accent">വായന</span> never ends.
           </h2>
           <p className="mt-4 max-w-md text-white/80">
-            Sign in to rent volumes for 20 days, save the books you love, and keep a diary of your reading journey.
+            Sign in to rent volumes for 30 days, save the books you love, and keep a diary of your reading journey.
           </p>
         </div>
         <p className="relative text-xs text-white/50">© Bookary — A reading sanctuary.</p>
