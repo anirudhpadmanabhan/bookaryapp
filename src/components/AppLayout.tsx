@@ -331,15 +331,20 @@ export function AppLayout({ children }: { children: ReactNode }) {
                                 </div>
                               </div>
                             );
+                            const onOpen = () => {
+                              setBellOpen(false);
+                              if (item.id.startsWith("n-")) dismissNotif.mutate(item.id);
+                            };
                             return (
                               <li key={item.id}>
                                 {item.bookId ? (
-                                  <Link to="/books/$id" params={{ id: item.bookId }} onClick={() => setBellOpen(false)} className="block cursor-pointer">{Inner}</Link>
+                                  <Link to="/books/$id" params={{ id: item.bookId }} onClick={onOpen} className="block cursor-pointer">{Inner}</Link>
                                 ) : (
-                                  <Link to="/tracking" onClick={() => setBellOpen(false)} className="block cursor-pointer">{Inner}</Link>
+                                  <Link to="/tracking" onClick={onOpen} className="block cursor-pointer">{Inner}</Link>
                                 )}
                               </li>
                             );
+
                           })}
                         </ul>
                       )}
