@@ -273,7 +273,7 @@ function ProfilePage() {
       )}
 
       {dueSoon.length > 0 && (
-        <Section id="due" title={`Due within 20 days (${dueSoon.length})`} icon={AlertTriangle}>
+        <Section id="due" title={`Due within 30 days (${dueSoon.length})`} icon={AlertTriangle}>
           {/* Compact grid — keeps the list dense and avoids vertical sprawl */}
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {dueSoon.map((r) => (
@@ -290,6 +290,7 @@ function ProfilePage() {
           </div>
         </Section>
       )}
+
 
       {/* Active rentals + Tracking */}
       <Section id="rentals" title={`Active rentals & tracking (${active.length})`} icon={BookOpen}>
