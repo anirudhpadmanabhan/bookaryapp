@@ -245,7 +245,7 @@ export function useDeclineReservation() {
   });
 }
 
-// Notifications — rentals due within 20 days (and overdue).
+// Notifications — rentals due within 30 days (and overdue).
 export function useDueSoonRentals() {
   const { data: rentals = [] } = useRentals();
   const now = Date.now();
@@ -256,9 +256,10 @@ export function useDueSoonRentals() {
       const daysLeft = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
       return { ...r, daysLeft, overdue: due < now };
     })
-    .filter((r) => r.daysLeft <= 20)
+    .filter((r) => r.daysLeft <= 30)
     .sort((a, b) => a.daysLeft - b.daysLeft);
 }
+
 
 // DIARY
 export function useDiary() {
