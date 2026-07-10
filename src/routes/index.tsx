@@ -34,16 +34,25 @@ const ONBOARDING_KEY = "bookary.onboarding_done";
 function HomePage() {
   const { libraries, selected, selectedId, setSelectedId } = useLibrary();
   const [showPicker, setShowPicker] = useState(false);
+  const [pickerQuery, setPickerQuery] = useState("");
   useEffect(() => {
     if (typeof window === "undefined") return;
     const done = window.localStorage.getItem(ONBOARDING_KEY);
-    if (!done && libraries.length > 1) setShowPicker(true);
+    if (!done && libraries.length >= 1) setShowPicker(true);
   }, [libraries.length]);
   const confirmLibrary = (id: string) => {
     setSelectedId(id);
     window.localStorage.setItem(ONBOARDING_KEY, "1");
     setShowPicker(false);
   };
+  const filteredLibraries = useMemo(() => {
+    const q = pickerQuery.trim().toLowerCase();
+    if (!q) return libraries;
+    return libraries.filter((l) =>
+      [l.name, l.name_ml ?? "", l.location ?? ""].some((s) => s.toLowerCase().includes(q))
+    );
+  }, [libraries, pickerQuery]);
+
 
 
   const { data, isLoading } = useQuery({
