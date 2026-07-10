@@ -465,7 +465,7 @@ function RentModal({
         </div>
 
         <div className="mt-4 rounded-xl border border-border/60 bg-surface/40 px-3 py-2.5 text-xs text-muted-foreground">
-          Return window: <span className="font-medium text-foreground">20 days</span>. Staff can update due and return status from the admin panel.
+          Return window: <span className="font-medium text-foreground">30 days</span>. Staff can update due and return status from the admin panel.
         </div>
 
         <div className="mt-5 flex gap-2">
