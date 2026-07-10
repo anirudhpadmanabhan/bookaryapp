@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { useState, useRef, useEffect, useMemo, type ReactNode } from "react";
 import { useSession } from "@/lib/auth";
-import { useProfile, useDueSoonRentals, useNotifications, useMarkNotificationsRead, useRentals } from "@/lib/userdata";
+import { useProfile, useDueSoonRentals, useNotifications, useMarkNotificationsRead, useDismissNotification, useRentals } from "@/lib/userdata";
 import { useIsStaff } from "@/lib/admin";
 import { Shield } from "lucide-react";
 import { useHideBrowse, useHideShelves } from "@/lib/ui-prefs";
