@@ -457,6 +457,23 @@ export function useMarkNotificationsRead() {
   });
 }
 
+export function useDismissNotification() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      // Strip 'n-' prefix used in the merged inbox to reach the raw row id.
+      const rowId = id.startsWith("n-") ? id.slice(2) : id;
+      // Try delete; if RLS blocks delete, fall back to marking read.
+      const { error } = await supabase.from("notifications" as any).delete().eq("id", rowId);
+      if (error) {
+        await supabase.from("notifications" as any).update({ read_at: new Date().toISOString() } as any).eq("id", rowId);
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+}
+
+
 export function useUpsertReview() {
   const qc = useQueryClient();
   const { user } = useSession();
