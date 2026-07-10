@@ -58,6 +58,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { data: rentals = [] } = useRentals();
   const { data: notifs = [] } = useNotifications();
   const markRead = useMarkNotificationsRead();
+  const dismissNotif = useDismissNotification();
   const isStaff = useIsStaff();
   const { selected, selectedId } = useLibrary();
   const [bellOpen, setBellOpen] = useState(false);
