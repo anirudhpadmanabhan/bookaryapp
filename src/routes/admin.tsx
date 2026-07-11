@@ -679,7 +679,7 @@ function BooksGridAdmin({ books, setEditing, outIds }: { books: any[]; setEditin
 function AvailabilitySelect({ book, isOut, compact = false }: { book: any; isOut?: boolean; compact?: boolean }) {
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
-  const value = book.availability ?? (isOut ? "rented" : "available");
+  const value = book.availability ?? (isOut ? "out_of_stock" : "available");
 
   const change = async (next: string) => {
     if (next === value) return;
@@ -704,7 +704,6 @@ function AvailabilitySelect({ book, isOut, compact = false }: { book: any; isOut
     >
       <option value="available">Available</option>
       <option value="out_of_stock">Out of stock</option>
-      <option value="rented">Rented</option>
     </select>
   );
 }
