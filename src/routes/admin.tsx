@@ -1553,15 +1553,7 @@ function RentalsByMonth({
                     <td className="px-2 py-2 text-right">
                       {!r.returned_at && (
                         <div className="flex justify-end gap-1">
-                          {r.tracking_status === "delivered" && (
-                            <button
-                              onClick={() => onMarkRented(r.id)}
-                              className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-amber-500 px-2 py-1 text-[11px] font-semibold text-amber-950 hover:opacity-90"
-                              title="Mark as currently rented / out"
-                            >
-                              Rented
-                            </button>
-                          )}
+
                           <button
                             onClick={() => onReturn(r)}
                             className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-emerald-500 px-2 py-1 text-[11px] font-semibold text-emerald-950 hover:opacity-90"
