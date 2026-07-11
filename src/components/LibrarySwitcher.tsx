@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Building2, Check, ChevronDown } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import { useLibrary } from "@/lib/library";
 
 export function LibrarySwitcher({ compact = false }: { compact?: boolean }) {
   const { libraries, selected, setSelectedId } = useLibrary();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
 
