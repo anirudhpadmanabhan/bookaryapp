@@ -31,7 +31,7 @@ export function AdPopup() {
       onClick={() => setOpen(false)}
     >
       <div
-        className="relative w-full max-w-md overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
+        className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -42,6 +42,17 @@ export function AdPopup() {
         >
           <X className="h-4 w-4" />
         </button>
+        {safeUrl(ad.cta_url) ? (
+          <a href={safeUrl(ad.cta_url)!} target="_blank" rel="noopener noreferrer" onClick={onClick} className="block">
+            <div className="aspect-[3/4] w-full bg-black/40">
+              <img src={ad.image_url} alt={ad.title || ad.name} className="h-full w-full object-cover" />
+            </div>
+          </a>
+        ) : (
+          <div className="aspect-[3/4] w-full bg-black/40">
+            <img src={ad.image_url} alt={ad.title || ad.name} className="h-full w-full object-cover" />
+          </div>
+        )}
         {safeUrl(ad.cta_url) ? (
           <a href={safeUrl(ad.cta_url)!} target="_blank" rel="noopener noreferrer" onClick={onClick}>
             <img src={ad.image_url} alt={ad.title || ad.name} className="block w-full" />
