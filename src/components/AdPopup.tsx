@@ -53,13 +53,6 @@ export function AdPopup() {
             <img src={ad.image_url} alt={ad.title || ad.name} className="h-full w-full object-cover" />
           </div>
         )}
-        {safeUrl(ad.cta_url) ? (
-          <a href={safeUrl(ad.cta_url)!} target="_blank" rel="noopener noreferrer" onClick={onClick}>
-            <img src={ad.image_url} alt={ad.title || ad.name} className="block w-full" />
-          </a>
-        ) : (
-          <img src={ad.image_url} alt={ad.title || ad.name} className="block w-full" />
-        )}
         {(ad.title || ad.description || (ad.cta_text && safeUrl(ad.cta_url))) && (
           <div className="space-y-2 p-4">
             {ad.title && <h3 className="text-lg font-semibold">{ad.title}</h3>}
