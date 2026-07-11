@@ -206,7 +206,7 @@ export function AdsTab() {
 
       {(editing || creating) && (
         <AdEditor
-          initial={editing ? toFormState(editing) : EMPTY}
+          initial={editing ? toFormState(editing) : makeEmpty()}
           editingId={editing?.id}
           onClose={() => { setEditing(null); setCreating(false); }}
         />
