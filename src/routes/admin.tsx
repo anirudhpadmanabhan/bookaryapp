@@ -1243,7 +1243,7 @@ function RentalsTab() {
     { header: "Status", get: (r: any) => r.tracking_status ?? "" },
   ];
 
-  const STATUSES = ["confirmed", "packed", "shipped", "out_for_delivery", "delivered", "rented"];
+  const STATUSES = ["confirmed", "packed", "shipped", "out_for_delivery", "delivered"];
 
   const SortableTh = ({ k, children, className = "" }: { k: RentalSort; children: any; className?: string }) => {
     const Icon = sortKey !== k ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
