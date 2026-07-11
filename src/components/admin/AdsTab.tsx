@@ -28,21 +28,28 @@ type FormState = {
   auto_close_seconds: number;
 };
 
-const EMPTY: FormState = {
-  name: "",
-  type: "popup",
-  image_url: "",
-  image_path: null,
-  title: "",
-  description: "",
-  cta_text: "",
-  cta_url: "",
-  status: "inactive",
-  start_date: "",
-  end_date: "",
-  banner_position: "top",
-  auto_close_seconds: 3,
-};
+function makeEmpty(): FormState {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const toLocal = (d: Date) =>
+    `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const now = new Date();
+  const end = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  return {
+    name: "",
+    type: "popup",
+    image_url: "",
+    image_path: null,
+    title: "",
+    description: "",
+    cta_text: "",
+    cta_url: "",
+    status: "active",
+    start_date: toLocal(now),
+    end_date: toLocal(end),
+    banner_position: "top",
+    auto_close_seconds: 3,
+  };
+}
 
 function toFormState(ad: Advertisement): FormState {
   const toLocal = (s: string | null) => {
