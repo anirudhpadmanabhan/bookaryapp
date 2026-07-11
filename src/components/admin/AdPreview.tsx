@@ -52,13 +52,15 @@ function Frame({ children, label }: { children: React.ReactNode; label: string }
 
 function PopupPreview({ ad }: { ad: AdPreviewData }) {
   return (
-    <Frame label="Popup overlay">
+    <Frame label="Popup overlay · portrait">
       <div className="absolute inset-0 grid place-items-center bg-black/60 p-4 backdrop-blur-sm">
-        <div className="relative w-full max-w-xs overflow-hidden rounded-xl border border-border bg-surface shadow-2xl">
+        <div className="relative w-[60%] max-w-[220px] overflow-hidden rounded-xl border border-border bg-surface shadow-2xl">
           <button type="button" className="absolute right-2 top-2 z-10 grid h-6 w-6 place-items-center rounded-full bg-black/50 text-white">
             <X className="h-3 w-3" />
           </button>
-          <img src={ad.image_url} alt={ad.title || ad.name} className="block max-h-32 w-full object-cover" />
+          <div className="aspect-[3/4] w-full overflow-hidden bg-black/40">
+            <img src={ad.image_url} alt={ad.title || ad.name} className="h-full w-full object-cover" />
+          </div>
           {(ad.title || ad.description || (ad.cta_text && safeUrl(ad.cta_url))) && (
             <div className="space-y-1.5 p-3">
               {ad.title && <h3 className="text-sm font-semibold">{ad.title}</h3>}
