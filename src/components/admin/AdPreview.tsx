@@ -81,15 +81,16 @@ function PopupPreview({ ad }: { ad: AdPreviewData }) {
 function InlineBannerPreview({ ad }: { ad: AdPreviewData }) {
   const pos = ad.banner_position ?? "top";
   return (
-    <Frame label={`Inline banner · ${pos}`}>
+    <Frame label={`Inline banner · ${pos} · landscape`}>
       <div className="flex h-full flex-col gap-2 p-3">
-        {pos !== "top" && <FakeBlock h="h-10" />}
-        {pos === "middle" && <FakeBlock h="h-8" />}
+        {pos !== "top" && <FakeBlock h="h-8" />}
+        {pos === "middle" && <FakeBlock h="h-6" />}
         <div className="overflow-hidden rounded-lg border border-border">
-          <img src={ad.image_url} alt={ad.title || ad.name} className="block max-h-32 w-full object-cover" />
+          <div className="aspect-[16/9] w-full bg-black/30">
+            <img src={ad.image_url} alt={ad.title || ad.name} className="h-full w-full object-cover" />
+          </div>
         </div>
-        {pos !== "bottom" && <FakeBlock h="h-10" />}
-        <FakeBlock h="h-6" />
+        {pos !== "bottom" && <FakeBlock h="h-6" />}
       </div>
     </Frame>
   );
