@@ -782,7 +782,6 @@ function EditBookModal({ book, onClose }: { book: any; onClose: () => void }) {
             <span className="mb-1 block text-muted-foreground">Availability</span>
             <select value={availability} onChange={(e) => setAvailability(e.target.value)} className={`${fld} cursor-pointer`}>
               <option value="available">Available</option>
-              <option value="rented">Rented</option>
               <option value="out_of_stock">Out of stock</option>
             </select>
           </label>
