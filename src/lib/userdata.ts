@@ -249,14 +249,21 @@ export function useDeclineReservation() {
 export function useDueSoonRentals() {
   const { data: rentals = [] } = useRentals();
   const now = Date.now();
+  const seen = new Set<string>();
   return (rentals as any[])
-    .filter((r) => !r.returned_at)
-    .map((r) => {
-      const due = new Date(r.due_at).getTime();
-      const daysLeft = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
-      return { ...r, daysLeft, overdue: due < now };
+    .filter((r) => !r.returned_at && !["reserved", "cancelled", "expired"].includes(r.tracking_status))
+    .filter((r) => {
+      const key = r.book_id ?? r.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
     })
-    .filter((r) => r.daysLeft <= 30)
+    .map((r) => {
+      const due = r.due_at ? new Date(r.due_at).getTime() : NaN;
+      const daysLeft = Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+      return { ...r, daysLeft, overdue: Number.isFinite(due) && due < now };
+    })
+    .filter((r) => Number.isFinite(r.daysLeft) && r.daysLeft <= 30)
     .sort((a, b) => a.daysLeft - b.daysLeft);
 }
 

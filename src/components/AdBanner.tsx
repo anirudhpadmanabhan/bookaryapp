@@ -15,11 +15,13 @@ export function AdBanner({ position }: { position: BannerPosition }) {
   const href = safeUrl(ad.cta_url);
 
   const img = (
-    <img
-      src={ad.image_url}
-      alt={ad.title || ad.name}
-      className="block w-full rounded-2xl border border-border object-cover"
-    />
+    <div className="aspect-[16/9] w-full overflow-hidden rounded-2xl border border-border bg-black/30">
+      <img
+        src={ad.image_url}
+        alt={ad.title || ad.name}
+        className="h-full w-full object-cover"
+      />
+    </div>
   );
 
   return (

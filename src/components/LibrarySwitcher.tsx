@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Building2, Check, ChevronDown } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import { useLibrary } from "@/lib/library";
 
 export function LibrarySwitcher({ compact = false }: { compact?: boolean }) {
   const { libraries, selected, setSelectedId } = useLibrary();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
 
@@ -45,7 +47,7 @@ export function LibrarySwitcher({ compact = false }: { compact?: boolean }) {
               <button
                 key={lib.id}
                 type="button"
-                onClick={() => { setSelectedId(lib.id); setOpen(false); }}
+                onClick={() => { setSelectedId(lib.id); setOpen(false); navigate({ to: "/" }); }}
                 className={`flex w-full cursor-pointer items-start gap-2 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-surface-elevated ${active ? "bg-primary/10" : ""}`}
               >
                 <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
