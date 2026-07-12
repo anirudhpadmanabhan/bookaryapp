@@ -86,17 +86,20 @@
     border-color: var(--color-border);
   }
 
-  html, body {
+  html {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
-    overflow-x: hidden;
-    max-width: 100vw;
-    overscroll-behavior-y: none;
+    overflow-x: clip;
     -webkit-tap-highlight-color: transparent;
-    text-size-adjust: 100%;
-    -webkit-text-size-adjust: 100%;
   }
 
   /* Prevent iOS/Android auto-zoom on input focus (needs >=16px font). */
