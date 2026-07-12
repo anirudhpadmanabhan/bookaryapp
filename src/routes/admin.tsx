@@ -115,13 +115,16 @@ function AdminPage() {
             Role: <span className="font-semibold text-accent">{roles.map((r) => r === "admin" ? "Admin" : r === "librarian" ? "Library Admin" : r).join(" · ") || "staff"}</span>
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setAddMemberOpen(true)}
-          className="ml-auto inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
-        >
-          <Users className="h-4 w-4" /> Add member
-        </button>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <SeedCatalogueButton isAdmin={isAdmin} />
+          <button
+            type="button"
+            onClick={() => setAddMemberOpen(true)}
+            className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+          >
+            <Users className="h-4 w-4" /> Add member
+          </button>
+        </div>
       </div>
       {addMemberOpen && <AddMemberDialog onClose={() => setAddMemberOpen(false)} />}
 
