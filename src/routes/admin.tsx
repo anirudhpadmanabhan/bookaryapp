@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { exportCsv, exportPdf } from "@/lib/pdf-export";
 import { AdsTab } from "@/components/admin/AdsTab";
+import { SeedCatalogueButton } from "@/components/admin/SeedCatalogueButton";
 
 type Tab = "overview" | "books" | "rentals" | "waitlist" | "suggestions" | "reports" | "ads" | "libraries" | "profile" | "roles" | "users" | "activity";
 
